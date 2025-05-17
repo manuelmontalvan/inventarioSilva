@@ -1,0 +1,19 @@
+Aquí tienes algunos ejemplos de entradas comunes en un archivo .gitignore:
+
+# Ignorar el directorio node_modules
+node_modules/
+
+# Ignorar el directorio dist
+dist/
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar archivos de entorno
+.env
+
+# Ignorar la carpeta de caché de macOS
+.DS_Store
+
+# Ignorar archivos de configuración de VS Code
+.vscode/
