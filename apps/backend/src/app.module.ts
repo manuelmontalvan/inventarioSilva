@@ -1,22 +1,43 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/user.module';
+import { RolesModule } from './users/roles/roles.module';
+import { RolesSeed } from './users/roles/roles.seed';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5433,
-      username: 'eros',
-      password: 'eros2021',
-      database: 'inventarioSilva',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // solo para desarrollo
+    ConfigModule.forRoot({
+      isGlobal: true, // Hace disponible el .env en todo el proyecto
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST'),
+        port: parseInt(configService.get('DB_PORT') || '5433', 10),
+
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+
+        synchronize: true, // Solo en desarrollo
+
+        migrations: [__dirname + '/migration/*.js'],
+        migrationsRun: true, // Opcional: corre migraciones al arrancar
+        cli: {
+          migrationsDir: 'src/migration',
+        },
+      }),
+      inject: [ConfigService],
     }),
     AuthModule,
     UsersModule,
+    RolesModule,
   ],
+  providers: [RolesSeed],
 })
 export class AppModule {}

@@ -1,5 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* globals.css */
+
+
+@tailwind utilities;
+
+/* Aquí puedes añadir estilos globales personalizados si lo deseas */
+html,
+body {
+  @apply bg-white text-gray-900 antialiased;
+  font-family: 'Inter', sans-serif;
+}
+
+a {
+  @apply text-blue-600 hover:underline;
+}
+
 
 @custom-variant dark (&:is(.dark *));
 

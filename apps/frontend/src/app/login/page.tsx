@@ -1,4 +1,5 @@
 // app/login/page.tsx
+"use client";
 import React from 'react';
 import LoginForm from '@/components/form/loginForm'; // Importa el componente LoginForm
 

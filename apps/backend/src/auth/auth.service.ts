@@ -19,10 +19,18 @@ export class AuthService {
     return null;
   }
 
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.role.nombre };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
-  }
+ async login(user: any) {
+  const payload = { sub: user.id, email: user.email, role: user.role.nombre };
+  const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+  const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+  // Guarda el refreshToken en la base de datos
+  await this.usersService.updateRefreshToken(user.id, refreshToken);
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  };
+}
+
 }

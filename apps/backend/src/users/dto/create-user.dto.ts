@@ -5,7 +5,11 @@ export class CreateUserDto {
   email: string;
 
   @IsNotEmpty()
-  nombre: string;
+  name: string;
+
+
+  @IsNotEmpty()
+  password: string;
 
   @IsNotEmpty()
   roleId: number;
