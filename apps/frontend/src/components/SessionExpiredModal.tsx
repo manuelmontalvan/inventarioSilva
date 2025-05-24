@@ -1,29 +1,56 @@
 // components/SessionExpiredModal.tsx
 import React from "react";
 import { useEffect } from "react";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
 
 const SessionExpiredModal = ({ onClose }: { onClose: () => void }) => {
+  const calledRef = React.useRef(false);
+  
   useEffect(() => {
     const timeout = setTimeout(() => {
-      onClose();
-    }, 4000); // se cierra en 4 segundos automáticamente
+       if (!calledRef.current) {
+        calledRef.current = true;
+        onClose();
+      }
+    }, 6000); // se cierra en 6 segundos automáticamente
 
     return () => clearTimeout(timeout);
   }, [onClose]);
 
+    const handleClose = () => {
+    if (!calledRef.current) {
+      calledRef.current = true;
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-xl shadow-md text-center">
-        <h2 className="text-xl font-semibold mb-2">Sesión Expirada</h2>
-        <p className="mb-4">Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.</p>
-        <button
-          onClick={onClose}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Ir al login
-        </button>
-      </div>
-    </div>
+    <Modal isOpen={true} onClose={handleClose} backdrop="blur" >
+      <ModalContent className="text-white">
+        <ModalHeader>Sesión Expirada</ModalHeader>
+        <ModalBody>
+          Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.
+        </ModalBody>
+        <ModalFooter>
+          <Button onPress={handleClose} color="success" variant="bordered">Ir al login</Button>
+        </ModalFooter>
+      </ModalContent> 
+
+    </Modal>
+  
   );
 };
 

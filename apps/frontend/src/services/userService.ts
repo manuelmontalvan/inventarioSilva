@@ -1,14 +1,13 @@
 // services/userService.ts
-import { getToken } from "@/lib/auth";
+import axiosInstance from "@/lib/axiosInstance";
 
 export async function fetchCurrentUser() {
-  const token = getToken();
-  const res = await fetch('http://localhost:3001/api/auth/perfil', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) throw new Error("No se pudo obtener el usuario");
-  return res.json();
+  try {
+    const response = await axiosInstance.get("/auth/perfil");
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status !== 401) {
+      console.error("Error al obtener el usuario:", error);
+    }
+  }
 }

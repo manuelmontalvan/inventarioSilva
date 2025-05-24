@@ -3,7 +3,7 @@
 // ===============================
 import Header from "./header";
 import Footer from "./footer";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./appSidebar";
 
 import React, { ReactNode } from "react";
@@ -19,10 +19,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto">
-          <SidebarTrigger />
-          {children}
-        </main>
+
+    
+        <main className="flex-1 overflow-auto bg-gradient-to-br from-gray-900 via-purple-900 to-black">{children}</main>
+
         <Footer />
       </div>
     </SidebarProvider>

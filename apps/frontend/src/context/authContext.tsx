@@ -8,7 +8,8 @@ import React, {
   ReactNode,
 } from "react";
 import SessionExpiredModal from "@/components/SessionExpiredModal"; // Asegúrate de importar tu modal correctamente
-import axiosInstance, { setAuthToken } from "@/lib/axiosInstance";
+import axiosInstance from "@/lib/axiosInstance";
+import { setSessionExpiredHandler, setAuthToken } from "@/lib/axiosInstance";
 interface AuthContextType {
   user: string | null;
   token: string | null;
@@ -28,31 +29,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Al cargar, intenta leer token de localStorage
     const savedToken = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
+
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(savedUser);
+      setAuthToken(savedToken); // Inyectar token a Axios
     }
-    setLoading(false);
-  }, []);
 
-  useEffect(() => {
-    // Interceptor global de errores
-    const interceptor = axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          setSessionExpired(true);
-        }
-        return Promise.reject(error);
-      }
-    );
-    return () => {
-      axiosInstance.interceptors.response.eject(interceptor);
-    };
-  }, []);
+    // Configurar handler para sesión expirada (solo una vez al iniciar)
+    setSessionExpiredHandler(() => {
+      setSessionExpired(true);
+     
+    });
+
+    setLoading(false); // Ya terminó de verificar sesión
+  }, []); // 👈 solo se ejecuta al montar
+
 
   const login = (user: string, token: string) => {
     setUser(user);
@@ -81,6 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           onClose={() => {
             setSessionExpired(false);
             logout();
+            router.push("/login");
           }}
         />
       )}

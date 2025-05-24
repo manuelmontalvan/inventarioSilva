@@ -1,15 +1,17 @@
-
 // tailwind.config.ts
 import type { Config } from "tailwindcss";
 
+
 const config: Config = {
+ 
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
-    "// opcional según tu estructura",   
-     "./node_modules/@heroui/**/*.{js,ts,jsx,tsx}",
+    "// opcional según tu estructura",
+    "./node_modules/@heroui/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -18,7 +20,6 @@ const config: Config = {
       },
     },
   },
- 
 };
 
 export default config;

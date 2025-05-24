@@ -1,5 +1,4 @@
 import { Warehouse, LayoutDashboard, Settings, User } from "lucide-react";
-
 import {
   Sidebar,
   SidebarContent,
@@ -7,15 +6,20 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { ChevronDown } from "lucide-react";
-
 import Link from "next/link";
 
+interface SidebarItem {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+  hasChildren?: boolean;
+}
+
 // Menu items.
-const items = [
+const items:SidebarItem[] = [
   {
     title: "Inventario",
     url: "/dashboard",
@@ -25,14 +29,13 @@ const items = [
     title: "Usuarios",
     url: "/dashboard/users",
     icon: User,
- 
   },
   {
     title: "Productos",
     url: "#",
     icon: Warehouse,
+    hasChildren: true,
   },
-
   {
     title: "Settings",
     url: "#",
@@ -47,7 +50,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <Link href="/login">
             <SidebarGroupLabel className="cursor-pointer text-lg font-semibold text-purple-600 dark:text-purple-400 px-4 py-2 rounded-md bg-purple-100 dark:bg-purple-950 shadow-sm tracking-wide uppercase hover:bg-purple-200 dark:hover:bg-purple-900 transition">
-              Ferreteria Silva
+              Ferretería Silva
             </SidebarGroupLabel>
           </Link>
 
@@ -55,13 +58,14 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url} className="flex items-center gap-2">
-                      <item.icon />
-                      <span>{item.title}</span>
-                         <ChevronDown className="ml-auto" />
-                    </Link>
-                  </SidebarMenuButton>
+                  <Link
+                    href={item.url}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-0"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.title}</span>
+                     {item.hasChildren && <ChevronDown className="ml-auto w-4 h-4" />}
+                  </Link>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
