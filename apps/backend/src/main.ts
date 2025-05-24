@@ -12,6 +12,10 @@ async function bootstrap() {
       transform: true, // transforma payload a instancias de DTO
     }),
   );
+   app.enableCors({
+    origin: 'http://localhost:3000', // Cambia si tu frontend está en otro dominio o puerto
+    credentials: true,
+  });
   app.setGlobalPrefix('api');
   await app.listen(process.env.PORT ?? 3001);
 }

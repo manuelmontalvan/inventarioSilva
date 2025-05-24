@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/user.module';
 import { RolesModule } from './users/roles/roles.module';
 import { RolesSeed } from './users/roles/roles.seed';
+import { UserSeed } from './users/user.seed';
 
 @Module({
   imports: [
@@ -38,6 +39,6 @@ import { RolesSeed } from './users/roles/roles.seed';
     UsersModule,
     RolesModule,
   ],
-  providers: [RolesSeed],
+  providers: [RolesSeed, UserSeed],
 })
 export class AppModule {}

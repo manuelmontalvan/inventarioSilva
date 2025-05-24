@@ -3,6 +3,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,17 +21,21 @@ export class AuthService {
   }
 
  async login(user: any) {
-  const payload = { sub: user.id, email: user.email, role: user.role.nombre };
+  const payload = { sub: user.id, email: user.email, role: user.role?.name, };
   const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
   const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
   // Guarda el refreshToken en la base de datos
-  await this.usersService.updateRefreshToken(user.id, refreshToken);
-
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  await this.usersService.updateRefreshToken(user.id, hashedRefreshToken);
+    
+  // ACTUALIZA EL CAMPO lastLogin
+  await this.usersService.update(user.id, { lastLogin: new Date() });
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
   };
 }
+
 
 }

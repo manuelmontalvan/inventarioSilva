@@ -1,9 +1,21 @@
-import { Controller, Post, Request, UseGuards, Body, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Request,
+  Req,
+  UseGuards,
+  Body,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from '../common/guards/local-auth.guard';
+
+import { NotFoundException } from '@nestjs/common/exceptions';
+
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { LocalAuthGuard } from '../common/guards/local-auth.guard';
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -27,7 +39,7 @@ export class AuthController {
         throw new UnauthorizedException('Refresh token inválido');
       }
 
-      const payload = { sub: user.id, email: user.email, role: user.role.name};
+      const payload = { sub: user.id, email: user.email, role: user.role.name };
       return {
         access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
       };
@@ -35,5 +47,19 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token inválido');
     }
   }
+  @UseGuards(JwtAuthGuard)
+@Get('perfil')
+async getProfile(@Request() req) {
+  const userId = req.user.id;
+  const user = await this.usersService.findByIdWithRelations(userId); // Nueva función que verás abajo
+
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
+  }
+
+  // Opcional: quitar contraseña del response
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
 }
 
+}

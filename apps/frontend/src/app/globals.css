@@ -1,10 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* globals.css */
 
+
+/* globals.css */
 
 @tailwind utilities;
 
+@plugin './hero.ts';
+@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}' ;
+@custom - variante oscura ( & : es ( . dark * ) ) ; 
 /* Aquí puedes añadir estilos globales personalizados si lo deseas */
 html,
 body {
@@ -15,7 +19,6 @@ body {
 a {
   @apply text-blue-600 hover:underline;
 }
-
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,6 +61,30 @@ a {
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
+@layer base {
+  :root {
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
 
 :root {
   --radius: 0.625rem;
