@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { UserI } from "@/types/user";
-import { getUsers } from "@/lib/api";
+import { getUsers } from "@/lib/api/user";
 import UserTable from "@/components/userModal/userTable";
 import CreateUserModal from "@/components/userModal/createUserModal";
 import EditUserModal from "@/components/userModal/editUserModal";
@@ -66,14 +66,15 @@ export default function AdminPage() {
   });
  
   const handleBulkDelete = async () => {
-    const token = localStorage.getItem("token");
+  
 
     await Promise.all(
       selectedUsers.map((id) =>
         fetch(`http://localhost:3001/api/users/${id}`, {
           method: "DELETE",
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
+            
           },
         })
       )

@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/user.module';
 import { RolesModule } from './users/roles/roles.module';
 import { RolesSeed } from './users/roles/roles.seed';
 import { UserSeed } from './users/user.seed';
-
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './products/categories/categories.module';
 import { BrandsModule } from './products/brands/brands.module';

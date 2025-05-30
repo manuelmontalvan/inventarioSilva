@@ -1,3 +1,4 @@
+import {Role} from  "./role"
 export interface UserI {
   id: number;
   name: string;
@@ -9,7 +10,4 @@ export interface UserI {
   lastLogin: string;
   password?: string;
 }
-export interface Role {
-  id: number;
-  name: string;
-}
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { Role } from "@/types/user";
+import { Role } from "@/types/role";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@heroui/button";
-
+import { addToast } from "@heroui/react";
 import { UserI } from "@/types/user";
 
 const formSchema = z.object({
@@ -82,8 +82,7 @@ export default function EditUserModal({
         password: "",
         hiredDate: user.hiredDate?.split("T")[0],
         roleId: user.role?.id,
-      isActive: Boolean(user.isActive),
-
+        isActive: Boolean(user.isActive),
       });
     }
   }, [user, form]);
@@ -105,12 +104,6 @@ export default function EditUserModal({
   const onSubmit = async (values: FormValues): Promise<void> => {
     if (!user) return;
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-
     // Construimos el payload copiando valores
     const payload: any = {
       ...values,
@@ -128,9 +121,9 @@ export default function EditUserModal({
     try {
       const res = await fetch(`http://localhost:3001/api/users/${user.id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -141,6 +134,11 @@ export default function EditUserModal({
         console.error("Respuesta (texto):", text);
         return;
       }
+      addToast({
+                  title: "Usuario actualizado",
+                  description: "El usuario se ha actualizado exitosamente.",                 
+                  color: "success",
+                });
 
       onUpdated();
       onClose();

@@ -2,14 +2,11 @@
 import { UserI } from "@/types/user";
 
 export const getUsers = async (): Promise<UserI[]> => {
-  const token = localStorage.getItem("token");
 
-  if (!token) throw new Error("No se encontró el token");
 
   const res = await fetch("http://localhost:3001/api/users", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+   credentials: "include",
+   
   });
 
    if (!res.ok) {

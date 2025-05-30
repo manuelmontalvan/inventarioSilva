@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -6,7 +6,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Role } from './roles/role.entity';
 import * as bcrypt from 'bcrypt';
-import { BadRequestException } from '@nestjs/common/exceptions/bad-request.exception';
 
 @Injectable()
 export class UsersService {
@@ -29,7 +28,7 @@ export class UsersService {
       email: dto.email,
     });
     if (existingUser) {
-      throw new BadRequestException('email ya en uso');
+      throw new BadRequestException('Email ya en uso');
     }
 
     if (!dto.roleId) {
@@ -39,7 +38,6 @@ export class UsersService {
     const role = await this.rolesRepository.findOneBy({ id: dto.roleId });
     if (!role) throw new NotFoundException('Rol no encontrado');
 
-    // Hashear la contraseña antes de guardar
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = this.usersRepository.create({
@@ -54,10 +52,10 @@ export class UsersService {
 
     const savedUser = await this.usersRepository.save(user);
 
-    // Excluir la contraseña de la respuesta
     const { password, ...userWithoutPassword } = savedUser;
     return userWithoutPassword;
   }
+
   private async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt();
     return bcrypt.hash(password, salt);
@@ -73,17 +71,26 @@ export class UsersService {
 
     if (dto.name) user.name = dto.name;
     if (dto.lastname) user.lastname = dto.lastname;
-    if (dto.email) user.email = dto.email;
+
+    if (dto.email && dto.email !== user.email) {
+      const emailExists = await this.usersRepository.findOneBy({ email: dto.email });
+      if (emailExists) throw new BadRequestException('El email ya está en uso');
+      user.email = dto.email;
+    }
+
     if (dto.password) user.password = await this.hashPassword(dto.password);
     if (dto.hiredDate) user.hiredDate = new Date(dto.hiredDate);
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
     if (dto.lastLogin) user.lastLogin = new Date(dto.lastLogin);
+
     if (dto.roleId) {
       const role = await this.rolesRepository.findOneBy({ id: dto.roleId });
       if (role) user.role = role;
     }
 
-    return this.usersRepository.save(user);
+    const updatedUser = await this.usersRepository.save(user);
+    const { password, ...userWithoutPassword } = updatedUser;
+    return userWithoutPassword;
   }
 
   async delete(id: number): Promise<void> {
@@ -96,7 +103,7 @@ export class UsersService {
     return this.usersRepository.find({
       relations: ['role'],
       select: {
-        password: false, // Evita retornar la contraseña
+        password: false,
       },
     });
   }
@@ -109,19 +116,15 @@ export class UsersService {
     if (!user) throw new NotFoundException('Usuario no encontrado');
     return user;
   }
-  async updateRefreshToken(userId: number, token: string): Promise<void> {
+
+  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
     await this.usersRepository.update(userId, { refreshToken: token });
   }
+
   async findByIdWithRelations(id: number) {
     return this.usersRepository.findOne({
       where: { id },
-      relations: ['role'], // Asegúrate de tener la relación de rol en tu entidad
-    });
-  }
-  async findByIdWithRole(id: number) {
-    return this.usersRepository.findOne({
-      where: { id },
-      relations: ['role'], // Asegúrate de tener la relación de rol en tu entidad
+      relations: ['role'],
     });
   }
 }

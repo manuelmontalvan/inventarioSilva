@@ -1,12 +1,12 @@
 "use client";
-
+import axiosInstance, { setIsLoggingOut } from "@/lib/axiosInstance";
 import React, { useState, useEffect, useRef } from "react";
 import { fetchCurrentUser } from "@/services/userService";
 import { ChevronDown } from "lucide-react";
 import { ThemeSwitcher } from "../ui/themeSwitcher";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { addToast } from "@heroui/toast";
-
+import { useAuth } from "@/context/authContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,10 +19,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const Header = () => {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(
+  const [user, setUser ] = useState<{ name: string; email: string } | null>(
     null
   );
   const avatarRef = useRef<HTMLDivElement>(null);
+  const { logout } = useAuth();
 
   useEffect(() => {
     const getUser = async () => {
@@ -43,10 +44,7 @@ const Header = () => {
     getUser();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login"; // Redirige al login
-  };
+
 
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-16 flex items-center justify-between px-4">
@@ -90,9 +88,7 @@ const Header = () => {
             <DropdownMenuItem>Perfil</DropdownMenuItem>
             <DropdownMenuItem>Configuración</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              Cerrar sesión
-            </DropdownMenuItem>
+             <DropdownMenuItem onClick={logout}>Cerrar sesión</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}

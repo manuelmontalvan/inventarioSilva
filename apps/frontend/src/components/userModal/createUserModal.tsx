@@ -80,12 +80,13 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      const token = localStorage.getItem("token");
+      
       const res = await fetch("http://localhost:3001/api/users", {
         method: "POST",
+         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          
         },
         body: JSON.stringify(data),
       });

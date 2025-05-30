@@ -7,6 +7,7 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 import { Button } from "@heroui/react";
+import { addToast } from "@heroui/react";
 
 interface Props {
   open: boolean;
@@ -22,31 +23,50 @@ export default function DeleteUserModal({
   onClose,
   user,
   onDelete,
-   multiple = false, // <- NUEVO
+  multiple = false, // <- NUEVO
   onConfirm,
 }: Props) {
-  const handleDelete = async () => {
+const handleDelete = async () => {
+  try {
     if (multiple) {
-    await onConfirm(); // ← Aquí ejecutas la lógica del padre para eliminar múltiples
-    onClose();
-    return;
-  }
-    const token = localStorage.getItem("token");
+      await onConfirm();
+      onClose();
+      return;
+    }
 
     if (!user) return;
-    await fetch(`http://localhost:3001/api/users/${user.id}`, {
+
+    const res = await fetch(`http://localhost:3001/api/users/${user.id}`, {
       method: "DELETE",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
     });
-    onDelete(); 
+
+    if (!res.ok) {
+      throw new Error("Error al eliminar el usuario");
+    }
+
+    addToast({
+      title: "Usuario eliminado",
+      description: "El usuario se ha eliminado exitosamente.",
+      color: "success",
+    });
+
+    onDelete();
     onClose();
-  };
+  } catch (error: any) {
+    addToast({
+      title: "Error",
+      description: error.message || "Ocurrió un error al eliminar",
+      color: "danger",
+    });
+  }
+};
 
- if (!open) return null;
 
+  if (!open) return null;
 
   return (
     <Modal backdrop="blur" isOpen={open} onClose={onClose}>

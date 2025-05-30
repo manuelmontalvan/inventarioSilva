@@ -22,6 +22,10 @@ export class UnitsService {
   findOne(id: string) {
     return this.repo.findOne({ where: { id } });
   }
+  async findByName(name: string): Promise<UnitOfMeasure | null> {
+  return this.repo.findOne({ where: { name } });
+}
+
 
   async update(id: string, dto: UpdateUnitOfMeasureDto) {
     await this.repo.update(id, dto);

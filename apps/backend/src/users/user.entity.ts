@@ -35,8 +35,8 @@ export class User {
   @JoinColumn({ name: 'roleId' })
   role: Role;
 
-  @Column({ nullable: true })
-  refreshToken?: string;
+  @Column({ type: 'text', nullable: true })
+  refreshToken?: string | null;
 
   @IsOptional()
   @CreateDateColumn({ name: 'created_at' })
@@ -49,7 +49,7 @@ export class User {
   @IsOptional()
   @Column({ default: true })
   isActive: boolean;
-  
+
   @IsOptional()
   @Column({ name: 'hired_date', type: 'date', nullable: true })
   hiredDate: Date;

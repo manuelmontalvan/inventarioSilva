@@ -32,36 +32,27 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+ 
 
-    try {
-      if (!email || !password) throw new Error("Por favor, completa todos los campos.");
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError(null);
 
-      const response = await fetch("http://localhost:3001/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Credenciales incorrectas");
-      }
-
-      const data = await response.json();
-      const token = data.access_token;
-      login(email, token);
-      localStorage.setItem("token", token);
-      router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión. Inténtalo de nuevo.");
-    } finally {
-      setIsLoading(false);
+  try {
+    if (!email || !password) {
+      throw new Error("Por favor, completa todos los campos.");
     }
-  };
+
+    await login(email, password); // ✅ Llama al login centralizado
+    router.push("/dashboard");
+  } catch (err: any) {
+    setError(err.message || "Error al iniciar sesión. Inténtalo de nuevo.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handlePasswordRecovery = async () => {
     if (!recoveryEmail) return;
@@ -71,6 +62,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: recoveryEmail }),
       });
+      
       alert("Se ha enviado un correo de recuperación si el email existe.");
     } catch (err) {
       alert("Error al enviar la solicitud.");
@@ -90,7 +82,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <Label htmlFor="email" className="text-white">Email</Label>
+          <Label htmlFor="email" className="text-white">
+            Email
+          </Label>
           <Input
             type="email"
             id="email"
@@ -103,7 +97,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         </div>
 
         <div>
-          <Label htmlFor="password" className="text-white">Contraseña</Label>
+          <Label htmlFor="password" className="text-white">
+            Contraseña
+          </Label>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
@@ -159,7 +155,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               <DialogHeader>
                 <DialogTitle>Recuperar contraseña</DialogTitle>
                 <DialogDescription>
-                  Ingresa tu correo y te enviaremos instrucciones para restablecer tu contraseña.
+                  Ingresa tu correo y te enviaremos instrucciones para
+                  restablecer tu contraseña.
                 </DialogDescription>
               </DialogHeader>
               <Input

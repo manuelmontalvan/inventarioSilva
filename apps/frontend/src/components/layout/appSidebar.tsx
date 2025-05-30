@@ -1,4 +1,19 @@
-import { Warehouse, LayoutDashboard, Settings, User } from "lucide-react";
+"use client";
+
+import {
+  Warehouse,
+  LayoutDashboard,
+  Settings,
+  User,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  UserCog,
+  Hammer,
+  Layers,
+  Scale,
+  Tag
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -8,33 +23,68 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 interface SidebarItem {
   title: string;
   url: string;
   icon: React.ElementType;
   hasChildren?: boolean;
+  children?: SidebarItem[];
 }
 
-// Menu items.
-const items:SidebarItem[] = [
+const items: SidebarItem[] = [
   {
-    title: "Inventario",
+    title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "Usuarios",
-    url: "/dashboard/users",
-    icon: User,
+    title: "Usuarios y roles",
+    url: "#",
+    icon: UserCog,
+    hasChildren: true,
+    children: [
+      { 
+        title: "Usuario",
+        url: "/users",
+        icon: User,
+      },
+      {
+        title: "Rol",
+        url: "/roles",
+        icon: ShieldCheck,
+      },
+    ],
   },
   {
-    title: "Productos",
+    title: "Inventario",
     url: "#",
     icon: Warehouse,
     hasChildren: true,
+     children: [
+      { 
+        title: "Products",
+        url: "/products",
+        icon: Hammer,
+      },
+      {
+        title: "Marca",
+        url: "/products/brand",
+        icon: Tag,
+      },
+        { 
+        title: "Categoria",
+        url: "/products/categories",
+        icon: Layers,
+      },
+      {
+        title: "Unidad de medida ",
+        url: "/products/unitOfMeasure",
+        icon: Scale,
+      },
+    ]
   },
   {
     title: "Settings",
@@ -44,6 +94,14 @@ const items:SidebarItem[] = [
 ];
 
 export function AppSidebar() {
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
+
+  const toggleMenu = (title: string) => {
+    setOpenMenus((prev) =>
+      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    );
+  };
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -56,18 +114,47 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <Link
-                    href={item.url}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-0"
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.title}</span>
-                     {item.hasChildren && <ChevronDown className="ml-auto w-4 h-4" />}
-                  </Link>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isOpen = openMenus.includes(item.title);
+                return (
+                  <div key={item.title}>
+                    <SidebarMenuItem>
+                      <div
+                        onClick={() =>
+                          item.hasChildren ? toggleMenu(item.title) : null
+                        }
+                        className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-0 cursor-pointer w-full"
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span>{item.title}</span>
+                        {item.hasChildren && item.children?.length ? (
+                          isOpen ? (
+                            <ChevronDown className="ml-auto w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="ml-auto w-4 h-4" />
+                          )
+                        ) : null}
+                      </div>
+                    </SidebarMenuItem>
+
+                    {/* Submenú */}
+                    {isOpen && item.children?.length && (
+                      <div className="ml-6 mt-1 space-y-1">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.title}
+                            href={child.url}
+                            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                          >
+                            <child.icon className="w-4 h-4" />
+                            {child.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

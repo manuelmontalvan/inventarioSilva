@@ -21,6 +21,6 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       
       throw new UnauthorizedException('Credenciales incorrectas');
     }
-    return this.usersService.findByIdWithRole(user.id);
+    return this.usersService.findByIdWithRelations(user.id);
   }
 }
