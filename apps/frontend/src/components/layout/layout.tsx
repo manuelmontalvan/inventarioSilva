@@ -21,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <Header />
 
     
-        <main className="flex-1 overflow-auto bg-gradient-to-br from-gray-900 via-purple-900 to-black">{children}</main>
+        <main className="flex-1 overflow-auto ">{children}</main>
 
         <Footer />
       </div>

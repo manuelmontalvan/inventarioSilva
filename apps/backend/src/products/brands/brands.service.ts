@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brand } from '../entities/brand.entity';
-import { CreateBrandDto } from '../dtos/brand/create-brand.dto';
-import { UpdateBrandDto } from '../dtos/brand/update-brand.dto';
+import { CreateBrandDto } from './dto/create-brand.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class BrandsService {
@@ -29,7 +30,20 @@ export class BrandsService {
     return this.findOne(id);
   }
 
-  remove(id: string) {
-    return this.repo.delete(id);
+ async remove(id: string) {
+  try {
+    const result = await this.repo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException('Marca no encontrada');
+    }
+    return; // o simplemente return null;
+  } catch (error) {
+    if (error.code === '23503') {
+      // Código de error de Postgres: restricción de clave foránea
+      throw new BadRequestException('No se puede eliminar la marca porque tiene productos asociados.');
+    }
+    throw new BadRequestException('Error al eliminar la marca');
   }
+
+}
 }

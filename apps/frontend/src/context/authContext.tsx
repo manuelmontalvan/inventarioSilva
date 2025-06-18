@@ -12,6 +12,8 @@ import axiosInstance, { setSessionExpiredHandler } from "@/lib/axiosInstance";
 import { setIsLoggingOut } from "@/lib/axiosInstance";
 interface User {
   id: number;
+  name: string; 
+  lastname: string;
   email: string;
   role: string;
 }

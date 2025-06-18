@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (req: Request) => {
-          this.logger.log(`Cookies en request: ${JSON.stringify(req.cookies)}`);
+          //this.logger.log(`Cookies en request: ${JSON.stringify(req.cookies)}`);
           return req.cookies?.token;
         },
       ]),

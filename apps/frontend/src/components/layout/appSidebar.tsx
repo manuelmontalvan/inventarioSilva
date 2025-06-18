@@ -12,7 +12,15 @@ import {
   Hammer,
   Layers,
   Scale,
-  Tag
+  Tag,
+  PackagePlus,
+  PackageCheck,
+  Repeat,
+  LineChart,
+  MapPin,
+  ShoppingCart,
+  Handshake,
+  Receipt
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,7 +54,7 @@ const items: SidebarItem[] = [
     icon: UserCog,
     hasChildren: true,
     children: [
-      { 
+      {
         title: "Usuario",
         url: "/users",
         icon: User,
@@ -59,12 +67,12 @@ const items: SidebarItem[] = [
     ],
   },
   {
-    title: "Inventario",
+    title: "Productos",
     url: "#",
     icon: Warehouse,
     hasChildren: true,
-     children: [
-      { 
+    children: [
+      {
         title: "Products",
         url: "/products",
         icon: Hammer,
@@ -74,7 +82,7 @@ const items: SidebarItem[] = [
         url: "/products/brand",
         icon: Tag,
       },
-        { 
+      {
         title: "Categoria",
         url: "/products/categories",
         icon: Layers,
@@ -84,12 +92,53 @@ const items: SidebarItem[] = [
         url: "/products/unitOfMeasure",
         icon: Scale,
       },
-    ]
+      {
+        title: "Localidades",
+        url: "/products/localities",
+        icon: MapPin,
+      },
+    ],
+  },
+   {
+    title: "Gestion de compras",
+    url: "#",
+    icon: ShoppingCart,
+    hasChildren: true,
+    children: [
+      {
+        title: "Registro de compras",
+        url: "/purchases",
+        icon: Receipt,
+      },
+      {
+        title: "Proveedores",
+        url: "/purchases/suppliers",
+        icon: Handshake,
+      },
+    ],
   },
   {
-    title: "Settings",
+    title: "Gestion Bodega",
     url: "#",
-    icon: Settings,
+    icon: Repeat,
+    hasChildren: true,
+    children: [
+      {
+        title: "Ingreso de productos",
+        url: "/purchases",
+        icon: PackagePlus,
+      },
+      {
+        title: "Egreso de productos",
+        url: "/sales",
+        icon: PackageCheck,
+      },
+    ],
+  },
+  {
+    title: "Analisis Predictivo",
+    url: "/analytics",
+    icon: LineChart,
   },
 ];
 
@@ -116,25 +165,32 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => {
                 const isOpen = openMenus.includes(item.title);
+
                 return (
                   <div key={item.title}>
                     <SidebarMenuItem>
-                      <div
-                        onClick={() =>
-                          item.hasChildren ? toggleMenu(item.title) : null
-                        }
-                        className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-0 cursor-pointer w-full"
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.title}</span>
-                        {item.hasChildren && item.children?.length ? (
-                          isOpen ? (
+                      {item.hasChildren && item.children?.length ? (
+                        <div
+                          onClick={() => toggleMenu(item.title)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-0 cursor-pointer w-full"
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                          {isOpen ? (
                             <ChevronDown className="ml-auto w-4 h-4" />
                           ) : (
                             <ChevronRight className="ml-auto w-4 h-4" />
-                          )
-                        ) : null}
-                      </div>
+                          )}
+                        </div>
+                      ) : (
+                        <Link
+                          href={item.url}
+                          className="flex items-center gap-2 px-3 py-2 rounded-md no-underline text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition w-full"
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                        </Link>
+                      )}
                     </SidebarMenuItem>
 
                     {/* Submenú */}

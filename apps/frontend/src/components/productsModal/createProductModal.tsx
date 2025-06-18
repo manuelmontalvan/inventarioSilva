@@ -1,7 +1,5 @@
 "use client";
-import { ProductI } from "@/types/product";
-import { useEffect, useState } from "react";
-import { Button } from "@heroui/button";
+
 import {
   Modal,
   ModalContent,
@@ -9,12 +7,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormField,
@@ -23,301 +15,413 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@heroui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Select, SelectItem } from "@heroui/select";
+import { Switch } from "@heroui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState } from "react";
 import { addToast } from "@heroui/react";
-import { createProduct } from "@/lib/api/products";
+import { z } from "zod";
+import { useWatch } from "react-hook-form";
 import { ProductSchema } from "@/lib/schemas/productSchema";
 
-interface Props {
+
+
+
+type ProductFormValues = z.infer<typeof ProductSchema>;
+
+/* ----------  Props del Modal  ---------- */
+interface CreateProductModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated: (product: ProductI) => void;
+  onSuccess: () => void;
 }
 
-interface Category {
-  id: string;  // <--- id como string
-  name: string;
-}
-interface Brand {
-  id: string;  // <--- id como string
-  name: string;
-}
-interface UnitOfMeasure {
-  id: string;  // <--- id como string
-  name: string;
-}
-
-export default function CreateProductModal({
+export const CreateProductModal = ({
   open,
   onClose,
-  onCreated,
-}: Props) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
-
-  const form = useForm<z.infer<typeof ProductSchema>>({
+  onSuccess,
+}: CreateProductModalProps) => {
+  /* ----------  React-Hook-Form  ---------- */
+  const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductSchema),
     defaultValues: {
       name: "",
       description: "",
-      barcode: "",
-      purchase_price: 0,
-      sale_price: 0,
-      current_quantity: 0,
+      categoryId: "",
+      brandId: "",
+      internal_code: "",
+      image: "",
       min_stock: 0,
       max_stock: 0,
-      warehouse_location: "",
-      profit_margin: 0,
-      taxes: 0,
-      discount: 0,
-      isActive: true,
+      localityId: "",
+      unitOfMeasureId: "",
+      purchase_price: 0,
+      sale_price: 0,
       isPerishable: false,
       expiration_date: "",
       notes: "",
-      categoryId: "",
-      brandId: "",
-      unitOfMeasureId: "",
     },
   });
 
-  const fetchData = async () => {
-    try {
-      const [catRes, brandRes, unitRes] = await Promise.all([
-        fetch("http://localhost:3001/api/categories"),
-        fetch("http://localhost:3001/api/brands"),
-        fetch("http://localhost:3001/api/units"),
-      ]);
+  /* ----------  Catálogos  ---------- */
+  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [localities, setLocalities] = useState<any[]>([]);
+  const selectedCategoryId = useWatch({
+    control: form.control,
+    name: "categoryId",
+  });
 
-      const [catData, brandData, unitData] = await Promise.all([
-        catRes.json(),
-        brandRes.json(),
-        unitRes.json(),
-      ]);
+  const [filteredLocalities, setFilteredLocalities] = useState<any[]>([]);
 
-      // Asumimos que vienen con id:string desde API
-      setCategories(catData);
-      setBrands(brandData);
-      setUnits(unitData);
-    } catch (error) {
-      addToast({
-        title: "Error",
-        description: "No se pudieron cargar las listas desplegables.",
-        color: "danger",
-      });
+  /* ----------  Fetch catálogos  ---------- */
+  useEffect(() => {
+    if (!open) {
+      // Cuando se cierra el modal, resetea formulario
+      form.reset();
+      return;
     }
-  };
 
-  useEffect(() => {
-    if (open) fetchData();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) form.reset();
-  }, [open]);
-
-  const onSubmit = async (data: z.infer<typeof ProductSchema>) => {
-    try {
-      // expiration_date a undefined si vacía
-      if (!data.expiration_date) {
-        data.expiration_date = undefined;
+    const fetchData = async () => {
+      try {
+        const [catRes, brandRes, unitRes, locRes] = await Promise.all([
+          fetch("http://localhost:3001/api/categories", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/brands", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/units", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/localities", {
+            credentials: "include",
+          }),
+        ]);
+        if (!catRes.ok || !brandRes.ok || !unitRes.ok || !locRes.ok)
+          throw new Error();
+        setCategories(await catRes.json());
+        setBrands(await brandRes.json());
+        setUnits(await unitRes.json());
+        setLocalities(await locRes.json());
+      } catch {
+        addToast({
+          title: "Error",
+          description: "No se pudieron cargar categorías, marcas o unidades",
+          variant: "bordered",
+          color: "danger",
+        
+        });
       }
-      const newProduct = await createProduct(data);
+    };
+
+    fetchData();
+  }, [open, form]);
+
+  useEffect(() => {
+    const filtered = localities.filter(
+      (loc) => loc.category?.id === selectedCategoryId
+    );
+    setFilteredLocalities(filtered);
+    // Limpia selección previa si no es válida
+    if (!filtered.some((l) => l.id === form.getValues("localityId"))) {
+      form.setValue("localityId", "");
+    }
+  }, [selectedCategoryId, localities]);
+  /* ----------  Envío del formulario  ---------- */
+  const onSubmit = async (data: ProductFormValues) => {
+    setLoading(true);
+    try {
+      const cleaned = {
+        ...data,
+        expiration_date: data.expiration_date || undefined,
+      };
+
+      const res = await fetch("http://localhost:3001/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(cleaned),
+      });
+      const responseBody = await res.json();
+console.log("Respuesta del servidor:", responseBody);
+      if (!res.ok) throw new Error();
+
       addToast({
         title: "Producto creado",
-        description: "El producto ha sido registrado correctamente.",
+        description: "El producto fue registrado exitosamente",
+        variant: "bordered",
         color: "success",
       });
-      onCreated(newProduct);
+
+      onSuccess();
       onClose();
-    } catch (error: any) {
+      form.reset(); // ← Limpia al crear
+    } catch {
       addToast({
         title: "Error",
-        description: error.message || "Error al crear producto",
+        description: "No se pudo crear el producto",
+        variant: "bordered",
         color: "danger",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
+  /* ----------  Helper: limpia '0' al focus  ---------- */
+  const clearZeroOnFocus = (field: any) => () => {
+    if (field.value === 0) field.onChange("");
+  };
+
+  const isPerishable = form.watch("isPerishable");
+
+  /* ----------  Render  ---------- */
   return (
-    <Modal isOpen={open} onClose={onClose} backdrop="blur" isDismissable={false}>
-      <ModalContent
-        className="bg-gradient-to-br from-gray-900 via-purple-900 to-black 
-          border border-white/10 text-white shadow-lg max-w-full sm:max-w-3xl mx-4 sm:mx-auto max-h-[80vh] overflow-auto"
-      >
-        <ModalHeader>
-          <div className="flex flex-col items-center text-center">
-            <h1 className="text-white text-2xl flex items-center gap-2 justify-center">
-              Crear Producto
-            </h1>
-            <p className="text-gray-300 mt-1 max-w-md">
-              Completa los datos para registrar un nuevo producto.
-            </p>
-          </div>
-        </ModalHeader>
+    <Modal
+      isOpen={open}
+      onOpenChange={onClose}
+      size="5xl"
+      scrollBehavior="inside"
+      backdrop="blur"
+    >
+      <ModalContent className="bg-white dark:bg-gray-600 dark:text-white">
+        <ModalHeader>Crear nuevo producto</ModalHeader>
         <ModalBody>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Campos de texto, números y checkbox (igual que tu código original) */}
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 p-2 md:p-4"
+            >
+              {/* Nombre */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Nombre *</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Descripción */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Categoría */}
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoría *</FormLabel>
+                    <Select
+                      popoverProps={{
+                        className: "dark:bg-neutral-800 dark:text-white",
+                      }}
+                      selectedKeys={
+                        field.value ? new Set([field.value]) : new Set()
+                      }
+                      onSelectionChange={(keys) =>
+                        field.onChange(Array.from(keys)[0] || "")
+                      }
+                    >
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Marca */}
+              <FormField
+                control={form.control}
+                name="brandId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marca *</FormLabel>
+                    <Select
+                      popoverProps={{
+                        className: "dark:bg-neutral-800 dark:text-white",
+                      }}
+                      selectedKeys={
+                        field.value ? new Set([field.value]) : new Set()
+                      }
+                      onSelectionChange={(keys) =>
+                        field.onChange(Array.from(keys)[0] || "")
+                      }
+                    >
+                      {brands.map((brand) => (
+                        <SelectItem key={brand.id}>{brand.name}</SelectItem>
+                      ))}
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Unidad */}
+              <FormField
+                control={form.control}
+                name="unitOfMeasureId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unidad de medida *</FormLabel>
+                    <Select
+                      popoverProps={{
+                        className: "dark:bg-neutral-800 dark:text-white",
+                      }}
+                      selectedKeys={
+                        field.value ? new Set([field.value]) : new Set()
+                      }
+                      onSelectionChange={(keys) =>
+                        field.onChange(Array.from(keys)[0] || "")
+                      }
+                    >
+                      {units.map((unit) => (
+                        <SelectItem key={unit.id}>{unit.name}</SelectItem>
+                      ))}
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Código interno */}
+              <FormField
+                control={form.control}
+                name="internal_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código interno</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Imagen */}
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Imagen (URL)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Stocks */}
+              {(["min_stock", "max_stock"] as const).map((name) => (
                 <FormField
+                  key={name}
                   control={form.control}
-                  name="name"
+                  name={name}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre</FormLabel>
+                      <FormLabel>
+                        {name === "min_stock"
+                          ? "Stock mínimo *"
+                          : "Stock máximo *"}
+                      </FormLabel>
                       <FormControl>
                         <Input
+                          type="number"
                           {...field}
-                          className="w-full"
-                          placeholder="Nombre del producto"
+                          onFocus={clearZeroOnFocus(field)}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              ))}
 
-                {/* ... otros inputs iguales ... */}
+              {/* Ubicación */}
+              <FormField
+                control={form.control}
+                name="localityId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ubicación en almacén *</FormLabel>
+                    <Select
+                      popoverProps={{
+                        className: "dark:bg-neutral-800 dark:text-white",
+                      }}
+                      selectedKeys={
+                        field.value ? new Set([field.value]) : new Set()
+                      }
+                      onSelectionChange={(keys) =>
+                        field.onChange(Array.from(keys)[0] || "")
+                      }
+                      isDisabled={filteredLocalities.length === 0}
+                    >
+                      {filteredLocalities.map((loc) => (
+                        <SelectItem key={loc.id}>{loc.name}</SelectItem>
+                      ))}
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* Select Categoría */}
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoría</FormLabel>
-                      <Select
-                        onValueChange={field.onChange} // Recibe string
-                        value={field.value || ""}
+              {/* Perecedero */}
+              <FormField
+                control={form.control}
+                name="isPerishable"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>¿Es perecedero?</FormLabel>
+                    <FormControl>
+                      <Switch
+                        isSelected={field.value}
+                        onChange={field.onChange}
                       >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecciona una categoría" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        Sí
+                      </Switch>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                {/* Select Marca */}
-                <FormField
-                  control={form.control}
-                  name="brandId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marca</FormLabel>
-                      <Select
-                        onValueChange={field.onChange} // string directo
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecciona una marca" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {brands.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Select Unidad de Medida */}
-                <FormField
-                  control={form.control}
-                  name="unitOfMeasureId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unidad de medida</FormLabel>
-                      <Select
-                        onValueChange={field.onChange} // string directo
-                        value={field.value || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecciona una unidad" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {units.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Checkbox isActive */}
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                          className="h-4 w-4 rounded border border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Activo</FormLabel>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Checkbox isPerishable */}
-                <FormField
-                  control={form.control}
-                  name="isPerishable"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                          className="h-4 w-4 rounded border border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal">Perecedero</FormLabel>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Expiration Date */}
+              {/* Fecha de vencimiento */}
+              {isPerishable && (
                 <FormField
                   control={form.control}
                   name="expiration_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de expiración</FormLabel>
+                      <FormLabel>Fecha de vencimiento</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -325,42 +429,36 @@ export default function CreateProductModal({
                     </FormItem>
                   )}
                 />
+              )}
 
-                {/* Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Notas</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Notas adicionales" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Notas */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Notas</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <ModalFooter className="flex justify-end space-x-3">
-             <div className="flex flex-wrap justify-end gap-2 mt-4">
-              <Button
-                onPress={onClose}
-                variant="bordered"
-                color="danger"
-                className="flex-1 sm:flex-none"
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="bordered"
-                color="success"
-                onPress={() => form.handleSubmit(onSubmit)()}
-                className="flex-1 sm:flex-none"
-              >
-                Crear
-              </Button>
-            </div>
+              {/* Footer */}
+              <ModalFooter className="md:col-span-2">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  color="success"
+                  variant="bordered"
+                >
+                  {loading ? "Creando..." : "Crear"}
+                </Button>
+                <Button onPress={onClose} color="danger" variant="bordered">
+                  Cancelar
+                </Button>
               </ModalFooter>
             </form>
           </Form>
@@ -368,4 +466,4 @@ export default function CreateProductModal({
       </ModalContent>
     </Modal>
   );
-}
+};

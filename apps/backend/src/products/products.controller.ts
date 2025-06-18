@@ -1,34 +1,61 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+// src/products/products.controller.ts
+import { Controller, Get, Post, Body, Query,Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto } from './dtos/create-product.dto';
-import { UpdateProductDto } from './dtos/update-product.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorator/roles.decorator';
+import { RoleType } from '../common/enum/roles.enum'; // <-- ¡Este es el import correcto!
+import { Request } from 'express'; // Para el tipado de req
+import { User } from '../users/user.entity'; // Asegúrate de la ruta correcta para tu entidad User
+
 
 @Controller('products')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
-  constructor(private readonly service: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) {}
+
+
 
   @Post()
-  create(@Body() dto: CreateProductDto) {
-    return this.service.create(dto);
+  // Usa RoleType.admin, RoleType.bodeguero para INVENTORY_MANAGER
+  @Roles(RoleType.admin, RoleType.bodeguero)
+  async create(@Body() createProductDto: CreateProductDto, @Req() req: Request) {
+    
+    const user = req.user as User;
+    return this.productsService.create(createProductDto, user);
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
-  }
+  // Usa RoleType.admin, RoleType.bodeguero, RoleType.vendedor
+  @Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)
+  async findAll(@Query('search') search?: string) {
+  return this.productsService.findAll(search);
+}
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  // Usa RoleType.admin, RoleType.bodeguero, RoleType.vendedor
+  @Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)
+  async findOne(@Param('id') id: string) {
+    return this.productsService.findOne(id);
   }
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.service.update(id, dto);
+  @Patch(':id')
+  // Usa RoleType.admin, RoleType.bodeguero
+  @Roles(RoleType.admin, RoleType.bodeguero)
+  async update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto, @Req() req: Request) {
+    const user = req.user as User;
+    return this.productsService.update(id, updateProductDto, user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  // Usa RoleType.admin
+  @Roles(RoleType.admin)
+  async remove(@Param('id') id: string) {
+    return this.productsService.remove(id);
   }
+
+
+
 }

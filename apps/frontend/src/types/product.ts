@@ -1,36 +1,6 @@
 // types/product.ts
-export interface ProductI {
-  id: string;
-  name: string;
-  description?: string;
-  barcode: string;
-  internal_code?: string;
-  image?: string;
-  current_quantity: number;
-  min_stock: number;
-  max_stock: number;
-  warehouse_location?: string;
-  purchase_price: number;
-  sale_price: number;
-  profit_margin: number;
-  taxes: number;
-  discount?: number;
-  entry_date: string;
-  last_updated: string;
-  last_purchase_date?: string;
-  last_sale_date?: string;
-  sales_frequency: number;
-  isActive: boolean;
-  isPerishable: boolean;
-  expiration_date?: string;
-  notes?: string;
-  current_trend?: 'growing' | 'declining' | 'stable';
-created_by?: string;
-  updated_by?: string;
-  category: { id: string; name: string };
-  brand: { id: string; name: string };
-  unit_of_measure: { id: string; name: string };
-}
+import { UserI } from "./user"; // Tu interfaz de usuario
+
 export interface Category {
   id: string;
   name: string;
@@ -46,4 +16,38 @@ export interface UnitOfMeasure {
   id: string;
   name: string;
   abbreviation: string;
+}
+export interface Locality {
+  id: string;
+  name: string;  
+  category: Category;
+}
+export interface ProductI {
+  id: string;
+  name: string;
+  description?: string;
+  category: Category; // Objeto completo debido a eager loading
+  brand: Brand; // Objeto completo
+  internal_code?: string;
+  image?: string;
+  current_quantity: number;
+  min_stock: number;
+  max_stock: number;
+  locality?: Locality; // Objeto completo, puede ser null
+  unit_of_measure: UnitOfMeasure; // Objeto completo
+  purchase_price: number;
+  sale_price: number;
+  profit_margin: number; // Calculado en el backend
+  entry_date: string; // O Date, dependiendo de cómo manejes las fechas (string para ISO)
+  last_updated: string;
+  last_purchase_date?: string;
+  last_sale_date?: string;
+  sales_frequency: number;
+  isActive: boolean;
+  isPerishable: boolean;
+  expiration_date?: string;
+  notes?: string;
+  current_trend?: "growing" | "declining" | "stable";
+  createdBy: UserI; // Objeto completo debido a eager loading
+  updatedBy: UserI; // Objeto completo
 }

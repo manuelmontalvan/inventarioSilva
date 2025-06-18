@@ -1,8 +1,13 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { deleteProduct } from "@/lib/api/products";
+import { deleteProduct } from "@/lib/api/products/products";
 import { ProductI } from "@/types/product";
 import { addToast } from "@heroui/react";
 
@@ -11,8 +16,8 @@ interface Props {
   onClose: () => void;
   product: ProductI | null;
   multiple?: boolean;
-  onConfirm: () => Promise<void>; // Para acción múltiple externa
-  onDelete: () => void; // Callback para notificar que eliminó (refrescar lista)
+  onConfirm?: () => Promise<void>; // opcional
+  onDelete: () => void;
 }
 
 export default function DeleteProductModal({
@@ -23,10 +28,12 @@ export default function DeleteProductModal({
   onConfirm,
   onDelete,
 }: Props) {
+
+
   const handleDelete = async () => {
     try {
       if (multiple) {
-        await onConfirm();
+        await onConfirm?.(); 
         addToast({
           title: "Productos eliminados",
           description: "Los productos seleccionados se eliminaron correctamente.",
@@ -34,7 +41,7 @@ export default function DeleteProductModal({
         });
         onClose();
         return;
-      }
+      }else {
 
       if (!product) return;
 
@@ -48,6 +55,7 @@ export default function DeleteProductModal({
 
       onDelete();
       onClose();
+    }
     } catch (error: any) {
       addToast({
         title: "Error",
@@ -61,16 +69,22 @@ export default function DeleteProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gradient-to-br from-gray-900 via-purple-900 to-black border border-white/10 text-white shadow-xl px-4">
+      <DialogContent
+        className="sm:max-w-md rounded-2xl p-6 border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xl transition-colors"
+      >
         <DialogHeader>
-          <DialogTitle>{multiple ? "Eliminar productos" : "Eliminar producto"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl font-semibold">
+            {multiple ? "Eliminar productos" : "Eliminar producto"}
+          </DialogTitle>
         </DialogHeader>
-        <p className="mb-4">
+
+        <p className="text-sm sm:text-base mt-2 mb-5 leading-relaxed text-gray-600 dark:text-gray-300">
           {multiple
             ? "¿Estás seguro de que deseas eliminar los productos seleccionados?"
             : `¿Estás seguro de que deseas eliminar el producto "${product?.name}"?`}
         </p>
-        <div className="flex justify-end space-x-2">
+
+        <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>

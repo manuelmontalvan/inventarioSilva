@@ -53,4 +53,21 @@ export class User {
   @IsOptional()
   @Column({ name: 'hired_date', type: 'date', nullable: true })
   hiredDate: Date;
+
+    /*
+  // --- Relaciones inversas añadidas ---
+
+  @OneToMany(() => Product, (product) => product.createdBy)
+  createdProducts: Product[]; // Productos creados por este usuario
+
+  @OneToMany(() => Product, (product) => product.updatedBy)
+  updatedProducts: Product[]; // Productos actualizados por este usuario
+
+  @OneToMany(() => ProductPurchase, (purchase) => purchase.registeredBy)
+  registeredPurchases: ProductPurchase[]; // Compras de productos registradas por este usuario
+
+  @OneToMany(() => ProductSale, (sale) => sale.soldBy)
+  soldProducts: ProductSale[]; // Ventas de productos realizadas por este usuario*/
+
+
 }

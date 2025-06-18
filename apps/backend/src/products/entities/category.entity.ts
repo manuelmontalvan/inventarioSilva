@@ -1,6 +1,7 @@
 // src/categories/entities/category.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
+import { Locality } from '../../products/locality/locality.entity';
 
 @Entity('categories')
 export class Category {
@@ -15,4 +16,7 @@ export class Category {
 
   @OneToMany(() => Product, product => product.category)
   products: Product[];
+
+   @OneToMany(() => Locality, locality => locality.category)
+  localities: Locality[];
 }

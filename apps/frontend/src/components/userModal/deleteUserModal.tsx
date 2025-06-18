@@ -26,6 +26,7 @@ export default function DeleteUserModal({
   multiple = false, // <- NUEVO
   onConfirm,
 }: Props) {
+  
 const handleDelete = async () => {
   try {
     if (multiple) {

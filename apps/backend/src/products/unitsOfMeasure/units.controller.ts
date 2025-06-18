@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
 import { UnitsService } from './units.service';
-import { CreateUnitOfMeasureDto } from '../dtos/unitOfMeasure/create-unit-of-measure.dto';
-import { UpdateUnitOfMeasureDto } from '../dtos/unitOfMeasure/update-unit-of-measure.dto';
+import { CreateUnitOfMeasureDto } from '../unitsOfMeasure/dto/create-unit-of-measure.dto';
+import { UpdateUnitOfMeasureDto } from '../unitsOfMeasure/dto/update-unit-of-measure.dto';
 
 @Controller('units')
 export class UnitsController {

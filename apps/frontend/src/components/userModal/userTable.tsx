@@ -215,64 +215,66 @@ export default function UserTable({
               animate="visible"
               exit="exit"
               variants={rowVariants}
-              className="even:bg-gray-800/30 hover:bg-gray-700 cursor-pointer"
-            >
+              className="even:bg-gray-800/30 cursor-pointer"
+              onClick={() => onView(user)}
+           >
               <TableCell>
                 <Checkbox
                   checked={selectedUsers.includes(user.id)}
                   onCheckedChange={(checked) =>
                     handleSelectUser(user.id, Boolean(checked))
                   }
+                   onClick={(e) => e.stopPropagation()}
                 />
               </TableCell>
               {visibleColumns.name && (
                 <TableCell
-                  onClick={() => onView(user)}
-                  className="font-medium text-white"
+                
+                  className="font-medium  hover:bg-gray-700 text-white"
                 >
                   {user.name}
                 </TableCell>
               )}
               {visibleColumns.lastname && (
                 <TableCell
-                  onClick={() => onView(user)}
-                  className="font-medium text-white"
+                 
+                  className="font-medium text-white  hover:bg-gray-700"
                 >
                   {user.lastname}
                 </TableCell>
               )}
               {visibleColumns.email && (
                 <TableCell
-                  onClick={() => onView(user)}
-                  className="text-gray-300"
+             
+                  className="text-gray-300  hover:bg-gray-700"
                 >
                   {user.email}
                 </TableCell>
               )}
               {visibleColumns.role && (
                 <TableCell
-                  onClick={() => onView(user)}
-                  className="text-gray-300"
+             
+                  className="text-gray-300  hover:bg-gray-700"
                 >
                   {user.role.name}
                 </TableCell>
               )}
               {visibleColumns.hiredAt && (
-                <TableCell onClick={() => onView(user)}>
+                <TableCell>
                   {user.hiredDate
                     ? new Date(user.hiredDate).toLocaleDateString()
                     : "—"}
                 </TableCell>
               )}
               {visibleColumns.lastLogin && (
-                <TableCell onClick={() => onView(user)}>
+                <TableCell >
                   {user.lastLogin
                     ? new Date(user.lastLogin).toLocaleString()
                     : "Nunca"}
                 </TableCell>
               )}
               {visibleColumns.isActive && (
-                <TableCell onClick={() => onView(user)}>
+                <TableCell >
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       user.isActive

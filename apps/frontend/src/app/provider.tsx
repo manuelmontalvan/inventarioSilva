@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         toastProps={{
           radius: "full",      
           variant: "bordered",
-          timeout: 6000,          
+          timeout: 5000,          
           
         }}
       />

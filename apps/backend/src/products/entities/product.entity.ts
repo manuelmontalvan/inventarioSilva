@@ -1,13 +1,22 @@
 // src/products/entities/product.entity.ts
 import {
-  Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany,
-  CreateDateColumn, UpdateDateColumn, Index
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  JoinColumn,
 } from 'typeorm';
 import { Category } from './category.entity';
 import { Brand } from './brand.entity';
 import { UnitOfMeasure } from './unit-of-measure.entity';
-import { ProductSale } from './product-sale.entity';
-import { ProductPurchase } from './product-purchase.entity';
+import { ProductSale } from '../../productSales/entities/product-sale.entity';
+import { ProductPurchase } from '../../productPurchase/product-purchase.entity';
+import { User } from '../../users/user.entity';
+import { Locality } from '../locality/locality.entity';
 
 @Entity('products')
 export class Product {
@@ -21,15 +30,26 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @ManyToOne(() => Category, { eager: true })
+  @ManyToOne(() => Category, (category) => category.products, { eager: true })
+  @JoinColumn({ name: 'categoryId' })
   category: Category;
 
-  @ManyToOne(() => Brand, { eager: true })
+  @Column()
+  categoryId: string;
+
+  @ManyToOne(() => Brand, (brand) => brand.products, { eager: true })
+  @JoinColumn({ name: 'brandId' })
   brand: Brand;
 
-  @Column({ unique: true })
-  @Index()
-  barcode: string;
+  @Column()
+  brandId: string;
+
+  @ManyToOne(() => Locality, { eager: true, nullable: true })
+  @JoinColumn({ name: 'localityId' })
+  locality?: Locality;
+
+  @Column({ nullable: true })
+  localityId?: string;
 
   @Column({ nullable: true })
   @Index()
@@ -47,11 +67,14 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   max_stock: number;
 
-  @Column({ nullable: true })
-  warehouse_location?: string;
 
-  @ManyToOne(() => UnitOfMeasure, { eager: true })
+
+  @ManyToOne(() => UnitOfMeasure, (unit) => unit.products, { eager: true })
+  @JoinColumn({ name: 'unitOfMeasureId' })
   unit_of_measure: UnitOfMeasure;
+
+  @Column()
+  unitOfMeasureId: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   purchase_price: number;
@@ -61,12 +84,6 @@ export class Product {
 
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   profit_margin: number;
-
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-  taxes: number;
-
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  discount?: number;
 
   @CreateDateColumn()
   entry_date: Date;
@@ -95,18 +112,30 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @OneToMany(() => ProductSale, sale => sale.product)
+  @OneToMany(() => ProductSale, (sale) => sale.product)
   sales_history: ProductSale[];
 
-  @OneToMany(() => ProductPurchase, purchase => purchase.product)
+  @OneToMany(() => ProductPurchase, (purchase) => purchase.product)
   purchase_history: ProductPurchase[];
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['growing', 'declining', 'stable'],
+    nullable: true,
+  })
   current_trend?: 'growing' | 'declining' | 'stable';
 
-  @Column({ nullable: true })
-  created_by?: string;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'createdById' })
+  createdBy: User;
 
-  @Column({ nullable: true })
-  updated_by?: string;
+  @Column()
+  createdById: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'updatedById' })
+  updatedBy: User;
+
+  @Column()
+  updatedById: number;
 }

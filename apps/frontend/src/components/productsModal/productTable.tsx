@@ -1,13 +1,13 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "@heroui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Trash2 } from "lucide-react";
-import EditProductModal from "./editProductModal";
-import DeleteProductModal from "./deleteProductModal";
-import ViewProductModal from "./viewProductModal";
+
+import { productColumnOptions } from "@/constants/productColumns";
 
 interface ProductTableProps {
   products: ProductI[];
@@ -16,7 +16,7 @@ interface ProductTableProps {
   onDelete: (product: ProductI) => void;
   selectedProducts: string[];
   setSelectedProducts: React.Dispatch<React.SetStateAction<string[]>>;
-  visibleColumns: Record<keyof ProductI, boolean>;
+  visibleColumns: Record<string, boolean>;
 }
 
 export default function ProductTable({
@@ -35,8 +35,7 @@ export default function ProductTable({
 
   const [selected, setSelected] = useState<ProductI | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
+
 
   const requestSort = (key: keyof ProductI) => {
     let direction: "ascending" | "descending" = "ascending";
@@ -46,16 +45,39 @@ export default function ProductTable({
     setSortConfig({ key, direction });
   };
 
-  const getValue = (val: any) => {
+  const getValue = (product: ProductI, key: keyof ProductI) => {
+    const val = product[key];
     if (val === undefined || val === null) return "";
-    if (typeof val === "object" && "name" in val) return val.name;
+
+    if (typeof val === "object") {
+      if ("name" in val) return (val as any).name;
+      return JSON.stringify(val);
+    }
+    
+
+    if (key === "purchase_price" || key === "sale_price") {
+      return `USD $${val}`;
+    }
+
+    if (
+      key === "entry_date" ||
+      key === "last_updated" ||
+      key === "expiration_date"
+    ) {
+      return new Date(val as string).toLocaleDateString();
+    }
+
+    if (typeof val === "boolean") {
+      return val ? "Sí" : "No";
+    }
+
     return val;
   };
 
   const sortedProducts = [...products].sort((a, b) => {
     if (!sortConfig) return 0;
-    const valA = getValue(a[sortConfig.key]);
-    const valB = getValue(b[sortConfig.key]);
+    const valA = getValue(a, sortConfig.key);
+    const valB = getValue(b, sortConfig.key);
     if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;
     if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;
     return 0;
@@ -81,7 +103,7 @@ export default function ProductTable({
     if (!sortConfig && products.length > 0) {
       setSortConfig({ key: "name", direction: "ascending" });
     }
-  }, [products]);
+  }, [products, sortConfig]);
 
   return (
     <div className="p-4 overflow-x-auto">
@@ -90,10 +112,10 @@ export default function ProductTable({
       </div>
 
       <div className="min-w-[1200px]">
-        <table className="w-full text-sm border">
+        <table className="w-full text-sm border border-gray-300">
           <thead>
             <tr>
-              <th className="p-2 border hover:bg-gray-700">
+              <th className="p-2 border hover:bg-gray-50">
                 <Checkbox
                   checked={
                     selectedProducts.length === products.length &&
@@ -104,24 +126,24 @@ export default function ProductTable({
                   }
                 />
               </th>
-              {Object.keys(visibleColumns).map((key) => {
-                const k = key as keyof ProductI;
-                if (!visibleColumns[k]) return null;
+              {productColumnOptions.map(({ key, label }) => {
+                if (!visibleColumns[key]) return null;
                 return (
                   <th
                     key={key}
-                    className="p-2 border cursor-pointer"
-                    onClick={() => requestSort(k)}
+                    className="p-2 border cursor-pointer hover:bg-gray-200 hover:text-black select-none"
+                    onClick={() => requestSort(key as keyof ProductI)}
+                    scope="col"
                   >
-                    {key
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
-                    {sortConfig?.key === k &&
+                    {label}
+                    {sortConfig?.key === key &&
                       (sortConfig.direction === "ascending" ? " ↑" : " ↓")}
                   </th>
                 );
               })}
-              <th className="p-2 border text-center">Acciones</th>
+              <th className="p-2 border text-center hover:bg-gray-200 hover:text-black">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -129,7 +151,9 @@ export default function ProductTable({
               {products.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={Object.values(visibleColumns).filter(Boolean).length + 2}
+                    colSpan={
+                      Object.values(visibleColumns).filter(Boolean).length + 2
+                    }
                     className="text-center py-8 text-gray-400"
                   >
                     No hay productos disponibles.
@@ -143,71 +167,95 @@ export default function ProductTable({
                     animate="visible"
                     exit="exit"
                     variants={rowVariants}
+                    className={`transition-colors duration-300 ${
+                      selectedProducts.includes(p.id)
+                        ? "bg-blue-50 text-black"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      onView(p);
+                    }}
                   >
-                    <td className="p-2 border hover:bg-gray-700">
+                    <td
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 border hover:bg-gray-100"
+                    >
                       <Checkbox
                         checked={selectedProducts.includes(p.id)}
                         onCheckedChange={(checked) =>
                           handleSelect(p.id, Boolean(checked))
                         }
+                        aria-label={`Seleccionar producto ${p.name}`}
                       />
                     </td>
-                    {Object.keys(visibleColumns).map((key) => {
-                      const k = key as keyof ProductI;
-                      if (!visibleColumns[k]) return null;
-                      const value = p[k];
-                      let content: any = value;
+                    {productColumnOptions.map(({ key }) => {
+                      if (!visibleColumns[key]) return null;
 
-                      if (typeof value === "object" && value !== null) {
-                        content = value.name || JSON.stringify(value);
-                      }
+                      const isQuantity = key === "current_quantity";
 
-                      if (k === "sale_price" || k === "purchase_price") {
-                        content = `S/ ${content}`;
+                      let colorClass = "";
+                      const quantity = Number(p.current_quantity);
+                      const minStock = Number(p.min_stock);
+                      const maxStock = Number(p.max_stock);
+
+                      if (
+                        isQuantity &&
+                        !isNaN(quantity) &&
+                        !isNaN(minStock) &&
+                        !isNaN(maxStock)
+                      ) {
+                        if (quantity < minStock) {
+                          colorClass = "text-red-500 font-semibold";
+                        } else if (quantity > maxStock) {
+                          colorClass = "text-green-600 font-semibold";
+                        } else {
+                          colorClass = "text-blue-600 font-semibold";
+                        }
                       }
 
                       return (
                         <td
                           key={key}
-                          className={`p-2 border ${
-                            k === "name" ? "font-medium cursor-pointer" : ""
-                          }`}
+                          className={`p-2 border hover:bg-gray-100 hover:text-black ${
+                            key === "name" ? "font-medium cursor-pointer" : ""
+                          } ${colorClass}`}
                           onClick={
-                            k === "name"
+                            key === "name"
                               ? () => {
                                   setSelected(p);
                                   setViewOpen(true);
-                                  onView(p);
                                 }
                               : undefined
                           }
                         >
-                          {String(content)}
+                          {isQuantity
+                            ? quantity.toFixed(2)
+                            : String(getValue(p, key as keyof ProductI))}
                         </td>
                       );
                     })}
-                    <td className="p-2 border flex gap-2 justify-center">
+
+                    <td
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 border flex gap-2 justify-center"
+                    >
                       <Button
-                        size="icon"
-                        variant="outline"
-                        className="bg-blue-500/20 text-blue-500"
-                        onClick={() => {
-                          setSelected(p);
-                          setOpenEdit(true);
+                        color="success"
+                        variant="bordered"
+                        onPress={() => {
+                          onUpdated(p);
                         }}
-                        aria-label="Editar producto"
+                        aria-label={`Editar producto ${p.name}`}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
-                        size="icon"
-                        variant="outline"
-                        className="bg-red-500/20 text-red-500"
-                        onClick={() => {
-                          setSelected(p);
-                          setOpenDelete(true);
+                        color="danger"
+                        variant="bordered"
+                        onPress={() => {
+                          onDelete(p);
                         }}
-                        aria-label="Eliminar producto"
+                        aria-label={`Eliminar producto ${p.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -219,38 +267,6 @@ export default function ProductTable({
           </tbody>
         </table>
       </div>
-
-      {selected && (
-        <>
-          <ViewProductModal
-            product={selected}
-            open={viewOpen}
-            onClose={() => setViewOpen(false)}
-          />
-          <EditProductModal
-            product={selected}
-            open={openEdit}
-            onClose={() => setOpenEdit(false)}
-            onUpdated={(updatedProduct) => {
-              onUpdated(updatedProduct);
-              setOpenEdit(false);
-            }}
-          />
-          <DeleteProductModal
-            product={selected}
-            open={openDelete}
-            onClose={() => setOpenDelete(false)}
-            onDelete={() => {
-              onDelete(selected);
-              setOpenDelete(false);
-            }}
-            onConfirm={async () => {
-              onDelete(selected);
-              setOpenDelete(false);
-            }}
-          />
-        </>
-      )}
     </div>
   );
 }

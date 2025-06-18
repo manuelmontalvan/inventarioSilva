@@ -10,6 +10,9 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './products/categories/categories.module';
 import { BrandsModule } from './products/brands/brands.module';
 import { UnitsModule } from './products/unitsOfMeasure/units.module'; // Unidades de medida
+import { LocalityModule } from './products/locality/locality.module';
+
+import { SupplierModule } from './productPurchase/supplier/supplier.module';
 
 @Module({
   imports: [
@@ -42,6 +45,8 @@ import { UnitsModule } from './products/unitsOfMeasure/units.module'; // Unidade
     CategoriesModule,
     BrandsModule,
     UnitsModule,
+    LocalityModule,
+    SupplierModule,
   ],
   providers: [RolesSeed, UserSeed],
 })

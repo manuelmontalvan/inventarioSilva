@@ -28,23 +28,15 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Button } from "@heroui/button"; // <- Igual al EditUserModal
+
+import { Button } from "@heroui/button";
 import { addToast } from "@heroui/react";
+import { useWatch } from "react-hook-form";
+import { ProductI, Category, Brand, UnitOfMeasure } from "@/types/product";
+import { updateProduct } from "@/lib/api/products/products";
+import { ProductSchema } from "@/lib/schemas/productSchema";
 
-import { ProductI } from "@/types/product";
-import { updateProduct } from "@/lib/api/products";
-import { Category, Brand, UnitOfMeasure } from "@/types/product";
-
-const formSchema = z.object({
-  name: z.string().min(1, "El nombre es obligatorio"),
-  barcode: z.string().min(1, "El código es obligatorio"),
-  sale_price: z.coerce.number().nonnegative("Debe ser un precio válido"),
-  categoryId: z.number(),
-  brandId: z.number(),
-  unitOfMeasureId: z.number(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+type ProductFormValues = z.infer<typeof ProductSchema>;
 
 interface Props {
   product: ProductI | null;
@@ -59,149 +51,189 @@ export default function EditProductModal({
   onClose,
   onUpdated,
 }: Props) {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(ProductSchema),
     defaultValues: {
       name: "",
-      barcode: "",
+      internal_code: "",
       sale_price: 0,
-      categoryId: undefined,
-      brandId: undefined,
-      unitOfMeasureId: undefined,
+      purchase_price: 0,
+      min_stock: 0,
+      max_stock: 0,
+      localityId: "",
+      categoryId: "",
+      brandId: "",
+      unitOfMeasureId: "",
     },
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+  const [localities, setLocalities] = useState<any[]>([]);
+  const selectedCategoryId = useWatch({
+    control: form.control,
+    name: "categoryId",
+  });
+  const filteredLocalities = localities.filter(
+    (loc) => String(loc.categoryId) === selectedCategoryId
+  );
 
   useEffect(() => {
     if (product) {
       form.reset({
-        name: product.name,
-        barcode: product.barcode,
-        sale_price: product.sale_price,
-        categoryId: Number(product.category?.id),
-        brandId: Number(product.brand?.id),
-        unitOfMeasureId: Number(product.unit_of_measure?.id),
+        name: product.name || "",
+        internal_code: product.internal_code || "",
+        sale_price: Number(product.sale_price || 0),
+        purchase_price: Number(product.purchase_price || 0),
+        min_stock: Number(product.min_stock || 0),
+        max_stock: Number(product.max_stock || 0),
+        localityId: String(product.locality?.id || ""),
+        categoryId: String(product.category?.id || ""),
+        brandId: String(product.brand?.id || ""),
+        unitOfMeasureId: String(product.unit_of_measure?.id || ""),
       });
+    } else {
+      form.reset();
     }
   }, [product, form]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, brandRes, unitRes] = await Promise.all([
-          fetch("http://localhost:3001/api/categories"),
-          fetch("http://localhost:3001/api/brands"),
-          fetch("http://localhost:3001/api/units"),
+        const [catRes, brandRes, unitRes, locRes] = await Promise.all([
+          fetch("http://localhost:3001/api/categories", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/brands", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/units", {
+            credentials: "include",
+          }),
+          fetch("http://localhost:3001/api/localities", {
+            credentials: "include",
+          }),
         ]);
 
-        const [catData, brandData, unitData] = await Promise.all([
+        const [catData, brandData, unitData, locData] = await Promise.all([
           catRes.json(),
           brandRes.json(),
           unitRes.json(),
+          locRes.json(),
         ]);
 
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
+        setLocalities(locData);
       } catch (err) {
         console.error("Error al cargar datos relacionados:", err);
+        addToast({
+          title: "Error de carga",
+          description:
+            "No se pudieron cargar categorías, marcas o unidades. Revisa tu sesión.",
+          color: "danger",
+          variant: "bordered",
+        });
       }
     };
 
-    fetchData();
-  }, []);
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
 
-  const onSubmit = async (values: FormValues) => {
-    if (!product) return;
+  const onSubmit = async (data: ProductFormValues) => {
+    if (!product) {
+      addToast({
+        title: "Error",
+        description: "No se encontró el producto a actualizar.",
+        color: "danger",
+      });
+      return;
+    }
 
     try {
-      await updateProduct(product.id, values);
+      await updateProduct(product.id, data);
+
       addToast({
-        title: "Producto actualizado",
-        description: "Los datos del producto fueron actualizados exitosamente.",
+        title: "Actualizado",
+        description: "Producto actualizado correctamente.",
         color: "success",
       });
-      onUpdated({ ...product, ...values });
+      onUpdated({ ...product, ...data });
       onClose();
     } catch (error) {
-      console.error("Error actualizando producto:", error);
+      console.error("Error actualizando:", error);
+      addToast({
+        title: "Error",
+        description: "No se pudo actualizar el producto.",
+        color: "danger",
+      });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent
-        className="
-          bg-gradient-to-br from-gray-900 via-purple-900 to-black 
-          border border-white/10 text-white shadow-lg 
-          max-w-2xl w-full mx-4 sm:mx-auto
-          p-6 sm:p-8
-        "
-      >
+      <DialogContent className="bg-background text-foreground max-w-3xl w-full rounded-2xl shadow-xl p-6 sm:p-8">
         <DialogHeader>
-          <DialogTitle>Editar Producto</DialogTitle>
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            Editar producto
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Nombre del producto" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="barcode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Código de barras</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Código de barras" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sale_price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Precio de venta</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        step="0.01"
-                        placeholder="Precio de venta"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                ["name", "Nombre del producto", "text"],
+                ["internal_code", "Código interno", "text"],
+                ["sale_price", "Precio de venta", "number"],
+                ["purchase_price", "Precio de compra", "number"],
+                ["min_stock", "Stock mínimo", "number"],
+                ["max_stock", "Stock máximo", "number"],
+              ].map(([name, label, type]) => (
+                <FormField
+                  key={name}
+                  control={form.control}
+                  name={name as keyof ProductFormValues}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{label}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type={type}
+                          placeholder={label}
+                          value={
+                            typeof field.value === "boolean"
+                              ? ""
+                              : field.value ?? ""
+                          }
+                          onChange={(e) =>
+                            field.onChange(
+                              type === "number"
+                                ? e.target.value === ""
+                                  ? null
+                                  : Number(e.target.value)
+                                : e.target.value
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+
               <FormField
                 control={form.control}
                 name="categoryId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoría</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      defaultValue={String(field.value)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona una categoría" />
@@ -219,16 +251,14 @@ export default function EditProductModal({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="brandId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Marca</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      defaultValue={String(field.value)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona una marca" />
@@ -246,16 +276,14 @@ export default function EditProductModal({
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="unitOfMeasureId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidad de medida</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      defaultValue={String(field.value)}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona una unidad" />
@@ -273,23 +301,53 @@ export default function EditProductModal({
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="localityId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ubicación en almacén</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona una ubicación" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredLocalities.length > 0 ? (
+                          filteredLocalities.map((loc) => (
+                            <SelectItem key={loc.id} value={String(loc.id)}>
+                              {loc.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-400">
+                            No hay ubicaciones para esta categoría
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+
+            <DialogFooter className="flex justify-end gap-3 pt-4">
+              <Button variant="bordered" color="danger" onPress={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                color="success"
+                variant="solid"
+                onPress={() => form.handleSubmit(onSubmit)()}
+                type="button"
+              >
+                Guardar cambios
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-
-        <DialogFooter className="pt-4">
-          <Button variant="bordered" color="danger" onPress={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            color="success"
-            variant="bordered"
-            onPress={() => form.handleSubmit(onSubmit)()}
-            type="button"
-          >
-            Guardar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,9 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
-import { getProducts, deleteProduct } from "@/lib/api/products";
+import { getProducts, deleteProduct } from "@/lib/api/products/products";
 import ProductTable from "@/components/productsModal/productTable";
-import CreateProductModal from "@/components/productsModal/createProductModal";
+import { CreateProductModal } from "@/components/productsModal/createProductModal";
 import EditProductModal from "@/components/productsModal/editProductModal";
 import DeleteProductModal from "@/components/productsModal/deleteProductModal";
 import ProductDetailsModal from "@/components/productsModal/viewProductModal";
@@ -17,6 +18,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { productColumnOptions } from "@/constants/productColumns";
+import { addToast } from "@heroui/react";
 
 export default function ProductAdminPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
@@ -28,19 +31,27 @@ export default function ProductAdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [visibleColumns, setVisibleColumns] = useState({
-    name: true,
-    barcode: true,
-    category: true,
-    brand: true,
-    sale_price: true,
-    // agrega las demás si todavía las usas
-    price: true,
-    stock: true,
-    isActive: true,
-  });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+
+  const [visibleColumns, setVisibleColumns] = useState<
+    Record<keyof ProductI, boolean>
+  >(() => {
+    const initial: Record<keyof ProductI, boolean> = {} as any;
+    productColumnOptions.forEach(({ key }) => {
+      initial[key] = [
+        "name",
+        "locality",
+        "category",
+        "current_quantity",
+        "brand",
+        "unit_of_measure",
+        "sale_price",
+        "isActive",
+      ].includes(key);
+    });
+    return initial;
+  });
 
   const fetchProducts = async () => {
     try {
@@ -60,19 +71,15 @@ export default function ProductAdminPage() {
       product.brand?.name ?? ""
     }`.toLowerCase();
     const matchesSearch = fullText.includes(searchTerm.toLowerCase());
-
     const matchesCategory =
       selectedCategories.length === 0 ||
       selectedCategories.includes(product.category?.name?.toLowerCase() ?? "");
-
     return matchesSearch && matchesCategory;
   });
 
   const handleBulkDelete = async () => {
     await Promise.all(
-      selectedProducts.map(
-        (id) => deleteProduct(id.toString()) // asumo que id es number y deleteProduct espera string
-      )
+      selectedProducts.map((id) => deleteProduct(id.toString()))
     );
     setSelectedProducts([]);
     fetchProducts();
@@ -105,9 +112,9 @@ export default function ProductAdminPage() {
   }
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
       <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-3xl font-bold dark:text-white   flex items-center gap-2">
           <Box className="w-6 h-6 text-green-600" />
           Gestión de Productos
         </h1>
@@ -120,7 +127,6 @@ export default function ProductAdminPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">
-        {/* Input de búsqueda */}
         <div className="relative w-full sm:w-[250px]">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -132,7 +138,6 @@ export default function ProductAdminPage() {
           />
         </div>
 
-        {/* Botones de filtro y columnas */}
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -156,56 +161,25 @@ export default function ProductAdminPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="bordered"
-                className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700"
-              >
+              <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700">
                 <Settings2 className="w-4 h-4 mr-2" /> Columnas
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 text-white border-gray-600">
+            <DropdownMenuContent className="bg-gray-800 text-white border-gray-600 max-h-[300px] overflow-y-auto">
               <DropdownMenuLabel>Columnas visibles</DropdownMenuLabel>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.name}
-                onCheckedChange={() => toggleColumn("name")}
-              >
-                Nombre
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.category}
-                onCheckedChange={() => toggleColumn("category")}
-              >
-                Categoría
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.brand}
-                onCheckedChange={() => toggleColumn("brand")}
-              >
-                Marca
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.price}
-                onCheckedChange={() => toggleColumn("price")}
-              >
-                Precio
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.stock}
-                onCheckedChange={() => toggleColumn("stock")}
-              >
-                Stock
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.isActive}
-                onCheckedChange={() => toggleColumn("isActive")}
-              >
-                Activo
-              </DropdownMenuCheckboxItem>
+              {productColumnOptions.map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.key}
+                  checked={visibleColumns[column.key]}
+                  onCheckedChange={() => toggleColumn(column.key)}
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Eliminar seleccionados */}
         {selectedProducts.length > 0 && (
           <div className="bg-gray-800 px-3 py-2 rounded text-white flex items-center gap-2">
             <span className="text-sm">
@@ -226,18 +200,18 @@ export default function ProductAdminPage() {
         )}
       </div>
 
-      <div className="rounded-md border border-gray-800 overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
+      <div className="rounded-md border border-white overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
         <ProductTable
           products={filteredProducts}
-          onView={(product: ProductI) => {
+          onView={(product) => {
             setSelectedProduct(product);
             setShowDetailsModal(true);
           }}
-          onUpdated={(product: ProductI) => {
+          onUpdated={(product) => {
             setSelectedProduct(product);
             setShowEditModal(true);
           }}
-          onDelete={(product: ProductI) => {
+          onDelete={(product) => {
             setSelectedProduct(product);
             setBulkDeleteMode(false);
             setShowDeleteModal(true);
@@ -256,7 +230,7 @@ export default function ProductAdminPage() {
       <CreateProductModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreated={fetchProducts}
+        onSuccess={fetchProducts}
       />
       <EditProductModal
         open={showEditModal}
@@ -273,8 +247,8 @@ export default function ProductAdminPage() {
         }}
         product={selectedProduct}
         multiple={bulkDeleteMode}
-        onDelete={fetchProducts} // individual delete
-        onConfirm={handleBulkDelete} // bulk delete
+        onDelete={fetchProducts}
+        onConfirm={handleBulkDelete}
       />
     </div>
   );

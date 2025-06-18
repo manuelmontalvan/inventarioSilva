@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Role  } from "@/types/role";
-import { getRoles } from "@/lib/api/role";
+import { getRoles } from "@/lib/api/users/role";
 import RoleTable from "@/components/rolesModal/roleTable";
 import CreateRoleModal from "@/components/rolesModal/createRoleModal";
 import EditRoleModal from "@/components/rolesModal/editRoleModal";
@@ -9,13 +9,7 @@ import DeleteRoleModal from "@/components/rolesModal/deleteRoleModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@heroui/button";
 import { ShieldPlus, Shield, Search, Settings2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+
 
 export default function RolePage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -83,15 +77,15 @@ export default function RolePage() {
   }
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6 min-h-screen dark:bg-gray-950">
       <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-          <Shield className="w-6 h-6 text-green-500" />
+        <h1 className="text-3xl font-bold text-blue-500  dark:text-white flex items-center gap-2">
+          <Shield className="w-6 h-6 text-blue-500" />
           Gestión de Roles
         </h1>
         <Button
           onPress={() => setShowCreateModal(true)}
-          className="bg-green-500/20 text-green-400 hover:bg-green-500/30 hover:text-green-300 border-green-500/30 flex items-center gap-2"
+         className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none hover:from-purple-600 hover:to-blue-600"
         >
           <ShieldPlus className="w-4 h-4" /> Crear Rol
         </Button>
