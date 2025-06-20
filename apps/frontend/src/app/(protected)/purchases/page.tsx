@@ -1,178 +1,82 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import React, { useEffect, useState } from "react";
 import {
-  Select,
-  SelectTrigger,
-  SelectItem,
-  SelectContent,
-  SelectValue,
-} from '@/components/ui/select'
-import { addToast } from '@heroui/toast'
-import { Combobox } from '@/components/ui/combobox'
+  getPurchaseOrders,
+  createPurchaseOrder,
+} from "@/lib/api/purchases/purchaseOrders";
+import { getProducts } from "@/lib/api/products/products";
+import { getSuppliers } from "@/lib/api/purchases/suppliers";
+import { getCategories } from "@/lib/api/products/categories";
+import { useAuth } from "@/context/authContext";
 
-export default function NewPurchasePage() {
-  const router = useRouter()
-  const [form, setForm] = useState({
-    productId: '',
-    supplierId: '',
-    registeredById: '', // puedes obtenerlo del contexto de auth
-    invoice_number: '',
-    quantity: '',
-    unit_cost: '',
-    total_cost: '',
-    purchase_date: '',
-    notes: '',
-  })
+import { PurchaseOrder, CreatePurchaseOrderDto } from "@/types/purchaseOrders";
+import { ProductI, Category } from "@/types/product";
+import { SupplierI } from "@/types/supplier";
 
-  const [products, setProducts] = useState<any[]>([])
-  const [suppliers, setSuppliers] = useState<any[]>([])
+import { PurchaseOrderTable } from "@/components/productPurchase/purchaseOrderTable";
+import PurchaseOrderForm from "@/components/productPurchase/purchaseOrderForm";
+
+export default function PurchasesPage() {
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierI[]>([]);
+  const [products, setProducts] = useState<ProductI[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [prodRes, suppRes] = await Promise.all([
-        fetch('/api/products', { credentials: 'include' }),
-        fetch('/api/suppliers', { credentials: 'include' }),
-      ])
-      const products = await prodRes.json()
-      const suppliers = await suppRes.json()
-      setProducts(products)
-      setSuppliers(suppliers)
-    }
+    fetchData();
+  }, []);
 
-    fetchData()
-  }, [])
+  const fetchData = async () => {
+    const [ordersData, suppliersData, productsData, categoriesData] =
+      await Promise.all([
+        getPurchaseOrders(),
+        getSuppliers(),
+        getProducts(),
+        getCategories(),
+      ]);
+    setOrders(ordersData);
+    setSuppliers(suppliersData);
+    setProducts(productsData);
+    setCategories(categoriesData);
+  };
 
-  useEffect(() => {
-    const quantity = parseFloat(form.quantity)
-    const unit_cost = parseFloat(form.unit_cost)
-    if (!isNaN(quantity) && !isNaN(unit_cost)) {
-      setForm((prev) => ({
-        ...prev,
-        total_cost: (quantity * unit_cost).toFixed(2),
-      }))
-    }
-  }, [form.quantity, form.unit_cost])
-
-  const handleChange = (e: any) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const handleCreateOrder = async (payload: CreatePurchaseOrderDto) => {
     try {
-      const res = await fetch('/api/purchases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(form),
-      })
-
-      if (!res.ok) throw new Error('Error al registrar compra')
-
-      addToast({
-        title: 'Compra registrada correctamente',
-        description: 'La compra se ha registrado exitosamente.',
-        color: 'success',
-      })
-
-      router.push('/dashboard/purchases')
-    } catch (err) {
-      console.error(err)
-      addToast({
-        title: 'Error al registrar compra',
-        description:
-          'Hubo un problema al registrar la compra. Por favor, inténtalo de nuevo.',
-        color: 'danger',
-      })
+      await createPurchaseOrder(payload);
+      fetchData(); // Refrescar lista de órdenes
+    } catch (error: any) {
+      alert(
+        "Error creando orden: " + error?.response?.data?.message || "Error"
+      );
     }
-  }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-md">
-      <h1 className="text-2xl font-bold mb-4">Ingreso de Producto</h1>
-      <form onSubmit={handleSubmit} className="grid gap-4">
-        {/* Combobox de productos con búsqueda por nombre, marca o categoría */}
-        <Combobox
-          items={products}
-          selected={products.find((p) => p.id === form.productId) || null}
-          onChange={(product) =>
-            setForm({ ...form, productId: product.id })
-          }
-          displayValue={(product) =>
-            `${product.name} (${product.brand?.name || 'Sin marca'} / ${
-              product.category?.name || 'Sin categoría'
-            })`
-          }
-          placeholder="Buscar producto por nombre, marca o categoría"
+    <div className="min-h-screen bg-gray-50 dark:bg-black max-w-7xl mx-auto px-6 py-10">
+      <h1 className="text-3xl font-semibold mb-6 text-gray-800 dark:text-white">
+        Gestión de Órdenes de Compra
+      </h1>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* Formulario reutilizable */}
+        <PurchaseOrderForm
+          suppliers={suppliers}
+          products={products}
+          categories={categories}
+          onCreate={handleCreateOrder}
         />
 
-        {/* Select de proveedores */}
-        <Select
-          onValueChange={(value) => setForm({ ...form, supplierId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar proveedor" />
-          </SelectTrigger>
-          <SelectContent>
-            {suppliers.map((supplier) => (
-              <SelectItem key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Input
-          name="invoice_number"
-          placeholder="Número de factura"
-          value={form.invoice_number}
-          onChange={handleChange}
-        />
-        <Input
-          name="quantity"
-          type="number"
-          placeholder="Cantidad"
-          value={form.quantity}
-          onChange={handleChange}
-        />
-        <Input
-          name="unit_cost"
-          type="number"
-          placeholder="Costo unitario"
-          value={form.unit_cost}
-          onChange={handleChange}
-        />
-        <Input
-          name="total_cost"
-          type="number"
-          value={form.total_cost}
-          disabled
-        />
-        <Input
-          name="purchase_date"
-          type="date"
-          value={form.purchase_date}
-          onChange={handleChange}
-        />
-        <Textarea
-          name="notes"
-          placeholder="Notas (opcional)"
-          value={form.notes}
-          onChange={handleChange}
-        />
-
-        <Button type="submit" className="w-full">
-          Registrar Compra
-        </Button>
-      </form>
+        {/* Tabla de órdenes */}
+        <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6 max-h-[90vh] flex flex-col">
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
+            Órdenes Registradas
+          </h2>
+          <PurchaseOrderTable orders={orders} products={products} />
+        </section>
+      </div>
     </div>
-  )
+  );
 }

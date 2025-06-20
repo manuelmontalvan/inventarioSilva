@@ -11,9 +11,10 @@ import { CategoriesModule } from './products/categories/categories.module';
 import { BrandsModule } from './products/brands/brands.module';
 import { UnitsModule } from './products/unitsOfMeasure/units.module'; // Unidades de medida
 import { LocalityModule } from './products/locality/locality.module';
-
+import { PurchaseOrderModule } from './productPurchase/purchase-order.module';
 import { SupplierModule } from './productPurchase/supplier/supplier.module';
-
+import {InventoryModule} from './Inventory/inventory.module'
+import {CustomersModule} from './productSales/customers/customers.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -47,6 +48,9 @@ import { SupplierModule } from './productPurchase/supplier/supplier.module';
     UnitsModule,
     LocalityModule,
     SupplierModule,
+    PurchaseOrderModule,
+    InventoryModule,
+    CustomersModule,
   ],
   providers: [RolesSeed, UserSeed],
 })

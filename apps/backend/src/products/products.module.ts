@@ -7,6 +7,8 @@ import { Category } from './entities/category.entity';
 import { Brand } from './entities/brand.entity';
 import { UnitOfMeasure } from './entities/unit-of-measure.entity';
 import { Locality } from './locality/locality.entity';
+import {ProductCostHistory} from '../productPurchase/entities/product-cost-history.entity'
+import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
 
 @Module({
   imports: [
@@ -15,7 +17,8 @@ import { Locality } from './locality/locality.entity';
       Category,
       Brand,
       UnitOfMeasure,
-      Locality,    
+      Locality, 
+      ProductCostHistory,  
     ]),
   ],
   controllers: [ProductsController],

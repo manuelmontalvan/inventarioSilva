@@ -10,7 +10,6 @@ import {
 import { Button } from "@heroui/button";
 
 interface Props {
-  open: boolean;
   onClose: () => void;
 }
 

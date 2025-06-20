@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { ProductSale } from './product-sale.entity';
+import { ProductSale } from '../entities/product-sale.entity';
 
 @Entity('customers')
 export class Customer {
@@ -11,7 +11,8 @@ export class Customer {
 
   @Column({ nullable: true })
   lastname?: string;
-
+  @Column({ unique: true, nullable: true }) // Aquí va la cédula
+  identification?: string;
   @Column({ unique: true, nullable: true })
   email?: string;
 

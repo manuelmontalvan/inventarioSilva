@@ -1,20 +1,19 @@
 // src/purchases/purchase-order.service.ts
-
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository, DataSource } from 'typeorm';
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { Product } from '../products/entities/product.entity';
 import { Supplier } from './supplier/supplier.entity';
 import { User } from '../users/user.entity';
 import { ProductPurchase } from './entities/product-purchase.entity';
-import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
-
+import { ProductCostHistory } from './entities/product-cost-history.entity';
 
 @Injectable()
 export class PurchaseOrderService {
@@ -28,58 +27,144 @@ export class PurchaseOrderService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
 
+    @InjectRepository(ProductCostHistory)
+    private readonly productCostHistoryRepo: Repository<ProductCostHistory>,
+
     @InjectRepository(Supplier)
     private readonly supplierRepo: Repository<Supplier>,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
-  async create(dto: CreatePurchaseOrderDto, userId: string) {
-  const supplier = await this.supplierRepo.findOne({ where: { id: dto.supplierId } });
-  if (!supplier) throw new NotFoundException('Proveedor no encontrado');
+  async create(dto: CreatePurchaseOrderDto, user: User) {
+    console.log('===> Iniciando creación de orden de compra');
 
-  const registeredBy = await this.userRepo.findOne({ where: { id: Number(userId) } });
-  if (!registeredBy) throw new NotFoundException('Usuario no encontrado');
+    const supplier = await this.supplierRepo.findOneBy({ id: dto.supplierId });
+    if (!supplier) throw new NotFoundException('Proveedor no encontrado');
+    console.log('Proveedor encontrado:', supplier.name);
 
-  const purchaseOrder = new PurchaseOrder();
-  purchaseOrder.supplier = supplier;
-  purchaseOrder.registeredBy = registeredBy;
-  purchaseOrder.invoice_number = dto.invoice_number;
-  purchaseOrder.purchase_date = new Date(dto.purchase_date);
-  purchaseOrder.notes = dto.notes;
+    const registeredBy = { id: user.id } as User;
 
-  const items: ProductPurchase[] = [];
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateString = `${yyyy}${mm}${dd}`;
 
-  for (const item of dto.items) {
-    const product = await this.productRepo.findOne({ where: { id: item.productId } });
-    if (!product) {
-      throw new BadRequestException(`Producto no encontrado: ${item.productId}`);
-    }
+    const countToday = await this.orderRepo.count({
+      where: {
+        purchase_date: Between(
+          new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`),
+          new Date(`${yyyy}-${mm}-${dd}T23:59:59.999Z`),
+        ),
+      },
+    });
 
-    const purchase = new ProductPurchase();
-    purchase.product = product;
-    purchase.supplier = supplier;
-    purchase.invoice_number = item.invoice_number;
-    purchase.quantity = item.quantity;
-    purchase.unit_cost = item.unit_cost;
-    purchase.total_cost = item.total_cost;
-    purchase.purchase_date = new Date(dto.purchase_date);
-    purchase.notes = item.notes;
-    purchase.registeredBy = registeredBy;
-    purchase.order = purchaseOrder;
+    const correlativo = String(countToday + 1).padStart(4, '0');
+    const orderNumber = `OC-${dateString}-${correlativo}`;
+    console.log('Correlativo generado:', orderNumber);
 
-    items.push(purchase);
+    return await this.dataSource.transaction(async (manager) => {
+      const purchaseOrder = manager.create(PurchaseOrder, {
+        supplier,
+        registeredBy,
+        invoice_number: dto.invoice_number,
+        purchase_date: new Date(dto.purchase_date),
+        notes: dto.notes,
+        orderNumber,
+      });
+
+      const savedOrder = await manager.save(purchaseOrder);
+      const purchaseLines: ProductPurchase[] = [];
+
+      for (const item of dto.items) {
+        const product = await manager.findOne(Product, {
+          where: { id: item.productId },
+        });
+        if (!product) {
+          throw new BadRequestException(
+            `Producto no encontrado: ${item.productId}`,
+          );
+        }
+
+        //console.log('Procesando producto:', product.id);
+
+        // ✅ Actualizar precio y fecha de última compra
+        product.purchase_price = item.unit_cost;
+        product.last_purchase_date = new Date(dto.purchase_date);
+        /*console.log('✅ Producto antes de guardar:', {
+        id: product.id,
+        purchase_price: product.purchase_price,
+        last_purchase_date: product.last_purchase_date,
+      });*/
+        await manager.save(product);
+        //console.log('✅ Producto actualizado');
+
+        // ✅ Guardar historial de costos si el precio cambió
+        const lastHistory = await manager.findOne(ProductCostHistory, {
+          where: { product: { id: product.id } },
+          order: { date: 'DESC' },
+        });
+
+        if (!lastHistory || +lastHistory.cost !== +item.unit_cost) {
+          const costHistory = manager.create(ProductCostHistory, {
+            product,
+            cost: item.unit_cost,
+            date: new Date(dto.purchase_date),
+            purchaseOrder: savedOrder,
+          });
+          await manager.save(costHistory);
+          //console.log('✅ Historial de costo guardado');
+        }
+
+        // ✅ Crear línea de compra
+        const purchaseLine = manager.create(ProductPurchase, {
+          product,
+          supplier,
+          invoice_number: item.invoice_number,
+          quantity: item.quantity,
+          unit_cost: item.unit_cost,
+          total_cost: item.total_cost,
+          purchase_date: new Date(dto.purchase_date),
+          notes: item.notes,
+          registeredBy,
+          order: savedOrder,
+        });
+
+        const savedLine = await manager.save(purchaseLine);
+        purchaseLines.push(savedLine);
+        //console.log('✅ Línea de compra guardada');
+      }
+
+      savedOrder.purchase_lines = purchaseLines;
+
+      // ✅ Devolver orden con relaciones
+      const fullOrder = await manager.findOne(PurchaseOrder, {
+        where: { id: savedOrder.id },
+        relations: [
+          'supplier',
+          'registeredBy',
+          'purchase_lines',
+          'purchase_lines.product',
+        ],
+      });
+
+      //console.log('✅ Orden de compra completada');
+      return fullOrder;
+    });
   }
-
-  purchaseOrder.purchase_lines = items;
-
-  return await this.orderRepo.save(purchaseOrder);
-}
 
   async findAll() {
     return this.orderRepo.find({
-      relations: ['supplier', 'registeredBy', 'purchase_lines', 'purchase_lines.product'],
+      relations: [
+        'supplier',
+        'registeredBy',
+        'purchase_lines',
+        'purchase_lines.product',
+      ],
       order: { created_at: 'DESC' },
     });
   }
@@ -87,38 +172,45 @@ export class PurchaseOrderService {
   async findOne(id: string) {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['supplier', 'registeredBy', 'purchase_lines', 'purchase_lines.product'],
+      relations: [
+        'supplier',
+        'registeredBy',
+        'purchase_lines',
+        'purchase_lines.product',
+      ],
     });
     if (!order) throw new NotFoundException('Orden de compra no encontrada');
     return order;
   }
-async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
-  const order = await this.orderRepo.findOne({
-    where: { id },
-    relations: ['registeredBy'],
-  });
 
-  if (!order) {
-    throw new NotFoundException(`Orden con ID ${id} no encontrada`);
+  async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
+    const userIdNumber = Number(userId);
+    if (isNaN(userIdNumber)) throw new BadRequestException('Invalid userId');
+
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['registeredBy'],
+    });
+    if (!order) throw new NotFoundException(`Orden con ID ${id} no encontrada`);
+
+    const user = await this.userRepo.findOneBy({ id: userIdNumber });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    if (dto.invoice_number !== undefined)
+      order.invoice_number = dto.invoice_number;
+    if (dto.purchase_date !== undefined)
+      order.purchase_date = new Date(dto.purchase_date);
+    if (dto.notes !== undefined) order.notes = dto.notes;
+
+    order.registeredBy = user;
+
+    return this.orderRepo.save(order);
   }
-
-  const user = await this.userRepo.findOne({ where: { id: Number(userId) } });
-  if (!user) {
-    throw new NotFoundException('Usuario no encontrado');
-  }
-
-  if (dto.invoice_number !== undefined) order.invoice_number = dto.invoice_number;
-  if (dto.purchase_date !== undefined) order.purchase_date = new Date(dto.purchase_date); // 🔥 Aquí se convierte
-  if (dto.notes !== undefined) order.notes = dto.notes;
-
-  order.registeredBy = user;
-
-  return this.orderRepo.save(order);
-}
 
   async remove(id: string) {
-    const found = await this.orderRepo.findOne({ where: { id } });
+    const found = await this.orderRepo.findOneBy({ id });
     if (!found) throw new NotFoundException('Orden de compra no encontrada');
+
     await this.orderRepo.delete(id);
     return { message: 'Orden eliminada correctamente' };
   }

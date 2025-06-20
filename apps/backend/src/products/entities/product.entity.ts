@@ -14,9 +14,11 @@ import { Category } from './category.entity';
 import { Brand } from './brand.entity';
 import { UnitOfMeasure } from './unit-of-measure.entity';
 import { ProductSale } from '../../productSales/entities/product-sale.entity';
-import { ProductPurchase } from '../../productPurchase/product-purchase.entity';
+import { ProductPurchase } from '../../productPurchase/entities/product-purchase.entity';
 import { User } from '../../users/user.entity';
 import { Locality } from '../locality/locality.entity';
+import { ProductCostHistory } from '../../productPurchase/entities/product-cost-history.entity';
+import { InventoryMovement } from '../../Inventory/inventory-movement.entity'; 
 
 @Entity('products')
 export class Product {
@@ -33,6 +35,9 @@ export class Product {
   @ManyToOne(() => Category, (category) => category.products, { eager: true })
   @JoinColumn({ name: 'categoryId' })
   category: Category;
+
+  @OneToMany(() => InventoryMovement, (movement) => movement.product)
+  inventoryMovements: InventoryMovement[];
 
   @Column()
   categoryId: string;
@@ -58,7 +63,7 @@ export class Product {
   @Column({ nullable: true })
   image?: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+ @Column({ type: 'float', default: 0 })
   current_quantity: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
@@ -67,7 +72,8 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   max_stock: number;
 
-
+ @OneToMany(() => ProductCostHistory, costHistory => costHistory.product)
+  costHistories: ProductCostHistory[];
 
   @ManyToOne(() => UnitOfMeasure, (unit) => unit.products, { eager: true })
   @JoinColumn({ name: 'unitOfMeasureId' })

@@ -9,6 +9,7 @@ import { Brand } from './entities/brand.entity';
 import { UnitOfMeasure } from './entities/unit-of-measure.entity';
 import { User } from '../users/user.entity'; // Asegúrate de que la ruta sea correcta
 import { Locality } from './locality/locality.entity';
+import { ProductCostHistory } from 'src/productPurchase/entities/product-cost-history.entity';
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -22,7 +23,8 @@ export class ProductsService {
     private brandRepository: Repository<Brand>,
     @InjectRepository(UnitOfMeasure)
     private unitOfMeasureRepository: Repository<UnitOfMeasure>,
- 
+     @InjectRepository(ProductCostHistory)
+     private productCostHistoryRepository: Repository<ProductCostHistory>,    
     @InjectRepository(Locality)
     private localityRepository: Repository<Locality>,
   ) {}
@@ -79,6 +81,15 @@ async create(createProductDto: CreateProductDto, createdBy: User): Promise<Produ
     this.logger.error(`Error creating product: ${error.message}`, error.stack);
     throw error;
   }
+}
+async getCostHistory(productId: string): Promise<ProductCostHistory[]> {
+  const histories = await this.productCostHistoryRepository.find({
+    where: { product: { id: productId } },
+    order: { date: 'DESC' },
+    relations: ['purchaseOrder'],
+  });
+
+  return histories;
 }
 
 

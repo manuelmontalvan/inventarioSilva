@@ -7,15 +7,11 @@ import {
   JoinColumn,
   OneToMany,
   CreateDateColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
 import { Supplier } from '../supplier/supplier.entity'; // Asegúrate de que la ruta sea correcta
 import { User } from '../../users/user.entity'; // Asegúrate de que la ruta sea correcta
 import { ProductPurchase } from './product-purchase.entity'; // Asegúrate de que la ruta sea correcta
-
-import { PurchaseItem } from './purchase-item.entity'; // Asegúrate de que la ruta sea correcta
-
-
 
 @Entity('purchase_orders')
 export class PurchaseOrder {
@@ -24,6 +20,9 @@ export class PurchaseOrder {
 
   @Column()
   invoice_number: string;
+
+  @Column({ unique: true })
+  orderNumber: string;
 
   @ManyToOne(() => Supplier)
   @JoinColumn({ name: 'supplierId' })
@@ -39,12 +38,11 @@ export class PurchaseOrder {
   @JoinColumn({ name: 'registeredById' })
   registeredBy: User;
 
-  @OneToMany(() => PurchaseItem, item => item.order, { cascade: true })
-  items: PurchaseItem[];
+  @OneToMany(() => ProductPurchase, (pp) => pp.order, { cascade: true })
+  purchase_lines: ProductPurchase[];
+
   @CreateDateColumn()
   created_at: Date;
-  @OneToMany(() => ProductPurchase, (pp) => pp.order, { cascade: true })
-purchase_lines: ProductPurchase[];
 
   @UpdateDateColumn()
   updated_at: Date;

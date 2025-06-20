@@ -34,6 +34,16 @@ export class ProductsController {
   return this.productsService.findAll(search);
 }
 
+@Get(':id/cost-history')
+getProductCostHistory(@Param('id') id: string) {
+  return this.productsService.getCostHistory(id);
+}
+@Get(':productId/cost-history')
+getHistory(@Param('productId') productId: string) {
+  return this.productsService.getCostHistory(productId);
+}
+
+
   @Get(':id')
   // Usa RoleType.admin, RoleType.bodeguero, RoleType.vendedor
   @Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)

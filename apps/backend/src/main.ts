@@ -12,6 +12,9 @@ async function bootstrap() {
       whitelist: true, // elimina propiedades no definidas en DTO
       forbidNonWhitelisted: true, // lanza error si hay propiedades extra
       transform: true, // transforma payload a instancias de DTO
+      transformOptions: {
+      enableImplicitConversion: true,
+    },
     }),
   );
    app.enableCors({

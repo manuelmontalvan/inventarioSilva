@@ -3,7 +3,7 @@ import {
   CreateDateColumn, UpdateDateColumn
 } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
-import { Customer } from './customer.entity';
+import { Customer } from '../customers/customer.entity';
 import { User } from '../../users/user.entity'; // Para saber quién realizó la venta
 
 @Entity('product_sales')

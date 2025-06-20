@@ -8,7 +8,7 @@ import {
   Delete,
   Request,
   UseGuards,
-  NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PurchaseOrderService } from './purchase-order.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
@@ -22,8 +22,8 @@ export class PurchaseOrderController {
 
   @Post()
   async create(@Body() dto: CreatePurchaseOrderDto, @Request() req: any) {
-    const userId = req.user.sub;
-    return this.service.create(dto, userId);
+    const user = req.user;
+    return this.service.create(dto, user);
   }
 
   @Get()
@@ -32,15 +32,13 @@ export class PurchaseOrderController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const order = await this.service.findOne(id);
-    if (!order) throw new NotFoundException('Orden de compra no encontrada');
-    return order;
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findOne(id); // el service ya lanza NotFoundException si no se encuentra
   }
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePurchaseOrderDto,
     @Request() req: any
   ) {
@@ -49,7 +47,7 @@ export class PurchaseOrderController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
 }

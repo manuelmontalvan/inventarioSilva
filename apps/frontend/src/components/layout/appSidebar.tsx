@@ -4,7 +4,7 @@ import {
   Warehouse,
   LayoutDashboard,
   Settings,
-  User,
+ShieldUser,
   ShieldCheck,
   ChevronDown,
   ChevronRight,
@@ -14,13 +14,16 @@ import {
   Scale,
   Tag,
   PackagePlus,
-  PackageCheck,
   Repeat,
   LineChart,
   MapPin,
   ShoppingCart,
   Handshake,
-  Receipt
+  Receipt,
+  Store,
+  FilePlus,
+  History,
+  ContactRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,7 +52,7 @@ const items: SidebarItem[] = [
     icon: LayoutDashboard,
   },
   {
-    title: "Usuarios y roles",
+    title: "Gestión de usuarios",
     url: "#",
     icon: UserCog,
     hasChildren: true,
@@ -57,7 +60,7 @@ const items: SidebarItem[] = [
       {
         title: "Usuario",
         url: "/users",
-        icon: User,
+        icon: ShieldUser,
       },
       {
         title: "Rol",
@@ -67,7 +70,7 @@ const items: SidebarItem[] = [
     ],
   },
   {
-    title: "Productos",
+    title: " Gestion de Productos",
     url: "#",
     icon: Warehouse,
     hasChildren: true,
@@ -117,6 +120,29 @@ const items: SidebarItem[] = [
       },
     ],
   },
+    {
+    title: "Gestion de Ventas ",
+    url: "#",
+    icon: Store,
+    hasChildren: true,
+    children: [
+      {
+        title: "Registro de ventas",
+        url: "/purchases",
+        icon: FilePlus,
+      },
+      {
+        title: "Historial de ventas",
+        url: "/purchases/suppliers",
+        icon: History,
+      },
+       {
+        title: "Clientes",
+        url: "/sales/customers",
+        icon: ContactRound,
+      },
+    ],
+  },
   {
     title: "Gestion Bodega",
     url: "#",
@@ -124,15 +150,11 @@ const items: SidebarItem[] = [
     hasChildren: true,
     children: [
       {
-        title: "Ingreso de productos",
-        url: "/purchases",
+        title: "Entrada y Salida  de productos",
+        url: "/inventory",
         icon: PackagePlus,
       },
-      {
-        title: "Egreso de productos",
-        url: "/sales",
-        icon: PackageCheck,
-      },
+    
     ],
   },
   {
