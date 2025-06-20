@@ -118,6 +118,11 @@ const items: SidebarItem[] = [
         url: "/purchases/suppliers",
         icon: Handshake,
       },
+      {
+        title: "Historial de Compras",
+        url: "/purchases/history",
+        icon: History,
+      },
     ],
   },
     {

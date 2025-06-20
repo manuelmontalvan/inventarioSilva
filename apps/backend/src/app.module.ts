@@ -15,6 +15,7 @@ import { PurchaseOrderModule } from './productPurchase/purchase-order.module';
 import { SupplierModule } from './productPurchase/supplier/supplier.module';
 import {InventoryModule} from './Inventory/inventory.module'
 import {CustomersModule} from './productSales/customers/customers.module'
+import {AnalyticsModule} from './analytics/analytics.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -51,6 +52,7 @@ import {CustomersModule} from './productSales/customers/customers.module'
     PurchaseOrderModule,
     InventoryModule,
     CustomersModule,
+    AnalyticsModule
   ],
   providers: [RolesSeed, UserSeed],
 })
