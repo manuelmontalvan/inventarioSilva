@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
 import { getProducts, deleteProduct } from "@/lib/api/products/products";
-import ProductTable from "@/components/productsModal/productTable";
-import { CreateProductModal } from "@/components/productsModal/createProductModal";
-import EditProductModal from "@/components/productsModal/editProductModal";
-import DeleteProductModal from "@/components/productsModal/deleteProductModal";
-import ProductDetailsModal from "@/components/productsModal/viewProductModal";
+import ProductTable from "@/components/products/productTable";
+import { CreateProductModal } from "@/components/products/createProductModal";
+import EditProductModal from "@/components/products/editProductModal";
+import DeleteProductModal from "@/components/products/deleteProductModal";
+import ProductDetailsModal from "@/components/products/viewProductModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@heroui/button";
 import { Search, Filter, Settings2, PlusCircle, Box } from "lucide-react";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { productColumnOptions } from "@/constants/productColumns";
 import { addToast } from "@heroui/react";
+import ProductUpload from "@/components/products/productUpload";
 
 export default function ProductAdminPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
@@ -114,16 +115,21 @@ export default function ProductAdminPage() {
   return (
     <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
       <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold dark:text-white   flex items-center gap-2">
+        <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
           <Box className="w-6 h-6 text-green-600" />
           Gestión de Productos
         </h1>
-        <Button
-          onPress={() => setShowCreateModal(true)}
-          className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
-        >
-          <PlusCircle className="w-4 h-4" /> Crear Producto
-        </Button>
+
+        {/* Agrupamos botones en un flex con gap */}
+        <div className="flex items-center gap-4">
+          <ProductUpload onSuccess={fetchProducts} />
+          <Button
+            onPress={() => setShowCreateModal(true)}
+            className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
+          >
+            <PlusCircle className="w-4 h-4" /> Crear Producto
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">

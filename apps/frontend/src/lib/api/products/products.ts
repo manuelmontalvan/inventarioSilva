@@ -31,3 +31,15 @@ export const deleteProduct = async (id: string) => {
   const res = await axios.delete(`/products/${id}`);
   return res.status === 204 ? null : res.data;
 };
+export const uploadProducts = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await axios.post("/products/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return res.data;
+};
