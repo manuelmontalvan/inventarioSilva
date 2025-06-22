@@ -9,6 +9,7 @@ import { UnitOfMeasure } from './entities/unit-of-measure.entity';
 import { Locality } from './locality/locality.entity';
 import {ProductCostHistory} from '../productPurchase/entities/product-cost-history.entity'
 import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
+import { ProductStock } from './product-stock/product-stock.entity';
 
 @Module({
   imports: [
@@ -18,7 +19,9 @@ import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
       Brand,
       UnitOfMeasure,
       Locality, 
-      ProductCostHistory,  
+      ProductCostHistory, 
+      ProductStock,
+      InventoryMovement
     ]),
   ],
   controllers: [ProductsController],

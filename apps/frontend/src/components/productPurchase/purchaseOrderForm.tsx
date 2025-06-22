@@ -21,8 +21,7 @@ export default function PurchaseOrderForm({
   onCreate,
 }: Props) {
   const [supplierId, setSupplierId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState(""); 
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<CreateProductPurchaseDto[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -74,12 +73,11 @@ export default function PurchaseOrderForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supplierId || !purchaseDate || items.length === 0) return;
+    if (!supplierId || items.length === 0) return;
 
     const newOrder: CreatePurchaseOrderDto = {
       supplierId,
-      invoice_number: invoiceNumber,
-      purchase_date: purchaseDate,
+      invoice_number: invoiceNumber,     
       notes,
       items,
     };
@@ -87,7 +85,7 @@ export default function PurchaseOrderForm({
 
     setSupplierId("");
     setInvoiceNumber("");
-    setPurchaseDate("");
+   
     setNotes("");
     setItems([]);
   };
@@ -111,25 +109,6 @@ export default function PurchaseOrderForm({
             value={supplierId}
             onChange={(val) => setSupplierId(val)}
             placeholder="Seleccionar proveedor"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Factura"
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
-            value={invoiceNumber}
-            onChange={(e) => setInvoiceNumber(e.target.value)}
-    
-            required
-          />
-          <input
-            type="date"
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
-            value={purchaseDate}
-            onChange={(e) => setPurchaseDate(e.target.value)}
-            required
           />
         </div>
 
@@ -166,7 +145,6 @@ export default function PurchaseOrderForm({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             onFocus={() => setQuantity("")}
-
           />
           <input
             type="number"
@@ -177,7 +155,6 @@ export default function PurchaseOrderForm({
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
             onFocus={() => setUnitCost("")}
-
           />
         </div>
 

@@ -17,8 +17,6 @@ export class CreatePurchaseOrderDto {
   @IsString()
   invoice_number: string;
 
-  @IsDateString()
-  purchase_date: string;
 
   @IsOptional()
   @IsString()

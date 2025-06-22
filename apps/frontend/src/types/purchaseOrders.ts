@@ -17,8 +17,7 @@ export interface PurchaseOrder {
 
 export interface CreatePurchaseOrderDto {
   supplierId: string;
-  invoice_number: string;
-  purchase_date: string;
+  invoice_number: string; 
   notes?: string; 
   items: CreateProductPurchaseDto[];
 }

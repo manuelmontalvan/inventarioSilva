@@ -18,8 +18,8 @@ import { ProductPurchase } from '../../productPurchase/entities/product-purchase
 import { User } from '../../users/user.entity';
 import { Locality } from '../locality/locality.entity';
 import { ProductCostHistory } from '../../productPurchase/entities/product-cost-history.entity';
-import { InventoryMovement } from '../../Inventory/inventory-movement.entity'; 
-
+import { InventoryMovement } from '../../Inventory/inventory-movement.entity';
+import { ProductStock } from '../product-stock/product-stock.entity';
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
@@ -56,6 +56,9 @@ export class Product {
   @Column({ nullable: true })
   localityId?: string;
 
+  @OneToMany(() => ProductStock, (stock) => stock.product)
+  stocks: ProductStock[];
+
   @Column({ nullable: true })
   @Index()
   internal_code?: string;
@@ -63,7 +66,7 @@ export class Product {
   @Column({ nullable: true })
   image?: string;
 
- @Column({ type: 'float', default: 0 })
+  @Column({ type: 'float', default: 0 })
   current_quantity: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
@@ -72,7 +75,7 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   max_stock: number;
 
- @OneToMany(() => ProductCostHistory, costHistory => costHistory.product)
+  @OneToMany(() => ProductCostHistory, (costHistory) => costHistory.product)
   costHistories: ProductCostHistory[];
 
   @ManyToOne(() => UnitOfMeasure, (unit) => unit.products, { eager: true })
@@ -131,17 +134,17 @@ export class Product {
   })
   current_trend?: 'growing' | 'declining' | 'stable';
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'createdById' })
-  createdBy: User;
+  createdBy?: User;
 
   @Column()
-  createdById: number;
+  createdById: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'updatedById' })
   updatedBy: User;
 
-  @Column()
-  updatedById: number;
+  @Column({ nullable: true })
+  updatedById?: string;
 }

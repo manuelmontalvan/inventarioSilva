@@ -1,10 +1,15 @@
 // lib/api/products.ts
 import axios from "@/lib/axiosInstance"; // Asegúrate que tienes esto configurado
 import { ProductI } from "@/types/product";
-
-export const getProducts = async (): Promise<ProductI[]> => {
+interface ProductFilters {
+  categoryId?: string | null;
+}
+export const getProducts = async (filters?: ProductFilters): Promise<ProductI[]> => {
   const res = await axios.get("http://localhost:3001/api/products", {
-    withCredentials: true, // <--- Add this line
+    params: {
+      categoryId: filters?.categoryId ?? undefined,
+    },
+    withCredentials: true,
   });
 
   return res.data;

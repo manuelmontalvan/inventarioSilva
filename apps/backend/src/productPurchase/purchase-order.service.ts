@@ -48,23 +48,25 @@ export class PurchaseOrderService {
 
     const registeredBy = { id: user.id } as User;
 
+    // ✅ Fecha actual en UTC
     const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const dateString = `${yyyy}${mm}${dd}`;
+
+    // ✅ Rango del día actual en UTC
+    const yyyy = now.getUTCFullYear();
+    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(now.getUTCDate()).padStart(2, '0');
+
+    const todayStartUtc = new Date(Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate()));
+    const todayEndUtc = new Date(Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
     const countToday = await this.orderRepo.count({
       where: {
-        purchase_date: Between(
-          new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`),
-          new Date(`${yyyy}-${mm}-${dd}T23:59:59.999Z`),
-        ),
+        purchase_date: Between(todayStartUtc, todayEndUtc),
       },
     });
 
     const correlativo = String(countToday + 1).padStart(4, '0');
-    const orderNumber = `OC-${dateString}-${correlativo}`;
+    const orderNumber = `OC-${yyyy}${mm}${dd}-${correlativo}`;
     console.log('Correlativo generado:', orderNumber);
 
     return await this.dataSource.transaction(async (manager) => {
@@ -72,7 +74,7 @@ export class PurchaseOrderService {
         supplier,
         registeredBy,
         invoice_number: dto.invoice_number,
-        purchase_date: new Date(dto.purchase_date),
+        purchase_date: now, // ya en UTC
         notes: dto.notes,
         orderNumber,
       });
@@ -90,20 +92,10 @@ export class PurchaseOrderService {
           );
         }
 
-        //console.log('Procesando producto:', product.id);
-
-        // ✅ Actualizar precio y fecha de última compra
         product.purchase_price = item.unit_cost;
-        product.last_purchase_date = new Date(dto.purchase_date);
-        /*console.log('✅ Producto antes de guardar:', {
-        id: product.id,
-        purchase_price: product.purchase_price,
-        last_purchase_date: product.last_purchase_date,
-      });*/
+        product.last_purchase_date = now;
         await manager.save(product);
-        //console.log('✅ Producto actualizado');
 
-        // ✅ Guardar historial de costos si el precio cambió
         const lastHistory = await manager.findOne(ProductCostHistory, {
           where: { product: { id: product.id } },
           order: { date: 'DESC' },
@@ -113,14 +105,12 @@ export class PurchaseOrderService {
           const costHistory = manager.create(ProductCostHistory, {
             product,
             cost: item.unit_cost,
-            date: new Date(dto.purchase_date),
+            date: now,
             purchaseOrder: savedOrder,
           });
           await manager.save(costHistory);
-          //console.log('✅ Historial de costo guardado');
         }
 
-        // ✅ Crear línea de compra
         const purchaseLine = manager.create(ProductPurchase, {
           product,
           supplier,
@@ -128,7 +118,7 @@ export class PurchaseOrderService {
           quantity: item.quantity,
           unit_cost: item.unit_cost,
           total_cost: item.total_cost,
-          purchase_date: new Date(dto.purchase_date),
+          purchase_date: now,
           notes: item.notes,
           registeredBy,
           order: savedOrder,
@@ -136,12 +126,10 @@ export class PurchaseOrderService {
 
         const savedLine = await manager.save(purchaseLine);
         purchaseLines.push(savedLine);
-        //console.log('✅ Línea de compra guardada');
       }
 
       savedOrder.purchase_lines = purchaseLines;
 
-      // ✅ Devolver orden con relaciones
       const fullOrder = await manager.findOne(PurchaseOrder, {
         where: { id: savedOrder.id },
         relations: [
@@ -152,7 +140,6 @@ export class PurchaseOrderService {
         ],
       });
 
-      //console.log('✅ Orden de compra completada');
       return fullOrder;
     });
   }
@@ -183,29 +170,25 @@ export class PurchaseOrderService {
     return order;
   }
 
-  async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
-    const userIdNumber = Number(userId);
-    if (isNaN(userIdNumber)) throw new BadRequestException('Invalid userId');
+async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
+  const order = await this.orderRepo.findOne({
+    where: { id },
+    relations: ['registeredBy'],
+  });
+  if (!order) throw new NotFoundException(`Orden con ID ${id} no encontrada`);
 
-    const order = await this.orderRepo.findOne({
-      where: { id },
-      relations: ['registeredBy'],
-    });
-    if (!order) throw new NotFoundException(`Orden con ID ${id} no encontrada`);
+  const user = await this.userRepo.findOneBy({ id: userId });
+  if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    const user = await this.userRepo.findOneBy({ id: userIdNumber });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+  if (dto.invoice_number !== undefined)
+    order.invoice_number = dto.invoice_number;
 
-    if (dto.invoice_number !== undefined)
-      order.invoice_number = dto.invoice_number;
-    if (dto.purchase_date !== undefined)
-      order.purchase_date = new Date(dto.purchase_date);
-    if (dto.notes !== undefined) order.notes = dto.notes;
+  if (dto.notes !== undefined) order.notes = dto.notes;
 
-    order.registeredBy = user;
+  order.registeredBy = user;
 
-    return this.orderRepo.save(order);
-  }
+  return this.orderRepo.save(order);
+}
 
   async remove(id: string) {
     const found = await this.orderRepo.findOneBy({ id });

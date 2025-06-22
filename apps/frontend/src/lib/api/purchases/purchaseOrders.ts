@@ -26,7 +26,7 @@ export const createPurchaseOrder = async (
 
 export const updatePurchaseOrder = async (
   id: string,
-  purchaseOrder: Partial<CreatePurchaseOrderDto> // Mejor usar Partial<CreatePurchaseOrderDto> para coincidir con lo que envías
+  purchaseOrder: Partial<Omit<CreatePurchaseOrderDto, 'supplierId' | 'items'>>
 ): Promise<PurchaseOrder> => {
   const { data } = await api.patch(`/purchase-orders/${id}`, purchaseOrder);
   return data;

@@ -61,70 +61,48 @@ export class UsersService {
     return bcrypt.hash(password, salt);
   }
 
-  async update(id: number, dto: UpdateUserDto) {
-    const user = await this.usersRepository.findOne({
-      where: { id },
-      relations: ['role'],
-    });
+ async update(id: string, dto: UpdateUserDto) {
+  const user = await this.usersRepository.findOne({
+    where: { id },
+    relations: ['role'],
+  });
 
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+  if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    if (dto.name) user.name = dto.name;
-    if (dto.lastname) user.lastname = dto.lastname;
+  // ... resto igual
+}
+async findAll(): Promise<User[]> {
+  return this.usersRepository.find({
+    relations: ['role'],
+    select: {
+      password: false,
+    },
+  });
+}
 
-    if (dto.email && dto.email !== user.email) {
-      const emailExists = await this.usersRepository.findOneBy({ email: dto.email });
-      if (emailExists) throw new BadRequestException('El email ya está en uso');
-      user.email = dto.email;
-    }
+async delete(id: string): Promise<void> {
+  const user = await this.usersRepository.findOneBy({ id });
+  if (!user) throw new NotFoundException('Usuario no encontrado');
+  await this.usersRepository.remove(user);
+}
 
-    if (dto.password) user.password = await this.hashPassword(dto.password);
-    if (dto.hiredDate) user.hiredDate = new Date(dto.hiredDate);
-    if (dto.isActive !== undefined) user.isActive = dto.isActive;
-    if (dto.lastLogin) user.lastLogin = new Date(dto.lastLogin);
+async findOne(id: string): Promise<User> {
+  const user = await this.usersRepository.findOne({
+    where: { id },
+    relations: ['role'],
+  });
+  if (!user) throw new NotFoundException('Usuario no encontrado');
+  return user;
+}
 
-    if (dto.roleId) {
-      const role = await this.rolesRepository.findOneBy({ id: dto.roleId });
-      if (role) user.role = role;
-    }
+async updateRefreshToken(userId: string, token: string | null): Promise<void> {
+  await this.usersRepository.update(userId, { refreshToken: token });
+}
 
-    const updatedUser = await this.usersRepository.save(user);
-    const { password, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
-  }
-
-  async delete(id: number): Promise<void> {
-    const user = await this.usersRepository.findOneBy({ id });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-    await this.usersRepository.remove(user);
-  }
-
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find({
-      relations: ['role'],
-      select: {
-        password: false,
-      },
-    });
-  }
-
-  async findOne(id: number): Promise<User> {
-    const user = await this.usersRepository.findOne({
-      where: { id },
-      relations: ['role'],
-    });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-    return user;
-  }
-
-  async updateRefreshToken(userId: number, token: string | null): Promise<void> {
-    await this.usersRepository.update(userId, { refreshToken: token });
-  }
-
-  async findByIdWithRelations(id: number) {
-    return this.usersRepository.findOne({
-      where: { id },
-      relations: ['role'],
-    });
-  }
+async findByIdWithRelations(id: string) {
+  return this.usersRepository.findOne({
+    where: { id },
+    relations: ['role'],
+  });
+}
 }

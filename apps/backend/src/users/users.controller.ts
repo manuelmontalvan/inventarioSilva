@@ -17,23 +17,25 @@ export class UsersController {
 
   @Post()
   async create(@Body() dto: CreateUserDto) {
-   
     return this.usersService.create(dto);
   }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.delete(+id);
+    // Ya no uses +id, pasa directamente el string UUID
+    return this.usersService.delete(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  console.log('Actualizando usuario con PATCH:', id, updateUserDto);
-  return this.usersService.update(+id, updateUserDto);
-}
+    console.log('Actualizando usuario con PATCH:', id, updateUserDto);
+    // Pasa id como string
+    return this.usersService.update(id, updateUserDto);
+  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)

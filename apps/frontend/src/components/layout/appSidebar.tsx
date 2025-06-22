@@ -24,6 +24,8 @@ ShieldUser,
   FilePlus,
   History,
   ContactRound,
+  TrendingUp,
+  Layers2
 } from "lucide-react";
 import {
   Sidebar,
@@ -100,6 +102,11 @@ const items: SidebarItem[] = [
         url: "/products/localities",
         icon: MapPin,
       },
+       {
+        title: "ProductStock",
+        url: "/products/stock",
+        icon: Layers2,
+      },
     ],
   },
    {
@@ -158,6 +165,20 @@ const items: SidebarItem[] = [
         title: "Entrada y Salida  de productos",
         url: "/inventory",
         icon: PackagePlus,
+      },
+    
+    ],
+  },
+  {
+    title: "Configuracion",
+    url: "#",
+    icon: Settings,
+    hasChildren: true,
+    children: [
+      {
+        title: "Margen e impuesto",
+        url: "/config/margins-and-taxes",
+        icon:TrendingUp,
       },
     
     ],

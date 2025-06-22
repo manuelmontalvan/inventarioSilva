@@ -1,3 +1,6 @@
+// components/ui/multi-select-combobox.tsx
+"use client"
+
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -21,28 +24,34 @@ interface ComboboxItem {
   value: string
 }
 
-interface ComboboxProps {
+interface MultiSelectComboboxProps {
   items: ComboboxItem[]
-  value: string
-  onChange: (value: string) => void
+  value: string[]
+  onChange: (values: string[]) => void
   placeholder?: string
   className?: string
 }
 
-export function Combobox({
+export function MultiSelectCombobox({
   items,
   value,
   onChange,
-  placeholder = "Seleccione una opción...",
-  className = "w-[200px]",
-}: ComboboxProps) {
+  placeholder = "Seleccionar productos...",
+  className = "w-[300px]",
+}: MultiSelectComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
-  // Busca el label correspondiente al valor, incluso si es cadena vacía
-  const selectedLabel = React.useMemo(() => {
-    const found = items.find((item) => item.value === value)
-    return found ? found.label : placeholder
-  }, [items, value, placeholder])
+  const toggleValue = (val: string) => {
+    if (value.includes(val)) {
+      onChange(value.filter((v) => v !== val))
+    } else {
+      onChange([...value, val])
+    }
+  }
+
+  const selectedLabels = items
+    .filter((item) => value.includes(item.value))
+    .map((item) => item.label)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -53,7 +62,9 @@ export function Combobox({
           aria-expanded={open}
           className={cn("justify-between", className)}
         >
-          {selectedLabel}
+          {selectedLabels.length > 0
+            ? selectedLabels.join(", ")
+            : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -63,24 +74,23 @@ export function Combobox({
           <CommandList>
             <CommandEmpty>No se encontró resultado.</CommandEmpty>
             <CommandGroup>
-              {items.map((item) => (
-                <CommandItem
-                  key={item.value}
-                  value={item.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                  }}
-                >
-                  {item.label}
-                  <Check
-                    className={cn(
-                      "ml-auto h-4 w-4",
-                      value === item.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                </CommandItem>
-              ))}
+              {items.map((item) => {
+                const isSelected = value.includes(item.value)
+                return (
+                  <CommandItem
+                    key={item.value}
+                    onSelect={() => toggleValue(item.value)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        isSelected ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {item.label}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

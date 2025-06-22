@@ -1,5 +1,12 @@
+// src/purchases/dto/update-purchase-order.dto.ts
+import { IsString, IsOptional } from 'class-validator';
 
-import     { PartialType } from '@nestjs/mapped-types';
-import {CreatePurchaseOrderDto} from './create-purchase-order.dto';
+export class UpdatePurchaseOrderDto {
+  @IsOptional()
+  @IsString()
+  invoice_number?: string;
 
-export class  UpdatePurchaseOrderDto extends PartialType(CreatePurchaseOrderDto) {}
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}

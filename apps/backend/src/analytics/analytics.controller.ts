@@ -6,8 +6,13 @@ import { AnalyticsService } from './analytics.service';
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get('product-cost-history')
-  getProductCostTrends(@Query('productId') productId?: string) {
-    return this.analyticsService.getProductCostTrends(productId);
-  }
+ @Get('product-cost-history')
+getProductCostTrends(
+  @Query('productIds') productIds?: string,
+  @Query('startDate') startDate?: string,
+  @Query('endDate') endDate?: string
+) {
+  const ids = productIds?.split(",") ?? [];
+  return this.analyticsService.getProductCostTrends(ids, startDate, endDate);
+}
 }
