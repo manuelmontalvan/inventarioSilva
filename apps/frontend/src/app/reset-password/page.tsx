@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,14 @@ export default function ResetPasswordPage() {
 
   const strength = passwordStrength(newPassword);
   const { label, color } = strengthLabel(strength);
+
+  // Protección: si no hay token, redirigir
+  useEffect(() => {
+    if (!token) {
+      addToast({ color: "danger", title: "Token no proporcionado" });
+      router.push("/login");
+    }
+  }, [token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -7,6 +7,8 @@ import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { ProductsTab } from "../products/productTab";
 import { CreateSaleDto } from "@/types/productSales";
+import { addToast } from "@heroui/toast";
+addToast;
 
 interface SaleItem {
   productId: string;
@@ -87,15 +89,15 @@ export default function SalesForm({
           ? "cancelled"
           : status; // ya es "pending"
 
-    await onCreate({
-  customerId: selectedCustomerId || undefined, // opcional
-  payment_method: paymentMethod as 'cash' | 'credit' | 'transfer',
-  status: mappedStatus as 'paid' | 'pending' | 'cancelled',
-  productSales: items.map((item) => ({
-    productId: item.productId,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-  })),
+      await onCreate({
+        customerId: selectedCustomerId || undefined, // opcional
+        payment_method: paymentMethod as "cash" | "credit" | "transfer",
+        status: mappedStatus as "paid" | "pending" | "cancelled",
+        productSales: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        })),
         notes: "",
       });
 
@@ -106,10 +108,11 @@ export default function SalesForm({
       setStatus("");
       setItems([]);
       setSelectedCategoryId("");
-      alert("Venta guardada con éxito");
+      addToast({ color: "success", title: "Venta guardada con éxito" });
     } catch (error) {
       console.error("Error al guardar la venta:", error);
       alert("Error al guardar la venta");
+      addToast({ color: "danger", title: "Error al guardar venta" });
     }
   };
 
@@ -160,70 +163,71 @@ export default function SalesForm({
       <h2 className="text-xl font-bold">Registrar Venta</h2>
 
       {/* Cliente */}
-   <div className="grid grid-cols-2 gap-6 mb-6">
-  {/* Cliente */}
-  <div>
-    <label className="block font-medium mb-1">Cliente</label>
-    <Combobox
-      items={customers.map((c) => ({
-        label: c.identification || c.name,
-        value: c.id,
-      }))}
-      value={selectedCustomerId}
-      onChange={(val) => {
-        setSelectedCustomerId(val);
-        const found = customers.find((c) => c.id === val);
-        setSelectedCustomer(found || null);
-      }}
-      placeholder="Buscar por cédula o nombre"
-    />
-    {selectedCustomer && (
-      <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-        <p>
-          <strong>Nombre:</strong> {selectedCustomer.name}{" "}
-          {selectedCustomer.lastname || ""}
-        </p>
-        <p>
-          <strong>Correo:</strong> {selectedCustomer.email || "N/A"}
-        </p>
+      <div className="grid grid-cols-2 gap-6 mb-6">
+        {/* Cliente */}
+        <div>
+          <label className="block font-medium mb-1">Cliente</label>
+          <Combobox
+            items={customers.map((c) => ({
+              label: c.identification || c.name,
+              value: c.id,
+            }))}
+            value={selectedCustomerId}
+            onChange={(val) => {
+              setSelectedCustomerId(val);
+              const found = customers.find((c) => c.id === val);
+              setSelectedCustomer(found || null);
+            }}
+            placeholder="Buscar por cédula o nombre"
+          />
+          {selectedCustomer && (
+            <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+              <p>
+                <strong>Nombre:</strong> {selectedCustomer.name}{" "}
+                {selectedCustomer.lastname || ""}
+              </p>
+              <p>
+                <strong>Correo:</strong> {selectedCustomer.email || "N/A"}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Método de pago */}
+        <div>
+          <label className="block font-medium mb-1">Método de Pago</label>
+          <Combobox
+            items={paymentMethods}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            placeholder="Seleccione método"
+          />
+        </div>
+
+        {/* Estado */}
+        <div>
+          <label className="block font-medium mb-1">Estado</label>
+          <Combobox
+            items={saleStatuses}
+            value={status}
+            onChange={setStatus}
+            placeholder="Seleccione estado"
+          />
+        </div>
+
+        {/* Filtrar por categoría */}
+        <div>
+          <label className="block font-medium mb-1">
+            Filtrar por Categoría
+          </label>
+          <Combobox
+            items={categories.map((c) => ({ label: c.name, value: c.id }))}
+            value={selectedCategoryId}
+            onChange={setSelectedCategoryId}
+            placeholder="Categoría"
+          />
+        </div>
       </div>
-    )}
-  </div>
-
-  {/* Método de pago */}
-  <div>
-    <label className="block font-medium mb-1">Método de Pago</label>
-    <Combobox
-      items={paymentMethods}
-      value={paymentMethod}
-      onChange={setPaymentMethod}
-      placeholder="Seleccione método"
-    />
-  </div>
-
-  {/* Estado */}
-  <div>
-    <label className="block font-medium mb-1">Estado</label>
-    <Combobox
-      items={saleStatuses}
-      value={status}
-      onChange={setStatus}
-      placeholder="Seleccione estado"
-    />
-  </div>
-
-  {/* Filtrar por categoría */}
-  <div>
-    <label className="block font-medium mb-1">Filtrar por Categoría</label>
-    <Combobox
-      items={categories.map((c) => ({ label: c.name, value: c.id }))}
-      value={selectedCategoryId}
-      onChange={setSelectedCategoryId}
-      placeholder="Categoría"
-    />
-  </div>
-</div>
-
 
       {/* Tabla de productos con unidad/cantidad integrada */}
       <ProductsTab

@@ -13,7 +13,7 @@ export class MailService {
 
   async sendResetPasswordEmail(to: string, link: string) {
     await this.transporter.sendMail({
-      from: `"Soporte Inventario" <${process.env.EMAIL_USER}>`,
+      from: `"Soporte Ferreteria Silva" <${process.env.EMAIL_USER}>`,
       to:to, // puede ser @gmail, @hotmail, @outlook, etc.
       subject: 'Restablecimiento de contraseña',
       html: `
