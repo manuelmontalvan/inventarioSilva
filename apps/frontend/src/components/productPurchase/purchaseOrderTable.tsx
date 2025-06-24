@@ -1,11 +1,12 @@
+// src/components/productPurchase/purchaseOrderTable.tsx
 "use client";
 
 import React, { useState } from "react";
 import { PurchaseOrder } from "@/types/purchaseOrders";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface Props {
   orders: PurchaseOrder[];
@@ -31,36 +32,32 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     );
   });
 
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-
   function handleExportPdf() {
     const doc = new jsPDF();
-
     const title = "Reporte de órdenes de compra";
     const tableColumn = ["Orden", "Proveedor", "Fecha", "Total"];
     const tableRows: (string | number)[][] = [];
 
     let grandTotal = 0;
 
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const totalOrder = order.purchase_lines.reduce(
         (acc, item) => acc + Number(item.total_cost),
         0
       );
       grandTotal += totalOrder;
-
-      const row = [
+      tableRows.push([
         order.orderNumber,
         order.supplier?.name || "N/A",
         new Date(order.purchase_date).toLocaleDateString(),
         `$${totalOrder.toFixed(2)}`,
-      ];
-      tableRows.push(row);
+      ]);
     });
 
     doc.text(title, 14, 15);
@@ -80,78 +77,29 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     doc.save("ordenes_compra.pdf");
   }
 
-  function handleExportExcel() {
-    const data = orders.map(order => {
-      const total = order.purchase_lines.reduce(
-        (acc, item) => acc + Number(item.total_cost),
-        0
-      );
-      return {
-        Orden: order.orderNumber,
-        Proveedor: order.supplier?.name || "N/A",
-        Fecha: new Date(order.purchase_date).toLocaleDateString(),
-        Total: total.toFixed(2),
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "OrdenesCompra");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const dataBlob = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
-    saveAs(dataBlob, "ordenes_compra.xlsx");
-  }
-
-  function handleExportCsv() {
-    const data = orders.map(order => {
-      const total = order.purchase_lines.reduce(
-        (acc, item) => acc + Number(item.total_cost),
-        0
-      );
-      return {
-        Orden: order.orderNumber,
-        Proveedor: order.supplier?.name || "N/A",
-        Fecha: new Date(order.purchase_date).toLocaleDateString(),
-        Total: total.toFixed(2),
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, "ordenes_compra.csv");
-  }
-
-  function handleExportSinglePdf(order: PurchaseOrder) {
+  function handleExportSingleOrderPdf(order: PurchaseOrder) {
     const doc = new jsPDF();
     const tableColumn = ["Producto", "Cantidad", "Costo Unitario", "Total"];
     const tableRows: (string | number)[][] = [];
 
-    const totalOrder = order.purchase_lines.reduce(
+    const total = order.purchase_lines.reduce(
       (acc, item) => acc + Number(item.total_cost),
       0
     );
 
     order.purchase_lines.forEach((item) => {
-      const productName =
-        products.find((p) => p.id === item.product.id)?.name ||
-        item.product.id;
-      const row = [
-        productName,
+      const name =
+        products.find((p) => p.id === item.product.id)?.name || item.product.id;
+      tableRows.push([
+        name,
         item.quantity,
         `$${Number(item.unit_cost).toFixed(2)}`,
         `$${Number(item.total_cost).toFixed(2)}`,
-      ];
-      tableRows.push(row);
+      ]);
     });
 
-    doc.text(`Orden: ${order.orderNumber}`, 14, 15);
-    doc.text(`Proveedor: ${order.supplier?.name || "N/A"}`, 14, 25);
+    doc.text(`Orden de compra: ${order.orderNumber}`, 14, 15);
+    doc.text(`Proveedor: ${order.supplier?.name}`, 14, 25);
     doc.text(
       `Fecha: ${new Date(order.purchase_date).toLocaleDateString()}`,
       14,
@@ -159,13 +107,13 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     );
 
     autoTable(doc, {
-      startY: 40,
+      startY: 45,
       head: [tableColumn],
       body: tableRows,
     });
 
     doc.text(
-      `Total: $${totalOrder.toFixed(2)}`,
+      `Total: $${total.toFixed(2)}`,
       14,
       (doc as any).lastAutoTable.finalY + 10
     );
@@ -173,22 +121,94 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     doc.save(`orden_${order.orderNumber}.pdf`);
   }
 
+  function handleExportExcel() {
+    const worksheetData = orders.map((order) => {
+      const total = order.purchase_lines.reduce(
+        (acc, item) => acc + Number(item.total_cost),
+        0
+      );
+      return {
+        Orden: order.orderNumber,
+        Proveedor: order.supplier?.name || "N/A",
+        Fecha: new Date(order.purchase_date).toLocaleDateString("es-EC"),
+        Total: total.toFixed(2),
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Órdenes");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, "ordenes_compra.xlsx");
+  }
+
+  function handleExportCsv() {
+    const worksheetData = orders.map((order) => {
+      const total = order.purchase_lines.reduce(
+        (acc, item) => acc + Number(item.total_cost),
+        0
+      );
+      return {
+        Orden: order.orderNumber,
+        Proveedor: order.supplier?.name || "N/A",
+        Fecha: new Date(order.purchase_date).toLocaleDateString("es-EC"),
+        Total: total.toFixed(2),
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, "ordenes_compra.csv");
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 sticky top-0 bg-white dark:bg-gray-900 z-30 p-2 rounded shadow-sm">
         <input
           type="text"
-          placeholder="Buscar por proveedor, orden o factura"
+          placeholder="Buscar por proveedor, factura u orden"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-2 border rounded-lg dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-900"
+          className="flex-grow px-4 py-2 border rounded-lg dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-        <button onClick={handleExportPdf} className="btn">PDF</button>
-        <button onClick={handleExportExcel} className="btn">Excel</button>
-        <button onClick={handleExportCsv} className="btn">CSV</button>
+        <button
+          onClick={handleExportPdf}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded"
+        >
+          PDF
+        </button>
+        <button
+          onClick={handleExportExcel}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 rounded"
+        >
+          Excel
+        </button>
+        <button
+          onClick={handleExportCsv}
+          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 rounded"
+        >
+          CSV
+        </button>
+        <button
+          onClick={() => selectedOrder && handleExportSingleOrderPdf(selectedOrder)}
+          disabled={!selectedOrder}
+          className={`px-4 rounded text-white ${
+            selectedOrder ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Exportar orden abierta
+        </button>
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {paginatedOrders.length === 0 ? (
         <p className="text-gray-500 italic">No hay órdenes registradas.</p>
       ) : (
         <div className="overflow-y-auto flex-1 space-y-4 max-h-[500px]">
@@ -218,22 +238,23 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
         </div>
       )}
 
-      <div className="flex justify-center gap-2 mt-4">
-        {Array.from({ length: totalPages }, (_, index) => (
+      <div className="flex justify-center mt-4 space-x-2">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
           <button
-            key={index + 1}
-            onClick={() => setCurrentPage(index + 1)}
-            className={`px-3 py-1 border rounded ${
-              currentPage === index + 1
-                ? "bg-indigo-500 text-white"
-                : "bg-white text-black dark:bg-gray-800 dark:text-white"
+            key={page}
+            onClick={() => setCurrentPage(page)}
+            className={`px-3 py-1 rounded border ${
+              page === currentPage
+                ? "bg-indigo-600 text-white"
+                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-white"
             }`}
           >
-            {index + 1}
+            {page}
           </button>
         ))}
       </div>
 
+      {/* Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur bg-opacity-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-3xl w-full overflow-y-auto max-h-[90vh]">
@@ -241,20 +262,12 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
               <h2 className="text-lg font-semibold text-indigo-700 dark:text-indigo-400">
                 Nº Orden de compra : {selectedOrder.orderNumber}
               </h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleExportSinglePdf(selectedOrder)}
-                  className="text-sm px-3 py-1 rounded bg-red-600 text-white"
-                >
-                  PDF
-                </button>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-500 hover:text-red-600 text-xl"
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-gray-500 hover:text-red-600 text-xl"
+              >
+                ✕
+              </button>
             </div>
             <div className="p-4 space-y-4 text-sm dark:text-white">
               <div className="grid gap-1">
@@ -266,66 +279,43 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
                 </p>
                 <p>
                   <strong>Fecha:</strong>{" "}
-                  {new Date(selectedOrder.purchase_date).toLocaleDateString(
-                    "es-EC",
-                    {
-                      timeZone: "UTC",
-                    }
-                  )}
+                  {new Date(selectedOrder.purchase_date).toLocaleDateString("es-EC", {
+                    timeZone: "UTC",
+                  })}
                 </p>
                 <p>
-                  <strong>Registrado por:</strong>{" "}
-                  {selectedOrder.registeredBy?.name || "N/A"}
+                  <strong>Registrado por:</strong> {selectedOrder.registeredBy?.name || "N/A"}
                 </p>
                 <p>
                   <strong>Notas:</strong> {selectedOrder.notes || "N/A"}
                 </p>
               </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full border border-gray-300 dark:border-gray-700 text-sm">
                   <thead className="bg-gray-100 dark:bg-gray-800">
                     <tr>
-                      <th className="p-2 border dark:border-gray-700 text-left">
-                        Producto
-                      </th>
-                      <th className="p-2 border dark:border-gray-700 text-right">
-                        Cantidad
-                      </th>
-                      <th className="p-2 border dark:border-gray-700 text-right">
-                        Costo Unitario
-                      </th>
-                      <th className="p-2 border dark:border-gray-700 text-right">
-                        Total
-                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-left">Producto</th>
+                      <th className="p-2 border dark:border-gray-700 text-right">Cantidad</th>
+                      <th className="p-2 border dark:border-gray-700 text-right">Costo Unitario</th>
+                      <th className="p-2 border dark:border-gray-700 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...selectedOrder.purchase_lines]
                       .sort((a, b) => {
                         const nameA =
-                          products.find((p) => p.id === a.product.id)?.name ||
-                          "";
+                          products.find((p) => p.id === a.product.id)?.name || "";
                         const nameB =
-                          products.find((p) => p.id === b.product.id)?.name ||
-                          "";
+                          products.find((p) => p.id === b.product.id)?.name || "";
                         return nameA.localeCompare(nameB);
                       })
                       .map((item) => {
                         const productName =
-                          products.find((p) => p.id === item.product.id)
-                            ?.name || item.product.id;
+                          products.find((p) => p.id === item.product.id)?.name || item.product.id;
                         return (
-                          <tr
-                            key={item.product.id}
-                            className="border-t dark:border-gray-700"
-                          >
-                            <td className="p-2 border dark:border-gray-700">
-                              {productName}
-                            </td>
-                            <td className="p-2 border dark:border-gray-700 text-right">
-                              {item.quantity}
-                            </td>
+                          <tr key={item.product.id} className="border-t dark:border-gray-700">
+                            <td className="p-2 border dark:border-gray-700">{productName}</td>
+                            <td className="p-2 border dark:border-gray-700 text-right">{item.quantity}</td>
                             <td className="p-2 border dark:border-gray-700 text-right">
                               ${Number(item.unit_cost).toFixed(2)}
                             </td>
@@ -336,19 +326,13 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
                         );
                       })}
                     <tr className="bg-gray-100 dark:bg-gray-800 font-bold">
-                      <td
-                        colSpan={3}
-                        className="p-2 border text-right dark:border-gray-700"
-                      >
+                      <td colSpan={3} className="p-2 border text-right dark:border-gray-700">
                         Total general
                       </td>
                       <td className="p-2 border text-right dark:border-gray-700">
                         $
                         {selectedOrder.purchase_lines
-                          .reduce(
-                            (acc, item) => acc + Number(item.total_cost),
-                            0
-                          )
+                          .reduce((acc, item) => acc + Number(item.total_cost), 0)
                           .toFixed(2)}
                       </td>
                     </tr>

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import LoginForm from "@/components/form/loginForm";
+import LoginForm from "@/components/login/loginForm";
 import { useRouter } from "next/navigation";
 
 const LoginPage = () => {

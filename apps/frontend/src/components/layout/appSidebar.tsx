@@ -140,7 +140,7 @@ const items: SidebarItem[] = [
     children: [
       {
         title: "Registro de ventas",
-        url: "/purchases",
+        url: "/sales",
         icon: FilePlus,
       },
       {

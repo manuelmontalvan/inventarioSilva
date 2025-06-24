@@ -2,6 +2,7 @@ import axios from "@/lib/axiosInstance";
 
 export interface Supplier {
   id: string;
+  identification: string;
   name: string;
   contact_person?: string;
   phone?: string;

@@ -17,6 +17,7 @@ import { addToast } from "@heroui/toast";
 
 // Zod schema para validar el formulario de proveedor
 const SupplierSchema = z.object({
+  identification: z.string().min(1, "La cedula o ruc es obligatorio"),
   name: z.string().min(1, "El nombre es obligatorio"),
   contact_person: z.string().optional(),
   phone: z.string().optional(),
@@ -40,6 +41,7 @@ function SupplierTable({
       <table className="min-w-full border-collapse dark:text-white">
         <thead>
           <tr className="bg-gray-200 dark:bg-gray-700">
+            <th className="p-2 border">C.I. o Ruc</th>
             <th className="p-2 border">Nombre</th>
             <th className="p-2 border">Contacto</th>
             <th className="p-2 border">Teléfono</th>
@@ -51,6 +53,7 @@ function SupplierTable({
         <tbody>
           {suppliers.map((supplier) => (
             <tr key={supplier.id} className="even:bg-gray-100 dark:even:bg-gray-800">
+              <td className="p-2 border">{supplier.identification}</td>
               <td className="p-2 border">{supplier.name}</td>
               <td className="p-2 border">{supplier.contact_person ?? ""}</td>
               <td className="p-2 border">{supplier.phone ?? ""}</td>
@@ -93,6 +96,7 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
   } = useForm<SupplierForm>({
     resolver: zodResolver(SupplierSchema),
     defaultValues: {
+      identification: "",
       name: "",
       contact_person: undefined,
       phone: undefined,
@@ -103,6 +107,7 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
 
   useEffect(() => {
     if (initialData) {
+      setValue("identification", initialData.identification);
       setValue("name", initialData.name);
       setValue("contact_person", initialData.contact_person ?? undefined);
       setValue("phone", initialData.phone ?? undefined);
@@ -115,14 +120,18 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
 
   return (
     <>
-      <div className="fixed inset-0 backdrop:blur bg-black bg-opacity-30 z-40" onClick={onClose} />
-      <aside className="fixed top-0 right-0 h-full bg-white dark:bg-gray-900 shadow-lg p-6 z-50 w-full max-w-xs sm:max-w-sm">
+      <div className="fixed inset-0 backdrop:blur bg-opacity-30 z-40" onClick={onClose} />
+      <aside className="fixed top-0 right-0 h-full bg-white dark:bg-gray-900 dark:text-white shadow-lg p-6 z-50 w-full max-w-xs sm:max-w-sm">
         <Button onPress={onClose} variant="bordered" className="mb-4">
           × Cerrar
         </Button>
         <form onSubmit={handleSubmit(onSave)} className="flex flex-col space-y-4">
           <h2 className="text-xl font-bold">{initialData ? "Editar Proveedor" : "Crear Proveedor"}</h2>
-
+           <label className="flex flex-col">
+            <span>Cedula o Ruc  *</span>
+            <input className="input" {...register("identification")} />
+            {errors.identification && <span className="text-red-600">{errors.identification.message}</span>}
+          </label>
           <label className="flex flex-col">
             <span>Nombre *</span>
             <input className="input" {...register("name")} />

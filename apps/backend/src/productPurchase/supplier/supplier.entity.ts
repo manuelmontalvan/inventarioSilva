@@ -5,6 +5,9 @@ import { ProductPurchase } from '../entities/product-purchase.entity';
 export class Supplier {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+  
+  @Column({ nullable: true })
+  identification?: string;
 
   @Column({ unique: true })
   name: string;

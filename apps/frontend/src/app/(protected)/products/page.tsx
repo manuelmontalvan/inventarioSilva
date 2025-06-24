@@ -48,6 +48,7 @@ export default function ProductAdminPage() {
         "brand",
         "unit_of_measure",
         "sale_price",
+        "purchase_price",
         "isActive",
       ].includes(key);
     });

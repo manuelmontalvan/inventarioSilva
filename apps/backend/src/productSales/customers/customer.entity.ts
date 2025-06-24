@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { ProductSale } from '../entities/product-sale.entity';
+import {Sale } from '../entities/sale.entity'
 
 @Entity('customers')
 export class Customer {
@@ -22,6 +22,6 @@ export class Customer {
   @Column({ type: 'text', nullable: true })
   address?: string;
 
-  @OneToMany(() => ProductSale, sale => sale.customer)
-  sales: ProductSale[];
+  @OneToMany(() => Sale, sale => sale.customer)
+  sales: Sale[];
 }

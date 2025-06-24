@@ -69,7 +69,7 @@ export class UsersService {
 
   if (!user) throw new NotFoundException('Usuario no encontrado');
 
-  // ... resto igual
+
 }
 async findAll(): Promise<User[]> {
   return this.usersRepository.find({

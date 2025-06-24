@@ -58,7 +58,16 @@ export default function ProductTable({
     if (key === "purchase_price" || key === "sale_price") {
       return `USD $${val}`;
     }
-
+    
+    if (key === "profit_margin") {
+    // Si es entero, mostrar sin decimales, si no, mostrar 1 o 2 decimales
+    const numberVal = Number(val);
+    if (Number.isInteger(numberVal)) {
+      return `${numberVal}%`;
+    } else {
+      return `${numberVal.toFixed(2).replace(/\.?0+$/, '')}%`;
+    }
+  }
     if (
       key === "entry_date" ||
       key === "last_updated" ||
