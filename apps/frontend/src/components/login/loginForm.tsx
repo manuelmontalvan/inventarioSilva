@@ -17,6 +17,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { addToast } from "@heroui/toast";
 
 interface LoginFormProps {
   onLogin: (email: string) => void;
@@ -32,40 +33,46 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const { login } = useAuth();
   const router = useRouter();
 
- 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError(null);
+    try {
+      if (!email || !password) {
+        throw new Error("Por favor, completa todos los campos.");
+      }
 
-  try {
-    if (!email || !password) {
-      throw new Error("Por favor, completa todos los campos.");
+      await login(email, password); // ✅ Llama al login centralizado
+      router.push("/dashboard");
+      addToast({ color: "success", title: "Usuario Inicio Sessión" });
+    } catch (err: any) {
+      setError(err.message || "Error al iniciar sesión. Inténtalo de nuevo.");
+      addToast({ color: "danger", title: "Error al Inciar Sessión" });
+    } finally {
+      setIsLoading(false);
     }
-
-    await login(email, password); // ✅ Llama al login centralizado
-    router.push("/dashboard");
-  } catch (err: any) {
-    setError(err.message || "Error al iniciar sesión. Inténtalo de nuevo.");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const handlePasswordRecovery = async () => {
     if (!recoveryEmail) return;
     try {
-      await fetch("http://localhost:3001/api/auth/recover", {
+      await fetch("http://localhost:3001/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: recoveryEmail }),
       });
-      
-      alert("Se ha enviado un correo de recuperación si el email existe.");
+
+      addToast({
+        color: "success",
+        title: "Correo de recuperación enviado.",
+      });
+      router.push("/login");
     } catch (err) {
-      alert("Error al enviar la solicitud.");
+      addToast({
+        color: "danger",
+        title: "Error al enviar correo de recuperación.",
+      });
     }
   };
 
@@ -76,9 +83,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       transition={{ duration: 0.5 }}
       className="w-full max-w-md mx-auto p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/10"
     >
-      <h2 className="text-2xl font-semibold text-center text-white mb-8">
-        Iniciar Sesión
-      </h2>
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold text-center dark:text-white mb-8">
+          Iniciar Sesión
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Bienvenido de nuevo, ingresa tus credenciales
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -144,10 +156,13 @@ const handleSubmit = async (e: React.FormEvent) => {
           )}
         </Button>
 
-        <div className="text-center mt-4">
+        <div className="text-center mt-4 dark:text-white">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="link" className="text-white text-sm underline">
+              <Button
+                variant="link"
+                className=" text-blue-600 text-sm underline"
+              >
                 ¿Olvidaste tu contraseña?
               </Button>
             </DialogTrigger>

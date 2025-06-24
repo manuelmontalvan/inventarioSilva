@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   Body,
+  Patch,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -19,6 +20,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { LocalAuthGuard } from '../common/guards/local-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { Request as ExpressRequest, Response } from 'express';
+import { MailService } from './mail.service';
 
 interface RequestWithCookies extends ExpressRequest {
   cookies: {
@@ -33,6 +35,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   @UseGuards(LocalAuthGuard)
@@ -50,14 +53,14 @@ export class AuthController {
 
     const tokens = await this.authService.login(user);
 
-    res.cookie('token', tokens.access_token, {
+    res.cookie('token', tokens.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 15, // 15 minutos
+      maxAge: 1000 * 60 * 60 * 2, // 15 minutos
     });
 
-    res.cookie('refreshToken', tokens.refresh_token, {
+    res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -147,7 +150,52 @@ export class AuthController {
       path: '/',
     });
 
-
     return { message: 'Sesión cerrada' };
+  }
+  @Post('reset-password')
+  async resetPassword(
+    @Body('token') token: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    const payload = this.jwtService.verify(token);
+    if (!payload?.sub) throw new UnauthorizedException('Token inválido');
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(payload.sub, hashedPassword);
+    return { message: 'Contraseña actualizada' };
+  }
+
+  @Patch('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Request() req,
+    @Body('oldPassword') oldPassword: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    const user = await this.usersService.findOne(req.user.sub);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch)
+      throw new UnauthorizedException('Contraseña actual incorrecta');
+
+    const newHashed = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, newHashed);
+    return { message: 'Contraseña actualizada' };
+  }
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const token = this.jwtService.sign({ sub: user.id }, { expiresIn: '15m' });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const link = `${frontendUrl}/reset-password?token=${token}`;
+
+    await this.mailService.sendResetPasswordEmail(user.email, link);
+
+    return { message: 'Enlace enviado al correo' };
+  }
+  @Post('validate-reset-token')
+  async validateResetToken(@Body('token') token: string) {
+    return this.authService.validateResetToken(token);
   }
 }

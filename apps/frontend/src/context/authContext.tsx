@@ -32,25 +32,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
   const router = useRouter();
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const res = await axiosInstance.get("/auth/perfil");
-        setUser(res.data);
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setLoading(false); // <- Esto asegura que el spinner termine
-      }
-    };
+  // AuthProvider.tsx
+useEffect(() => {
+  const isLoginPage = window.location.pathname === "/login";
+  if (isLoginPage) {
+    setLoading(false);
+    return;
+  }
 
-    checkSession();
+  const checkSession = async () => {
+    try {
+      const res = await axiosInstance.get("/auth/perfil");
+      setUser(res.data);
+    } catch (err) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Establece el handler para manejar sesión expirada
-    setSessionExpiredHandler(() => {
-      setSessionExpired(true);
-    });
-  }, []);
+  checkSession();
+}, []);
+
 
   const login = async (email: string, password: string) => {
     try {

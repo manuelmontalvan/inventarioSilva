@@ -8,6 +8,7 @@ import { LocalStrategy } from './local.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { ConfigModule } from '@nestjs/config';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from './mail.service';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { ConfigService } from '@nestjs/config';
 }),
 
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy,MailService],
   controllers: [AuthController],
 })
 export class AuthModule {}

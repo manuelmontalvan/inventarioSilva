@@ -23,7 +23,6 @@ export const setSessionExpiredHandler = (handler: () => void) => {
   onSessionExpired = handler;
 };
 
-
 export const setIsLoggingOut = (value: boolean) => {
   isLoggingOut = value;
   if (!value) {
@@ -32,21 +31,53 @@ export const setIsLoggingOut = (value: boolean) => {
 };
 
 // Interceptor de respuesta global
+// Interceptor de respuesta global con intento de refresh
 axiosInstance.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
+    const originalRequest = error.config;
+
+    // ⚠️ Evitar que el interceptor actúe sobre /auth/login y /auth/refresh
+    const ignoredPaths = ["/auth/login", "/auth/refresh"];
+    const isIgnored = ignoredPaths.some(path => originalRequest?.url?.includes(path));
+    if (isIgnored) {
+      return Promise.reject(error); // ignora
+    }
+
+    // Interceptar solo errores 401 una sola vez
     if (
       error.response?.status === 401 &&
-      onSessionExpired &&
+      !originalRequest._retry &&
       !isLoggingOut &&
-       !modalShown // 👈 Aquí está la condición importante
+      !modalShown
     ) {
-       modalShown = true;
-         console.warn("🔐 Sesión expirada por:", error.config.url);
-      onSessionExpired();
+      originalRequest._retry = true;
+
+      try {
+        // Intenta refresh
+        const refreshResponse = await axios.post(
+          "http://localhost:3001/api/auth/refresh",
+          {},
+          { withCredentials: true }
+        );
+
+        const { access_token } = refreshResponse.data;
+
+        // Reintenta con nuevo token
+        setAuthToken(access_token);
+        originalRequest.headers["Authorization"] = `Bearer ${access_token}`;
+        return axiosInstance(originalRequest);
+      } catch (refreshError) {
+        modalShown = true;
+        console.warn("🔐 Sesión expirada y refresh fallido:", error.config?.url);
+        if (onSessionExpired) onSessionExpired();
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
+
 
 export default axiosInstance;

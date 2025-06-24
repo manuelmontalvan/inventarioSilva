@@ -69,8 +69,22 @@ export class UsersService {
 
   if (!user) throw new NotFoundException('Usuario no encontrado');
 
+  Object.assign(user, dto); // actualiza cualquier campo opcional
+
+  const saved = await this.usersRepository.save(user);
+  const { password, ...userWithoutPassword } = saved;
+  return userWithoutPassword;
 
 }
+
+async updatePassword(userId: string, newHashedPassword: string): Promise<void> {
+  await this.usersRepository.update(userId, {
+    password: newHashedPassword,
+  });
+}
+
+
+
 async findAll(): Promise<User[]> {
   return this.usersRepository.find({
     relations: ['role'],
