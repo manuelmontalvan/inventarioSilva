@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Customer } from "@/types/customer";
 import { ProductI, Category, UnitOfMeasure } from "@/types/product";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
-import { ProductsTab } from "../products/productTab";
+import { ProductsTab } from "../tabla/productTab";
 import { CreateSaleDto } from "@/types/productSales";
 import { addToast } from "@heroui/toast";
-addToast;
+import { getProducts } from "@/lib/api/products/products";
 
 interface SaleItem {
   productId: string;
@@ -22,27 +22,38 @@ interface SaleItem {
 
 interface Props {
   customers: Customer[];
-  products: ProductI[];
   categories: Category[];
   units: UnitOfMeasure[];
   onCreate: (data: CreateSaleDto) => Promise<void> | void;
 }
 
-const paymentMethods = [
-  { label: "Efectivo", value: "cash" },
-  { label: "Tarjeta", value: "credit" },
-  { label: "Transferencia", value: "transfer" },
-];
+// Función ficticia para llamar al backend y traer productos paginados con filtros.
+// Cambia esta función para que llame a tu API real.
+async function fetchProductsApi({
+  search,
+  page,
+  limit,
+  categoryId,
+}: {
+  search: string;
+  page: number;
+  limit: number;
+  categoryId?: string;
+}): Promise<{ data: ProductI[]; totalPages: number }> {
+  // Ejemplo: fetch a tu API
+  const query = new URLSearchParams();
+  if (search) query.append("search", search);
+  if (categoryId) query.append("categoryId", categoryId);
+  query.append("page", page.toString());
+  query.append("limit", limit.toString());
 
-const saleStatuses = [
-  { label: "Pendiente", value: "pending" },
-  { label: "Completado", value: "completed" },
-  { label: "Cancelado", value: "canceled" },
-];
+  const res = await fetch(`/api/products?${query.toString()}`);
+  if (!res.ok) throw new Error("Error fetching products");
+  return res.json(); // { data: ProductI[], totalPages: number }
+}
 
 export default function SalesForm({
   customers,
-  products,
   categories,
   units,
   onCreate,
@@ -56,65 +67,40 @@ export default function SalesForm({
   const [status, setStatus] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
 
-  const filteredProducts = selectedCategoryId
-    ? products.filter((p) => p.category.id === selectedCategoryId)
-    : products;
+  const [products, setProducts] = useState<ProductI[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 10;
+
+  // Cargar productos del backend cuando cambie página, búsqueda o categoría
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const res = await getProducts({
+          search: searchTerm,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
+        });
+        setProducts(res.data);
+        setTotalPages(res.totalPages);
+      } catch (error) {
+        console.error("Error fetching products", error);
+        addToast({ title: "Error cargando productos", color: "danger" });
+      }
+    };
+
+    loadProducts();
+  }, [searchTerm, currentPage, selectedCategoryId]);
+
+  // Resetea página a 1 si cambian búsqueda o categoría
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategoryId]);
 
   const totalGeneral = items.reduce((sum, item) => sum + item.total, 0);
-
-  const handleSubmit = async () => {
-    if (!selectedCustomerId) {
-      alert("Debe seleccionar un cliente");
-      return;
-    }
-    if (!paymentMethod) {
-      alert("Debe seleccionar un método de pago");
-      return;
-    }
-    if (!status) {
-      alert("Debe seleccionar un estado de la venta");
-      return;
-    }
-    if (items.length === 0) {
-      alert("Debe agregar al menos un producto");
-      return;
-    }
-
-    try {
-      // Mapeo para status compatible con backend
-      const mappedStatus =
-        status === "completed"
-          ? "paid"
-          : status === "canceled"
-          ? "cancelled"
-          : status; // ya es "pending"
-
-      await onCreate({
-        customerId: selectedCustomerId || undefined, // opcional
-        payment_method: paymentMethod as "cash" | "credit" | "transfer",
-        status: mappedStatus as "paid" | "pending" | "cancelled",
-        productSales: items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        })),
-        notes: "",
-      });
-
-      // Limpiar formulario después de guardar
-      setSelectedCustomerId("");
-      setSelectedCustomer(null);
-      setPaymentMethod("");
-      setStatus("");
-      setItems([]);
-      setSelectedCategoryId("");
-      addToast({ color: "success", title: "Venta guardada con éxito" });
-    } catch (error) {
-      console.error("Error al guardar la venta:", error);
-      alert("Error al guardar la venta");
-      addToast({ color: "danger", title: "Error al guardar venta" });
-    }
-  };
 
   const handleAddProduct = (
     product: ProductI,
@@ -122,20 +108,31 @@ export default function SalesForm({
     quantity: number
   ) => {
     if (quantity <= 0) {
-      alert("La cantidad debe ser mayor que cero");
-      return;
+      addToast({
+        title: "La cantidad debe ser mayor que cero",
+        color: "danger",
+      });
+      return false;
     }
 
     const unit = units.find((u) => u.id === unitId);
     if (!unit) {
-      alert("Unidad no válida");
-      return;
+      addToast({ title: "Unidad no válida", color: "danger" });
+      return false;
     }
 
     const exists = items.find((i) => i.productId === product.id);
     if (exists) {
-      alert("El producto ya fue agregado");
-      return;
+      addToast({ title: "El producto ya fue agregado", color: "danger" });
+      return false;
+    }
+
+    if (typeof product.sale_price !== "number" || product.sale_price <= 0) {
+      addToast({
+        title: "El producto no tiene un precio de venta válido",
+        color: "danger",
+      });
+      return false;
     }
 
     const total = quantity * product.sale_price;
@@ -152,19 +149,77 @@ export default function SalesForm({
         total,
       },
     ]);
+    return true;
   };
 
   const handleRemoveItem = (productId: string) => {
     setItems((prev) => prev.filter((item) => item.productId !== productId));
   };
 
+  const handleSubmit = async () => {
+    if (!selectedCustomerId) {
+      addToast({ title: "Debe seleccionar un cliente", color: "danger" });
+      return;
+    }
+    if (!paymentMethod) {
+      addToast({
+        title: "Debe seleccionar un método de pago",
+        color: "danger",
+      });
+      return;
+    }
+    if (!status) {
+      addToast({
+        title: "Debe seleccionar un estado de la venta",
+        color: "danger",
+      });
+      return;
+    }
+    if (items.length === 0) {
+      addToast({ title: "Debe agregar al menos un producto", color: "danger" });
+      return;
+    }
+
+    try {
+      const mappedStatus =
+        status === "paid"
+          ? "paid"
+          : status === "cancelled"
+          ? "cancelled"
+          : "pending";
+
+      await onCreate({
+        customerId: selectedCustomerId,
+        payment_method: paymentMethod as "cash" | "credit" | "transfer",
+        status: mappedStatus as "paid" | "pending" | "cancelled",
+        productSales: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        })),
+        notes: "",
+      });
+
+      setSelectedCustomerId("");
+      setSelectedCustomer(null);
+      setPaymentMethod("");
+      setStatus("");
+      setItems([]);
+      setSelectedCategoryId("");
+      setSearchTerm("");
+      setCurrentPage(1);
+      addToast({ color: "success", title: "Venta guardada con éxito" });
+    } catch (error) {
+      console.error("Error al guardar la venta:", error);
+      addToast({ color: "danger", title: "Error al guardar venta" });
+    }
+  };
+
   return (
     <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg">
       <h2 className="text-xl font-bold">Registrar Venta</h2>
 
-      {/* Cliente */}
       <div className="grid grid-cols-2 gap-6 mb-6">
-        {/* Cliente */}
         <div>
           <label className="block font-medium mb-1">Cliente</label>
           <Combobox
@@ -193,29 +248,34 @@ export default function SalesForm({
           )}
         </div>
 
-        {/* Método de pago */}
         <div>
           <label className="block font-medium mb-1">Método de Pago</label>
           <Combobox
-            items={paymentMethods}
+            items={[
+              { label: "Efectivo", value: "cash" },
+              { label: "Tarjeta", value: "credit" },
+              { label: "Transferencia", value: "transfer" },
+            ]}
             value={paymentMethod}
             onChange={setPaymentMethod}
             placeholder="Seleccione método"
           />
         </div>
 
-        {/* Estado */}
         <div>
           <label className="block font-medium mb-1">Estado</label>
           <Combobox
-            items={saleStatuses}
+            items={[
+              { label: "Pendiente", value: "pending" },
+              { label: "Completado", value: "paid" },
+              { label: "Cancelado", value: "cancelled" },
+            ]}
             value={status}
             onChange={setStatus}
             placeholder="Seleccione estado"
           />
         </div>
 
-        {/* Filtrar por categoría */}
         <div>
           <label className="block font-medium mb-1">
             Filtrar por Categoría
@@ -229,14 +289,19 @@ export default function SalesForm({
         </div>
       </div>
 
-      {/* Tabla de productos con unidad/cantidad integrada */}
       <ProductsTab
-        products={filteredProducts}
+        products={products}
         units={units}
         onAdd={handleAddProduct}
+        showPurchasePrice={false}
+        showSalePrice={true}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
 
-      {/* Tabla resumen de productos agregados */}
       {items.length > 0 && (
         <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg mt-6">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -256,10 +321,7 @@ export default function SalesForm({
                   <td className="px-4 py-2">{item.name}</td>
                   <td className="px-4 py-2">{item.quantity}</td>
                   <td className="px-4 py-2">{item.unit_name}</td>
-                  <td className="px-4 py-2">
-                    ${Number(item.unit_price).toFixed(2)}
-                  </td>
-
+                  <td className="px-4 py-2">${item.unit_price.toFixed(2)}</td>
                   <td className="px-4 py-2">${item.total.toFixed(2)}</td>
                   <td className="px-4 py-2">
                     <Button

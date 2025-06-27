@@ -118,23 +118,32 @@ export class PricingService {
 
   // === Actualizar margen en productos ===
 
- private async updateProductsProfitMargin(
+private async updateProductsProfitMargin(
   percentage: number,
   categoryId?: string,
 ) {
+  const query = this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.category', 'category');
+
   if (categoryId) {
-    await this.productRepo.update(
-      { categoryId },
-      { profit_margin: percentage },
-    );
-  } else {
-    // Actualizar todos los productos (margen global)
-    await this.productRepo
-      .createQueryBuilder()
-      .update()
-      .set({ profit_margin: percentage })
-      .execute();
+    query.where('category.id = :categoryId', { categoryId });
+  }
+
+  const products = await query.getMany();
+
+  for (const product of products) {
+    product.profit_margin = percentage;
+
+    if (product.purchase_price && percentage > 0) {
+      product.sale_price = parseFloat(
+        (product.purchase_price / (1 - percentage / 100)).toFixed(2),
+      );
+    }
+
+    await this.productRepo.save(product);
   }
 }
+
 
 }

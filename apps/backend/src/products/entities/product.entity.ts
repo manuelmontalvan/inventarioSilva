@@ -85,14 +85,38 @@ export class Product {
   @Column()
   unitOfMeasureId: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  purchase_price: number;
+  @Column({
+    type: 'decimal',
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string | null) =>
+        value !== null ? parseFloat(value) : null,
+    },
+  })
+  purchase_price?: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  sale_price: number;
+  @Column({
+    type: 'decimal',
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string | null) =>
+        value !== null ? parseFloat(value) : null,
+    },
+  })
+  sale_price?: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-  profit_margin: number;
+  @Column({
+    type: 'decimal',
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string | null) =>
+        value !== null ? parseFloat(value) : null,
+    },
+  })
+  profit_margin?: number;
 
   @CreateDateColumn()
   entry_date: Date;

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import {
   getPurchaseOrders,
   createPurchaseOrder,
+  
 } from "@/lib/api/purchases/purchaseOrders";
 import { getProducts } from "@/lib/api/products/products";
 import { getSuppliers } from "@/lib/api/purchases/suppliers";
@@ -16,6 +17,7 @@ import { SupplierI } from "@/types/supplier";
 
 import { PurchaseOrderTable } from "@/components/productPurchase/purchaseOrderTable";
 import PurchaseOrderForm from "@/components/productPurchase/purchaseOrderForm";
+
 
 export default function PurchasesPage() {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -37,9 +39,10 @@ export default function PurchasesPage() {
         getProducts(),
         getCategories(),
       ]);
+
     setOrders(ordersData);
     setSuppliers(suppliersData);
-    setProducts(productsData);
+    setProducts(productsData.data);
     setCategories(categoriesData);
   };
 
@@ -49,28 +52,33 @@ export default function PurchasesPage() {
       fetchData(); // Refrescar lista de órdenes
     } catch (error: any) {
       alert(
-        "Error creando orden: " + error?.response?.data?.message || "Error"
+        "Error creando orden: " + (error?.response?.data?.message || "Error")
       );
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black max-w-7xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-semibold mb-6 text-gray-800 dark:text-white">
-        Gestión de Órdenes de Compra
-      </h1>
+      {/* Título + Upload agrupados y con margen abajo */}
+      <div className="mb-10 flex justify-between  gap-4">
+        <h1 className="text-3xl font-semibold text-gray-800 dark:text-white">
+          Gestión de Órdenes de Compra
+        </h1>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* Formulario reutilizable */}
-        <PurchaseOrderForm
-          suppliers={suppliers}
-          products={products}
-          categories={categories}
-          onCreate={handleCreateOrder}
-        />
+        
+      </div>
 
-        {/* Tabla de órdenes */}
-        <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6 max-h-[90vh] flex flex-col">
+      {/* Formulario y tabla en flex-column con gap */}
+      <div className="flex flex-col gap-10">
+        <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6">
+          <PurchaseOrderForm
+            suppliers={suppliers}
+            categories={categories}
+            onCreate={handleCreateOrder}
+          />
+        </section>
+
+        <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6 max-h-[70vh] overflow-auto">
           <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
             Órdenes Registradas
           </h2>

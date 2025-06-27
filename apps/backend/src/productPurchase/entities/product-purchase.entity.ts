@@ -12,15 +12,28 @@ import { Product } from '../../products/entities/product.entity';
 import { Supplier } from '../supplier/supplier.entity';
 import { User } from '../../users/user.entity';
 import { PurchaseOrder } from './purchase-order.entity';
+import { Brand } from '../../products/entities/brand.entity'; // Ajusta ruta
+import { UnitOfMeasure } from '../../products/entities/unit-of-measure.entity'; // Ajusta ruta
 
 @Entity('product_purchases')
 export class ProductPurchase {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Product, (product) => product.purchase_history, { eager: true })
+  @ManyToOne(() => Product, (product) => product.purchase_history, {
+    eager: true,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'productId' })
   product: Product;
+  @ManyToOne(() => Brand, { eager: true, nullable: true })
+  @JoinColumn({ name: 'brandId' })
+  brand?: Brand;
+
+  @ManyToOne(() => UnitOfMeasure, { eager: true, nullable: true })
+  @JoinColumn({ name: 'unitId' })
+  unit_of_measure?: UnitOfMeasure;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   quantity: number;
@@ -38,7 +51,9 @@ export class ProductPurchase {
   @JoinColumn({ name: 'supplierId' })
   supplier: Supplier;
 
-  @ManyToOne(() => PurchaseOrder, (order) => order.purchase_lines, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PurchaseOrder, (order) => order.purchase_lines, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'orderId' })
   order: PurchaseOrder;
 

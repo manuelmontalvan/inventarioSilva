@@ -18,6 +18,7 @@ import { ProductCostHistory } from 'src/productPurchase/entities/product-cost-hi
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as csv from 'csv-parse/sync';
+import { Pagination } from 'src/common/types/pagination';
 
 @Injectable()
 export class ProductsService {
@@ -48,20 +49,30 @@ export class ProductsService {
     salePrice: number,
     purchasePrice: number,
   ): number {
-    if (salePrice <= 0) {
+    if (salePrice <= 0 || purchasePrice <= 0) {
       this.logger.warn(
-        `Sale price is zero or less for profit margin calculation. Sale: ${salePrice}, Purchase: ${purchasePrice}`,
+        `❗️[CALC] No se puede calcular margen: salePrice=${salePrice}, purchasePrice=${purchasePrice}`,
       );
-      return 0; // Evitar división por cero o márgenes infinitos
+      return 0;
     }
-    return ((salePrice - purchasePrice) / salePrice) * 100;
+
+    const margin = ((salePrice - purchasePrice) / salePrice) * 100;
+    return parseFloat(margin.toFixed(2));
   }
 
-  private calculateSalePrice(purchasePrice: number, profitMargin: number): number {
-    if (purchasePrice <= 0 || profitMargin <= 0) {
+  private calculateSalePrice(
+    purchasePrice: number,
+    profitMargin: number,
+  ): number {
+    if (purchasePrice <= 0 || profitMargin <= 0 || profitMargin >= 100) {
+      this.logger.warn(
+        `❗️[CALC] No se puede calcular precio de venta: purchasePrice=${purchasePrice}, profitMargin=${profitMargin}`,
+      );
       return purchasePrice;
     }
-    return purchasePrice / (1 - profitMargin / 100);
+
+    const price = purchasePrice / (1 - profitMargin / 100);
+    return parseFloat(price.toFixed(2));
   }
 
   async create(
@@ -72,9 +83,8 @@ export class ProductsService {
       categoryId,
       brandId,
       unitOfMeasureId,
-      localityId,
       purchase_price,
-      sale_price,
+      profit_margin,
       ...productData
     } = createProductDto;
 
@@ -96,32 +106,35 @@ export class ProductsService {
         `Unit of Measure with ID ${unitOfMeasureId} not found`,
       );
 
-    const locality = await this.localityRepository.findOneBy({
-      id: localityId,
-    });
-    if (!locality)
-      throw new NotFoundException(`Locality with ID ${localityId} not found`);
+    let sale_price = 0;
 
-    const profit_margin = this.calculateProfitMargin(
-      sale_price,
-      purchase_price,
-    );
+    if (
+      typeof purchase_price === 'number' &&
+      purchase_price > 0 &&
+      typeof profit_margin === 'number' &&
+      profit_margin > 0
+    ) {
+      sale_price = parseFloat(
+        this.calculateSalePrice(purchase_price, profit_margin).toFixed(2),
+      );
+    }
 
     const newProduct = this.productRepository.create({
       ...productData,
       purchase_price,
       sale_price,
-      profit_margin: parseFloat(profit_margin.toFixed(2)),
+      profit_margin,
       category,
       brand,
       unit_of_measure: unitOfMeasure,
-      locality, // 👈 Aquí se asigna la localidad
       createdBy,
       updatedBy: createdBy,
     });
 
     try {
-      return await this.productRepository.save(newProduct);
+      const saved = await this.productRepository.save(newProduct);
+      this.logger.debug(`[CREATE] Producto creado: ${saved.name}`);
+      return saved;
     } catch (error) {
       if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
         throw new BadRequestException(
@@ -129,12 +142,13 @@ export class ProductsService {
         );
       }
       this.logger.error(
-        `Error creating product: ${error.message}`,
+        `Error creando producto: ${error.message}`,
         error.stack,
       );
       throw error;
     }
   }
+
   async getCostHistory(productId: string): Promise<ProductCostHistory[]> {
     const histories = await this.productCostHistoryRepository.find({
       where: { product: { id: productId } },
@@ -145,7 +159,20 @@ export class ProductsService {
     return histories;
   }
 
-  async findAll(search?: string): Promise<Product[]> {
+  async findAll({
+    page = 1,
+    limit = 10,
+    search = '',
+  }: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    data: Product[];
+    total: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     const queryBuilder = this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
@@ -162,7 +189,17 @@ export class ProductsService {
       );
     }
 
-    return queryBuilder.take(10).getMany();
+    const [data, total] = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    };
   }
 
   async findOne(id: string): Promise<Product> {
@@ -182,97 +219,110 @@ export class ProductsService {
     }
     return product;
   }
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    updatedBy: User,
+  ): Promise<Product> {
+    const product = await this.findOne(id);
 
-async update(
-  id: string,
-  updateProductDto: UpdateProductDto,
-  updatedBy: User,
-): Promise<Product> {
-  const product = await this.findOne(id);
+    const {
+      categoryId,
+      brandId,
+      unitOfMeasureId,
+      purchase_price,
+      profit_margin,
+      ...productData
+    } = updateProductDto;
 
-  const {
-    categoryId,
-    brandId,
-    unitOfMeasureId,
-    localityId,
-    purchase_price,
-    sale_price,
-    profit_margin,
-    ...productData
-  } = updateProductDto;
-
-  if (categoryId) {
-    const category = await this.categoryRepository.findOneBy({ id: categoryId });
-    if (!category)
-      throw new NotFoundException(`Category with ID ${categoryId} not found`);
-    product.category = category;
-  }
-
-  if (brandId) {
-    const brand = await this.brandRepository.findOneBy({ id: brandId });
-    if (!brand) throw new NotFoundException(`Brand with ID ${brandId} not found`);
-    product.brand = brand;
-  }
-
-  if (unitOfMeasureId) {
-    const unitOfMeasure = await this.unitOfMeasureRepository.findOneBy({ id: unitOfMeasureId });
-    if (!unitOfMeasure)
-      throw new NotFoundException(
-        `Unit of Measure with ID ${unitOfMeasureId} not found`,
-      );
-    product.unit_of_measure = unitOfMeasure;
-  }
-
-  if (localityId) {
-    const locality = await this.localityRepository.findOneBy({ id: localityId });
-    if (!locality) throw new NotFoundException(`Locality with ID ${localityId} not found`);
-    product.locality = locality;
-  }
-
-  Object.assign(product, productData);
-
-  // Valores actuales o nuevos
-  const currentPurchasePrice = purchase_price ?? product.purchase_price;
-  const currentProfitMargin = profit_margin ?? product.profit_margin;
-  const currentSalePrice = sale_price ?? product.sale_price;
-
-  // Lógica para actualizar precios y margen
-  if (purchase_price !== undefined || profit_margin !== undefined) {
-    // Recalcular sale_price según purchasePrice y profitMargin
-    product.purchase_price = currentPurchasePrice;
-    product.profit_margin = currentProfitMargin;
-    product.sale_price = parseFloat(
-      this.calculateSalePrice(currentPurchasePrice, currentProfitMargin).toFixed(2),
-    );
-  } else if (sale_price !== undefined) {
-    // Si cambia sólo sale_price, recalcular profit_margin basado en sale_price y purchase_price actual
-    product.sale_price = currentSalePrice;
-    product.profit_margin = parseFloat(
-      this.calculateProfitMargin(currentSalePrice, currentPurchasePrice).toFixed(2),
-    );
-    product.purchase_price = currentPurchasePrice;
-  }
-
-  product.updatedBy = updatedBy;
-  product.last_updated = new Date();
-
-  try {
-    return await this.productRepository.save(product);
-  } catch (error) {
-    if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
-      throw new BadRequestException('Barcode or internal code already exists.');
+    if (categoryId) {
+      const category = await this.categoryRepository.findOneBy({
+        id: categoryId,
+      });
+      if (!category)
+        throw new NotFoundException(`Category with ID ${categoryId} not found`);
+      product.category = category;
     }
-    this.logger.error(`Error updating product: ${error.message}`, error.stack);
-    throw error;
-  }
-}
 
+    if (brandId) {
+      const brand = await this.brandRepository.findOneBy({ id: brandId });
+      if (!brand)
+        throw new NotFoundException(`Brand with ID ${brandId} not found`);
+      product.brand = brand;
+    }
+
+    if (unitOfMeasureId) {
+      const unit = await this.unitOfMeasureRepository.findOneBy({
+        id: unitOfMeasureId,
+      });
+      if (!unit)
+        throw new NotFoundException(
+          `Unit of Measure with ID ${unitOfMeasureId} not found`,
+        );
+      product.unit_of_measure = unit;
+    }
+
+    Object.assign(product, productData);
+
+    const hasNewPurchasePrice = typeof purchase_price === 'number';
+    const hasNewProfitMargin = typeof profit_margin === 'number';
+
+    if (hasNewPurchasePrice) {
+      product.purchase_price = purchase_price!;
+    }
+
+    if (hasNewProfitMargin) {
+      product.profit_margin = profit_margin!;
+    }
+
+    // Recalcular sale_price si ambos están definidos
+    if (
+      typeof product.purchase_price === 'number' &&
+      product.purchase_price > 0 &&
+      typeof product.profit_margin === 'number' &&
+      product.profit_margin > 0
+    ) {
+      product.sale_price = parseFloat(
+        this.calculateSalePrice(
+          product.purchase_price,
+          product.profit_margin,
+        ).toFixed(2),
+      );
+
+      this.logger.debug(
+        `[UPDATE] Recalculado sale_price=${product.sale_price} usando PP=${product.purchase_price} y PM=${product.profit_margin}`,
+      );
+    }
+
+    product.updatedBy = updatedBy;
+    product.last_updated = new Date();
+
+    try {
+      const saved = await this.productRepository.save(product);
+      this.logger.debug(`[UPDATE] Producto actualizado con id=${id}`);
+      return saved;
+    } catch (error) {
+      if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
+        throw new BadRequestException(
+          'Barcode or internal code already exists.',
+        );
+      }
+      this.logger.error(
+        `[UPDATE] Error actualizando producto: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 
   async remove(id: string): Promise<void> {
     const result = await this.productRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+  }
+  async removeAll(): Promise<void> {
+    await this.productRepository.createQueryBuilder().delete().execute();
   }
 
   // Métodos internos para que otros servicios actualicen la cantidad, fechas, etc.
@@ -301,6 +351,48 @@ async update(
     this.logger.debug(
       `Product ${product.name} quantity updated by ${change}. New quantity: ${product.current_quantity}`,
     );
+  }
+
+  //pagination
+  async findAllPaginated(
+    page: number,
+    limit: number,
+    categoryIds?: string[],
+    search?: string,
+  ): Promise<Pagination<Product>> {
+    const queryBuilder = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')
+      .leftJoinAndSelect('product.locality', 'locality')
+      .leftJoinAndSelect('product.createdBy', 'createdBy')
+      .leftJoinAndSelect('product.updatedBy', 'updatedBy');
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(LOWER(product.name) LIKE :search OR LOWER(brand.name) LIKE :search OR LOWER(category.name) LIKE :search)',
+        { search: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    if (categoryIds && categoryIds.length > 0) {
+      queryBuilder.andWhere('category.id IN (:...categoryIds)', {
+        categoryIds,
+      });
+    }
+
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async updateLastPurchaseDate(
@@ -336,90 +428,108 @@ async update(
     }
   }
 
-async importProductsFromFile(filePath: string, ext: string, userId: string) {
-  const content = fs.readFileSync(filePath);
+  async importProductsFromFile(filePath: string, ext: string, userId: string) {
+    const content = fs.readFileSync(filePath);
 
-  const rows =
-    ext === '.csv'
-      ? csv.parse(content, {
-          columns: true,
-          skip_empty_lines: true,
-          delimiter: ',',
-        })
-      : XLSX.utils.sheet_to_json(
-          XLSX.read(content, { type: 'buffer' }).Sheets['Sheet1'],
-        );
-  console.log('Rows importados:', rows);
+    let rows: any[] = [];
 
-  const created: string[] = [];
+    if (ext === '.csv') {
+      rows = csv.parse(content, {
+        columns: true,
+        skip_empty_lines: true,
+        delimiter: ',',
+      });
+    } else {
+      const workbook = XLSX.read(content, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      rows = XLSX.utils.sheet_to_json(worksheet);
+    }
 
-  for (const row of rows) {
-    const name = row['name']?.toString();
-    if (!name) continue;
+    const created: string[] = [];
 
-    // Buscar o crear categoría
-    const category =
-      (await this.categoryRepository.findOne({
-        where: { name: row['category'] },
-      })) ??
-      (await this.categoryRepository.save(
-        this.categoryRepository.create({ name: row['category'] }),
-      ));
+    for (const row of rows) {
+      const name = row['name']?.toString();
+      if (!name) continue;
 
-    // Buscar o crear marca
-    const brand =
-      (await this.brandRepository.findOne({
-        where: { name: row['brand'] },
-      })) ??
-      (await this.brandRepository.save(
-        this.brandRepository.create({ name: row['brand'] }),
-      ));
+      // Buscar o crear categoría
+      const category =
+        (await this.categoryRepository.findOne({
+          where: { name: row['category'] },
+        })) ??
+        (await this.categoryRepository.save(
+          this.categoryRepository.create({ name: row['category'] }),
+        ));
 
-    // Buscar o crear unidad
-    const unit =
-      (await this.unitOfMeasureRepository.findOne({
-        where: { name: row['unit'] },
-      })) ??
-      (await this.unitOfMeasureRepository.save(
-        this.unitOfMeasureRepository.create({
-          name: row['unit'],
-          abbreviation: row['unit'].substring(0, 3),
-        }),
-      ));
+      // Buscar o crear marca
+      const brand =
+        (await this.brandRepository.findOne({
+          where: { name: row['brand'] },
+        })) ??
+        (await this.brandRepository.save(
+          this.brandRepository.create({ name: row['brand'] }),
+        ));
 
-    const product = this.productRepository.create({
-      name,
-      description: row['description'],
-      purchase_price: Number(row['purchase_price']),
-      sale_price: Number(row['sale_price']),
-      internal_code: row['internal_code'] || undefined,
-      min_stock: Number(row['min_stock'] || 0),
-      max_stock: Number(row['max_stock'] || 0),
-      category,
-      brand,
-      unit_of_measure: unit,
-      profit_margin: row['profit_margin']
-        ? Number(row['profit_margin'])
-        : this.calculateProfitMargin(
-            Number(row['sale_price']),
-            Number(row['purchase_price']),
-          ),
-      isPerishable: row['isPerishable'] === 'true',
-      expiration_date: row['expiration_date']
-        ? new Date(row['expiration_date'])
-        : undefined,
-      createdBy: { id: userId }, // ✅ Aquí sí colocas correctamente el userId
-    });
+      // Buscar o crear unidad
+      const unitName = row['unit'] ?? row['unitOfMeasure'];
+      const unit =
+        (await this.unitOfMeasureRepository.findOne({
+          where: { name: unitName },
+        })) ??
+        (await this.unitOfMeasureRepository.save(
+          this.unitOfMeasureRepository.create({
+            name: unitName,
+            abbreviation: unitName?.substring(0, 3) ?? '',
+          }),
+        ));
 
-    await this.productRepository.save(product);
-    created.push(product.name);
+      const product = this.productRepository.create({
+        name,
+        description: row['description'],
+        purchase_price: isNaN(Number(row['purchase_price']))
+          ? undefined
+          : Number(row['purchase_price']),
+        sale_price: isNaN(Number(row['sale_price']))
+          ? undefined
+          : Number(row['sale_price']),
+
+        internal_code: row['internal_code'] || undefined,
+        min_stock: Number(row['min_stock'] ?? 0),
+        max_stock: Number(row['max_stock'] ?? 0),
+
+        category,
+        brand,
+        unit_of_measure: unit,
+        profit_margin: row['profit_margin']
+          ? Number(row['profit_margin'])
+          : this.calculateProfitMargin(
+              Number(row['sale_price']),
+              Number(row['purchase_price']),
+            ),
+        isPerishable: row['isPerishable'] === 'true',
+        expiration_date: row['expiration_date']
+          ? new Date(row['expiration_date'])
+          : undefined,
+        createdBy: { id: userId }, // ✅ Aquí sí colocas correctamente el userId
+      });
+      if (
+        typeof product.purchase_price !== 'number' ||
+        isNaN(product.purchase_price)
+      ) {
+        product.purchase_price = 0;
+      }
+
+      if (typeof product.sale_price !== 'number' || isNaN(product.sale_price)) {
+        product.sale_price = 0;
+      }
+
+      await this.productRepository.save(product);
+      created.push(product.name);
+    }
+
+    fs.unlinkSync(filePath);
+    return {
+      productos: created,
+    };
   }
-
-  fs.unlinkSync(filePath);
-  return {
-    message: `${created.length} productos creados`,
-    productos: created,
-  };
-}
-
 }

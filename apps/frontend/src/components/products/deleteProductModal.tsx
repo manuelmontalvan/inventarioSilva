@@ -16,7 +16,8 @@ interface Props {
   onClose: () => void;
   product: ProductI | null;
   multiple?: boolean;
-  onConfirm?: () => Promise<void>; // opcional
+  all?: boolean;             // <-- nuevo prop para "eliminar todos"
+  onConfirm?: () => Promise<void>;
   onDelete: () => void;
 }
 
@@ -25,15 +26,28 @@ export default function DeleteProductModal({
   onClose,
   product,
   multiple = false,
+  all = false,               // <-- valor por defecto false
   onConfirm,
   onDelete,
 }: Props) {
 
-
   const handleDelete = async () => {
     try {
+      if (all) {
+        // Eliminar todos
+        await onConfirm?.();
+        addToast({
+          title: "Todos los productos eliminados",
+          description: "Se eliminaron correctamente todos los productos.",
+          color: "success",
+        });
+        onClose();
+        return;
+      }
+
       if (multiple) {
-        await onConfirm?.(); 
+        // Eliminar varios seleccionados
+        await onConfirm?.();
         addToast({
           title: "Productos eliminados",
           description: "Los productos seleccionados se eliminaron correctamente.",
@@ -41,8 +55,9 @@ export default function DeleteProductModal({
         });
         onClose();
         return;
-      }else {
+      }
 
+      // Eliminar uno solo
       if (!product) return;
 
       await deleteProduct(product.id);
@@ -55,7 +70,6 @@ export default function DeleteProductModal({
 
       onDelete();
       onClose();
-    }
     } catch (error: any) {
       addToast({
         title: "Error",
@@ -74,12 +88,18 @@ export default function DeleteProductModal({
       >
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-semibold">
-            {multiple ? "Eliminar productos" : "Eliminar producto"}
+            {all
+              ? "Eliminar todos los productos"
+              : multiple
+              ? "Eliminar productos"
+              : "Eliminar producto"}
           </DialogTitle>
         </DialogHeader>
 
         <p className="text-sm sm:text-base mt-2 mb-5 leading-relaxed text-gray-600 dark:text-gray-300">
-          {multiple
+          {all
+            ? "¿Estás seguro de que deseas eliminar todos los productos? Esta acción no se puede deshacer."
+            : multiple
             ? "¿Estás seguro de que deseas eliminar los productos seleccionados?"
             : `¿Estás seguro de que deseas eliminar el producto "${product?.name}"?`}
         </p>

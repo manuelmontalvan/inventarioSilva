@@ -36,11 +36,8 @@ export const ProductSchema = z
       .optional(),
     min_stock: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
     max_stock: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
-    localityId: z.string().min(1, "Selecciona una ubicación válida"),
 
     unitOfMeasureId: z.string().uuid("Selecciona una unidad válida"),
-    purchase_price: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
-    sale_price: z.coerce.number().min(0, "Debe ser mayor o igual a 0"),
     isPerishable: z.boolean().optional(),
     expiration_date: z.string().optional(),
     notes: z.string().optional(),

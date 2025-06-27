@@ -27,7 +27,7 @@ import { addToast } from "@heroui/react";
 import { z } from "zod";
 import { useWatch } from "react-hook-form";
 import { ProductSchema } from "@/lib/schemas/productSchema";
-
+import { createProduct } from "@/lib/api/products/products"; // Ajusta la ruta si es necesario
 
 
 
@@ -57,10 +57,7 @@ export const CreateProductModal = ({
       image: "",
       min_stock: 0,
       max_stock: 0,
-      localityId: "",
       unitOfMeasureId: "",
-      purchase_price: 0,
-      sale_price: 0,
       isPerishable: false,
       expiration_date: "",
       notes: "",
@@ -72,13 +69,10 @@ export const CreateProductModal = ({
   const [brands, setBrands] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [localities, setLocalities] = useState<any[]>([]);
   const selectedCategoryId = useWatch({
     control: form.control,
     name: "categoryId",
   });
-
-  const [filteredLocalities, setFilteredLocalities] = useState<any[]>([]);
 
   /* ----------  Fetch catálogos  ---------- */
   useEffect(() => {
@@ -90,9 +84,10 @@ export const CreateProductModal = ({
 
     const fetchData = async () => {
       try {
-        const [catRes, brandRes, unitRes, locRes] = await Promise.all([
+        const [catRes, brandRes, unitRes] = await Promise.all([
           fetch("http://localhost:3001/api/categories", {
             credentials: "include",
+           
           }),
           fetch("http://localhost:3001/api/brands", {
             credentials: "include",
@@ -100,23 +95,18 @@ export const CreateProductModal = ({
           fetch("http://localhost:3001/api/units", {
             credentials: "include",
           }),
-          fetch("http://localhost:3001/api/localities", {
-            credentials: "include",
-          }),
         ]);
-        if (!catRes.ok || !brandRes.ok || !unitRes.ok || !locRes.ok)
-          throw new Error();
+        if (!catRes.ok || !brandRes.ok || !unitRes.ok) throw new Error();
         setCategories(await catRes.json());
         setBrands(await brandRes.json());
         setUnits(await unitRes.json());
-        setLocalities(await locRes.json());
+
       } catch {
         addToast({
           title: "Error",
           description: "No se pudieron cargar categorías, marcas o unidades",
           variant: "bordered",
           color: "danger",
-        
         });
       }
     };
@@ -124,56 +114,41 @@ export const CreateProductModal = ({
     fetchData();
   }, [open, form]);
 
-  useEffect(() => {
-    const filtered = localities.filter(
-      (loc) => loc.category?.id === selectedCategoryId
-    );
-    setFilteredLocalities(filtered);
-    // Limpia selección previa si no es válida
-    if (!filtered.some((l) => l.id === form.getValues("localityId"))) {
-      form.setValue("localityId", "");
-    }
-  }, [selectedCategoryId, localities]);
   /* ----------  Envío del formulario  ---------- */
   const onSubmit = async (data: ProductFormValues) => {
-    setLoading(true);
-    try {
-      const cleaned = {
-        ...data,
-        expiration_date: data.expiration_date || undefined,
-      };
+  setLoading(true);
+  try {
+    const cleaned = {
+      ...data,
+      expiration_date: data.expiration_date || undefined,
+    };
 
-      const res = await fetch("http://localhost:3001/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(cleaned),
-      });
-      const responseBody = await res.json();
-console.log("Respuesta del servidor:", responseBody);
-      if (!res.ok) throw new Error();
+    const responseBody = await createProduct(cleaned); 
+    console.log("Respuesta del servidor:", responseBody);
+    
+    addToast({
+      title: "Producto creado",
+      description: "El producto fue registrado exitosamente",
+      variant: "bordered",
+      color: "success",
+    });
 
-      addToast({
-        title: "Producto creado",
-        description: "El producto fue registrado exitosamente",
-        variant: "bordered",
-        color: "success",
-      });
+    onSuccess();
+    onClose();
+    form.reset();
+  } catch (error) {
+    console.error("Error al crear producto:", error);
+    addToast({
+      title: "Error",
+      description: "No se pudo crear el producto",
+      variant: "bordered",
+      color: "danger",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      onSuccess();
-      onClose();
-      form.reset(); // ← Limpia al crear
-    } catch {
-      addToast({
-        title: "Error",
-        description: "No se pudo crear el producto",
-        variant: "bordered",
-        color: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   /* ----------  Helper: limpia '0' al focus  ---------- */
   const clearZeroOnFocus = (field: any) => () => {
@@ -366,33 +341,7 @@ console.log("Respuesta del servidor:", responseBody);
                 />
               ))}
 
-              {/* Ubicación */}
-              <FormField
-                control={form.control}
-                name="localityId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ubicación en almacén *</FormLabel>
-                    <Select
-                      popoverProps={{
-                        className: "dark:bg-neutral-800 dark:text-white",
-                      }}
-                      selectedKeys={
-                        field.value ? new Set([field.value]) : new Set()
-                      }
-                      onSelectionChange={(keys) =>
-                        field.onChange(Array.from(keys)[0] || "")
-                      }
-                      isDisabled={filteredLocalities.length === 0}
-                    >
-                      {filteredLocalities.map((loc) => (
-                        <SelectItem key={loc.id}>{loc.name}</SelectItem>
-                      ))}
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+             
 
               {/* Perecedero */}
               <FormField

@@ -1,6 +1,7 @@
 import {
   IsEnum,
   IsNotEmpty,
+  IsDateString,
   IsOptional,
   IsString,
   ValidateNested,
@@ -22,6 +23,13 @@ export class CreateProductSaleDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsDateString()
+  sale_date?: string;
+  @IsOptional()
+  @IsString()
+  invoice_number?: string; // Agregado
 }
 
 export class CreateSaleDto {
@@ -43,4 +51,22 @@ export class CreateSaleDto {
   @IsOptional()
   @IsString()
   notes?: string;
+    @IsOptional()
+  @IsString()
+  invoice_number?: string; 
+}
+
+export class ImportProductSaleDto {
+  @IsString()
+  productName: string;
+
+  @IsNumber()
+  quantity: number;
+
+  @IsDateString()
+  saleDate: string; // fecha venta en ISO string
+
+  @IsOptional()
+  @IsString()
+  invoice_number?: string;
 }

@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,24 +9,25 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 interface ComboboxItem {
-  label: string
-  value: string
+  label: string;
+  value: string;
 }
 
 interface ComboboxProps {
-  items: ComboboxItem[]
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
+  items: ComboboxItem[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  onReachEnd?: () => void;
 }
 
 export function Combobox({
@@ -36,13 +37,13 @@ export function Combobox({
   placeholder = "Seleccione una opción...",
   className = "w-[200px]",
 }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
 
   // Busca el label correspondiente al valor, incluso si es cadena vacía
   const selectedLabel = React.useMemo(() => {
-    const found = items.find((item) => item.value === value)
-    return found ? found.label : placeholder
-  }, [items, value, placeholder])
+    const found = items.find((item) => item.value === value);
+    return found ? found.label : placeholder;
+  }, [items, value, placeholder]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -68,8 +69,8 @@ export function Combobox({
                   key={item.value}
                   value={item.value}
                   onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
-                    setOpen(false)
+                    onChange(currentValue === value ? "" : currentValue);
+                    setOpen(false);
                   }}
                 >
                   {item.label}
@@ -86,5 +87,5 @@ export function Combobox({
         </Command>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

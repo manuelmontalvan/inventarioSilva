@@ -8,10 +8,12 @@ import { Product } from '../products/entities/product.entity';
 import { Customer } from './customers/customer.entity';
 import { User } from '../users/user.entity';
 import { OrderNumberCounter } from './entities/order-number-counter.entity';
+import { Brand } from 'src/products/entities/brand.entity';
+import { UnitOfMeasure } from 'src/products/entities/unit-of-measure.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sale, ProductSale, Product, Customer, User, OrderNumberCounter ]),
+    TypeOrmModule.forFeature([Sale, ProductSale, Product, Customer, User, OrderNumberCounter ,Brand,UnitOfMeasure  ]),
   ],
   controllers: [SalesController],
   providers: [SalesService],

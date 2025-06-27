@@ -1,6 +1,7 @@
-import { ProductI } from './product';
+import { ProductI, Brand, UnitOfMeasure } from './product';
 import { UserI } from './user';
 import { SupplierI } from './supplier';
+
 
 export interface PurchaseOrder {
   id: string;
@@ -17,8 +18,8 @@ export interface PurchaseOrder {
 
 export interface CreatePurchaseOrderDto {
   supplierId: string;
-  invoice_number: string; 
-  notes?: string; 
+  invoice_number: string;
+  notes?: string;
   items: CreateProductPurchaseDto[];
 }
 
@@ -37,11 +38,16 @@ export interface CreateProductPurchaseDto {
   total_cost: number;
   notes?: string;
   supplierId: string;
+  unit_id?: string; // <--- si quieres enviar el id de unidad (relación FK)
+  brand_id?: string; // <--- si necesitas enviar el id de marca (relación FK)
 }
 
 export interface ProductPurchaseI {
   id: string;
-  product: ProductI;
+  product: ProductI & {
+    brand?: Brand;
+    unit_of_measure?: UnitOfMeasure;
+  };
   supplier: SupplierI;
   invoice_number: string;
   quantity: number;

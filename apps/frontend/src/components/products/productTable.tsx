@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@heroui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Trash2 } from "lucide-react";
-
 import { productColumnOptions } from "@/constants/productColumns";
+
 
 interface ProductTableProps {
   products: ProductI[];
@@ -33,9 +33,11 @@ export default function ProductTable({
     direction: "ascending" | "descending";
   } | null>(null);
 
+  // Estado para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [selected, setSelected] = useState<ProductI | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
-
 
   const requestSort = (key: keyof ProductI) => {
     let direction: "ascending" | "descending" = "ascending";
@@ -43,6 +45,7 @@ export default function ProductTable({
       direction = "descending";
     }
     setSortConfig({ key, direction });
+    setCurrentPage(1); // Resetear a página 1 al ordenar
   };
 
   const getValue = (product: ProductI, key: keyof ProductI) => {
@@ -53,21 +56,19 @@ export default function ProductTable({
       if ("name" in val) return (val as any).name;
       return JSON.stringify(val);
     }
-    
 
     if (key === "purchase_price" || key === "sale_price") {
       return `USD $${val}`;
     }
-    
+
     if (key === "profit_margin") {
-    // Si es entero, mostrar sin decimales, si no, mostrar 1 o 2 decimales
-    const numberVal = Number(val);
-    if (Number.isInteger(numberVal)) {
-      return `${numberVal}%`;
-    } else {
-      return `${numberVal.toFixed(2).replace(/\.?0+$/, '')}%`;
+      const numberVal = Number(val);
+      if (Number.isInteger(numberVal)) {
+        return `${numberVal}%`;
+      } else {
+        return `${numberVal.toFixed(2).replace(/\.?0+$/, "")}%`;
+      }
     }
-  }
     if (
       key === "entry_date" ||
       key === "last_updated" ||
@@ -88,9 +89,16 @@ export default function ProductTable({
     const valA = getValue(a, sortConfig.key);
     const valB = getValue(b, sortConfig.key);
     if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;
+    if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;   
     return 0;
   });
+
+  // Paginación
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedProducts(checked ? products.map((p) => p.id) : []);
@@ -157,7 +165,7 @@ export default function ProductTable({
           </thead>
           <tbody>
             <AnimatePresence>
-              {products.length === 0 ? (
+              {paginatedProducts.length === 0 ? (
                 <tr>
                   <td
                     colSpan={
@@ -169,7 +177,7 @@ export default function ProductTable({
                   </td>
                 </tr>
               ) : (
-                sortedProducts.map((p) => (
+                paginatedProducts.map((p) => (
                   <motion.tr
                     key={p.id}
                     initial="hidden"
@@ -276,6 +284,8 @@ export default function ProductTable({
           </tbody>
         </table>
       </div>
+
+    
     </div>
   );
 }

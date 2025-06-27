@@ -1,14 +1,16 @@
-// src/purchases/dto/create-product-purchase.dto.ts
-
 import { IsUUID, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateProductPurchaseDto {
   @IsUUID()
   productId: string;
+  
+  @IsOptional()
+  @IsString()
+  product_name?: string;
 
   @IsUUID()
   supplierId: string;
-
+  
   @IsString()
   invoice_number: string;
 
@@ -27,4 +29,13 @@ export class CreateProductPurchaseDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  // Nuevos campos para marca y unidad de medida
+  @IsOptional()
+  @IsUUID()
+  brandId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  unitOfMeasureId?: string;
 }

@@ -22,17 +22,16 @@ export default function SalesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
         const [
           salesData,
-          productsData,
-          categoriesData,
-          unitsData,
-          customersData,
+          productsResponse,
+          categoriesResponse,
+          unitsResponse,
+          customersResponse,
         ] = await Promise.all([
           getSales(),
           getProducts(),
@@ -41,10 +40,10 @@ export default function SalesPage() {
           getCustomers(),
         ]);
         setSales(salesData);
-        setProducts(productsData);
-        setCategories(categoriesData);
-        setUnits(unitsData);
-        setCustomers(customersData);
+        setProducts(productsResponse.data);
+        setCategories(categoriesResponse);
+        setUnits(unitsResponse);
+        setCustomers(customersResponse);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {

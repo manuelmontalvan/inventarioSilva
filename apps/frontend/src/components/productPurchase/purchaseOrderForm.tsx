@@ -1,202 +1,299 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { SupplierI } from "@/types/supplier";
+import { Category, ProductI, UnitOfMeasure } from "@/types/product";
+import { Combobox } from "../ui/combobox";
+import { Button } from "@/components/ui/button";
 import {
   CreatePurchaseOrderDto,
   CreateProductPurchaseDto,
 } from "@/types/purchaseOrders";
-import { SupplierI } from "@/types/supplier";
-import { Category, ProductI } from "@/types/product";
-import { Combobox } from "../ui/combobox";
+import { getProducts } from "@/lib/api/products/products";
+import { addToast } from "@heroui/toast";
+import { ProductsTab } from "@/components/tabla/productTab";
 
 interface Props {
   suppliers: SupplierI[];
-  products: ProductI[];
   categories: Category[];
-  onCreate: (newOrder: CreatePurchaseOrderDto) => Promise<void>;
+  onCreate: (data: CreatePurchaseOrderDto) => Promise<void>;
+}
+
+interface PurchaseItem extends CreateProductPurchaseDto {
+  name: string;
+  unit_id: string;
+  brand?: {
+    id: string;
+    name: string;
+  };
+  unit_of_measure?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function PurchaseOrderForm({
   suppliers,
-  products,
   categories,
   onCreate,
 }: Props) {
   const [supplierId, setSupplierId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState(""); 
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<CreateProductPurchaseDto[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [unitCost, setUnitCost] = useState("1.00");
+  const [items, setItems] = useState<PurchaseItem[]>([]);
+  const [products, setProducts] = useState<ProductI[]>([]);
+  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [notes, setNotes] = useState("");
 
-  const filteredProducts = selectedCategoryId
-    ? products.filter((p) => p.category?.id === selectedCategoryId)
-    : products;
+  const limit = 10;
 
-  const handleAddItem = () => {
-    const qty = Number(quantity);
-    const cost = Number(unitCost);
-    if (!selectedProductId || qty <= 0 || cost <= 0) return;
+  const fetchProducts = async (reset: boolean = false): Promise<void> => {
+    try {
+      const res = await getProducts({
+        search,
+        page,
+        limit,
+        categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
+      });
 
-    const total_cost = qty * cost;
+      setProducts(res.data);
+      setTotalPages(res.totalPages);
 
-    const existingIndex = items.findIndex(
-      (i) => i.productId === selectedProductId
-    );
-    if (existingIndex >= 0) {
-      const updated = [...items];
-      updated[existingIndex].quantity += qty;
-      updated[existingIndex].unit_cost = cost;
-      updated[existingIndex].total_cost =
-        updated[existingIndex].quantity * cost;
-      setItems(updated);
-    } else {
-      setItems([
-        ...items,
-        {
-          productId: selectedProductId,
-          supplierId,
-          invoice_number: invoiceNumber,
-          quantity: qty,
-          unit_cost: cost,
-          total_cost,
-          notes,
-        },
-      ]);
+      const uniqueUnitsMap: Record<string, UnitOfMeasure> = {};
+      res.data.forEach((p) => {
+        if (p.unit_of_measure && !uniqueUnitsMap[p.unit_of_measure.id]) {
+          uniqueUnitsMap[p.unit_of_measure.id] = p.unit_of_measure;
+        }
+      });
+      setUnits(Object.values(uniqueUnitsMap));
+    } catch (error) {
+      console.error("Error cargando productos", error);
+      addToast({ color: "danger", title: "Error cargando productos" });
     }
-
-    setSelectedCategoryId("");
-    setSelectedProductId("");
-    setQuantity("1");
-    setUnitCost("1.00");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supplierId || items.length === 0) return;
+  useEffect(() => {
+    setPage(1);
+    fetchProducts(true);
+  }, [search, selectedCategoryId]);
 
-    const newOrder: CreatePurchaseOrderDto = {
+  useEffect(() => {
+    if (page > 1) fetchProducts();
+  }, [page]);
+
+  const totalGeneral = items.reduce((sum, item) => sum + item.total_cost, 0);
+
+  const handleAddProduct = (
+  product: ProductI,
+  unitId: string,
+  quantity: number,
+  purchasePrice?: number
+): boolean => {   // <-- Aquí retorno boolean
+  if (!supplierId) {
+    addToast({title:"Selecciona un proveedor antes de agregar productos", color:"danger"});
+    return false;
+  }
+
+  const exists = items.find(
+    (i) => i.productId === product.id && i.unit_id === unitId
+  );
+  if (exists) {
+    addToast({title:"Este producto con la unidad seleccionada ya fue agregado.", color:"danger"});
+    return false;
+  }
+
+  const unit_cost = purchasePrice ?? product.purchase_price ?? 0;
+  if (unit_cost <= 0) {
+    addToast({title:"El producto no tiene precio de compra válido.", color:"danger"});
+    return false;
+  }
+
+  const total_cost = unit_cost * quantity;
+
+  setItems((prev) => [
+    ...prev,
+    {
+      productId: product.id,
       supplierId,
-      invoice_number: invoiceNumber,     
-      notes,
-      items,
-    };
-    await onCreate(newOrder);
+      invoice_number: invoiceNumber,
+      quantity,
+      unit_cost,
+      total_cost,
+      notes: "",
+      name: product.name,
+      unit_id: unitId,
+      brand: product.brand
+        ? { id: product.brand.id, name: product.brand.name }
+        : undefined,
+      unit_of_measure: product.unit_of_measure
+        ? {
+            id: product.unit_of_measure.id,
+            name: product.unit_of_measure.name,
+          }
+        : undefined,
+    },
+  ]);
+  
+  return true; // agregado con éxito
+};
 
-    setSupplierId("");
-    setInvoiceNumber("");
-   
-    setNotes("");
-    setItems([]);
+
+  const handleRemoveItem = (productId: string, unitId: string) => {
+    setItems((prev) =>
+      prev.filter(
+        (item) => !(item.productId === productId && item.unit_id === unitId)
+      )
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!supplierId) return  addToast({title:"Selecciona un proveedor ", color:"danger"})  ;
+    if (items.length === 0) return  addToast({title:"Agrega al menos un producto ", color:"danger"});
+
+    try {
+      const newOrder: CreatePurchaseOrderDto = {
+        supplierId,
+        invoice_number: invoiceNumber,
+        notes,
+        items: items.map(
+          ({ unit_id, name, brand, unit_of_measure, ...rest }) => rest
+        ),
+      };
+
+      await onCreate(newOrder);
+      addToast({ color: "success", title: "Orden de compra creada" });
+
+      setSupplierId("");
+      setInvoiceNumber("");
+      setNotes("");
+      setItems([]);
+      setSelectedCategoryId("");
+      setSearch("");
+      setPage(1);
+      setProducts([]);
+      await fetchProducts();
+    } catch (error) {
+      console.error(error);
+      addToast({ color: "danger", title: "Error al crear orden" });
+    }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700"
-    >
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-        Nueva Orden de Compra
-      </h2>
+    <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg">
+      <h2 className="text-xl font-bold">Nueva Orden de Compra</h2>
 
-      <div className="space-y-4">
-        <div className="dark:text-white">
-          <label className="block text-sm font-medium text-gray-700  dark:text-gray-300 mb-1">
-            Proveedor
-          </label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block font-medium mb-1">Proveedor</label>
           <Combobox
             items={suppliers.map((s) => ({ label: s.name, value: s.id }))}
             value={supplierId}
-            onChange={(val) => setSupplierId(val)}
+            onChange={setSupplierId}
             placeholder="Seleccionar proveedor"
           />
         </div>
 
-        <textarea
-          placeholder="Notas"
-          className="w-full px-4 py-2 border rounded-md resize-none bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
-          rows={3}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 dark:text-white">
+        <div>
+          <label className="block font-medium mb-1">Categoría</label>
           <Combobox
             items={categories.map((c) => ({ label: c.name, value: c.id }))}
             value={selectedCategoryId}
-            onChange={(val) => setSelectedCategoryId(val)}
-            placeholder="Seleccionar categoría"
-          />
-          <Combobox
-            items={filteredProducts.map((p) => ({
-              label: p.name,
-              value: p.id,
-            }))}
-            value={selectedProductId}
-            onChange={(val) => setSelectedProductId(val)}
-            placeholder="Seleccionar producto"
-          />
-
-          <input
-            type="number"
-            min={1}
-            placeholder="Cantidad"
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            onFocus={() => setQuantity("")}
-          />
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder="Costo Unitario"
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600"
-            value={unitCost}
-            onChange={(e) => setUnitCost(e.target.value)}
-            onFocus={() => setUnitCost("")}
+            onChange={setSelectedCategoryId}
+            placeholder="Filtrar por categoría"
           />
         </div>
-
-        <button
-          type="button"
-          onClick={handleAddItem}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-md transition"
-        >
-          Agregar Producto
-        </button>
-
-        {items.length > 0 && (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700 text-sm mt-4">
-            {items.map((item, idx) => {
-              const name =
-                products.find((p) => p.id === item.productId)?.name ||
-                item.productId;
-              return (
-                <li
-                  key={idx}
-                  className="flex justify-between py-2 text-gray-700 dark:text-gray-300"
-                >
-                  <span className="truncate">{name}</span>
-                  <span>
-                    {item.quantity} x ${item.unit_cost.toFixed(2)}
-                  </span>
-                  <span className="font-semibold">
-                    ${item.total_cost.toFixed(2)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <button
-          type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-md transition"
-        >
-          Crear Orden
-        </button>
       </div>
-    </form>
+
+      <div className="min-h-[500px]">
+        <ProductsTab
+          products={products}
+          units={units}
+          onAdd={handleAddProduct}
+          showPurchasePrice={true}
+          showSalePrice={false}
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          searchTerm={search}
+          onSearchChange={(newSearch) => {
+            setSearch(newSearch);
+            setPage(1);
+          }}
+        />
+      </div>
+
+      {items.length > 0 && (
+        <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg mt-6">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-100 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-2 text-left">Producto</th>
+                <th className="px-4 py-2 text-left">Marca</th>
+                <th className="px-4 py-2 text-left">Unidad</th>
+                <th className="px-4 py-2 text-left">Cantidad</th>
+                <th className="px-4 py-2 text-left">Costo Unitario</th>
+                <th className="px-4 py-2 text-left">Total</th>
+                <th className="px-4 py-2 text-left">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {items.map((item) => (
+                <tr key={`${item.productId}-${item.unit_id}`}>
+                  <td className="px-4 py-2">{item.name}</td>
+                  <td className="px-4 py-2">{item.brand?.name ?? "—"}</td>
+                  <td className="px-4 py-2">
+                    {item.unit_of_measure?.name ?? "—"}
+                  </td>
+                  <td className="px-4 py-2">{item.quantity}</td>
+                  <td className="px-4 py-2">${item.unit_cost.toFixed(2)}</td>
+                  <td className="px-4 py-2">${item.total_cost.toFixed(2)}</td>
+                  <td className="px-4 py-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() =>
+                        handleRemoveItem(item.productId, item.unit_id)
+                      }
+                    >
+                      Eliminar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td colSpan={5} className="text-right font-bold px-4 py-2">
+                  Total General
+                </td>
+                <td className="font-bold px-4 py-2">
+                  ${totalGeneral.toFixed(2)}
+                </td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <label className="block font-medium mb-1">Notas</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full border rounded px-3 py-2 dark:bg-gray-800 dark:text-white resize-none"
+          rows={3}
+          placeholder="Notas adicionales..."
+        />
+      </div>
+
+      <Button
+        onClick={handleSubmit}
+        className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-md"
+      >
+        Crear Orden de Compra
+      </Button>
+    </div>
   );
 }

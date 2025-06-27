@@ -8,12 +8,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository, DataSource } from 'typeorm';
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { CreateProductPurchaseDto } from './dto/create-product-purchase.dto';
+
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { Product } from '../products/entities/product.entity';
+import { Brand } from '../products/entities/brand.entity';
+import { UnitOfMeasure } from '../products/entities/unit-of-measure.entity';
 import { Supplier } from './supplier/supplier.entity';
 import { User } from '../users/user.entity';
 import { ProductPurchase } from './entities/product-purchase.entity';
 import { ProductCostHistory } from './entities/product-cost-history.entity';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as XLSX from 'xlsx';
+import { parse } from 'csv-parse/sync';
 
 @Injectable()
 export class PurchaseOrderService {
@@ -35,6 +43,11 @@ export class PurchaseOrderService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Brand)
+    private readonly brandRepo: Repository<Brand>,
+
+    @InjectRepository(UnitOfMeasure)
+    private readonly unitOfMeasureRepo: Repository<UnitOfMeasure>,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -56,8 +69,12 @@ export class PurchaseOrderService {
     const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(now.getUTCDate()).padStart(2, '0');
 
-    const todayStartUtc = new Date(Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate()));
-    const todayEndUtc = new Date(Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    const todayStartUtc = new Date(
+      Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate()),
+    );
+    const todayEndUtc = new Date(
+      Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
+    );
 
     const countToday = await this.orderRepo.count({
       where: {
@@ -85,6 +102,7 @@ export class PurchaseOrderService {
       for (const item of dto.items) {
         const product = await manager.findOne(Product, {
           where: { id: item.productId },
+          relations: ['brand', 'unit_of_measure'],
         });
         if (!product) {
           throw new BadRequestException(
@@ -94,6 +112,22 @@ export class PurchaseOrderService {
 
         product.purchase_price = item.unit_cost;
         product.last_purchase_date = now;
+        // ✅ Recalcular sale_price si ya tiene margen de ganancia definido
+        if (
+          typeof product.profit_margin === 'number' &&
+          product.profit_margin > 0
+        ) {
+          product.sale_price = parseFloat(
+            (
+              product.purchase_price /
+              (1 - product.profit_margin / 100)
+            ).toFixed(2),
+          );
+          console.log(
+            `📦 Producto "${product.name}" actualizado con nuevo precio de venta: ${product.sale_price}`,
+          );
+        }
+
         await manager.save(product);
 
         const lastHistory = await manager.findOne(ProductCostHistory, {
@@ -113,6 +147,9 @@ export class PurchaseOrderService {
 
         const purchaseLine = manager.create(ProductPurchase, {
           product,
+          product_name: product.name,
+          brand: product.brand,
+          unit_of_measure: product.unit_of_measure,
           supplier,
           invoice_number: item.invoice_number,
           quantity: item.quantity,
@@ -170,25 +207,25 @@ export class PurchaseOrderService {
     return order;
   }
 
-async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
-  const order = await this.orderRepo.findOne({
-    where: { id },
-    relations: ['registeredBy'],
-  });
-  if (!order) throw new NotFoundException(`Orden con ID ${id} no encontrada`);
+  async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['registeredBy'],
+    });
+    if (!order) throw new NotFoundException(`Orden con ID ${id} no encontrada`);
 
-  const user = await this.userRepo.findOneBy({ id: userId });
-  if (!user) throw new NotFoundException('Usuario no encontrado');
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
 
-  if (dto.invoice_number !== undefined)
-    order.invoice_number = dto.invoice_number;
+    if (dto.invoice_number !== undefined)
+      order.invoice_number = dto.invoice_number;
 
-  if (dto.notes !== undefined) order.notes = dto.notes;
+    if (dto.notes !== undefined) order.notes = dto.notes;
 
-  order.registeredBy = user;
+    order.registeredBy = user;
 
-  return this.orderRepo.save(order);
-}
+    return this.orderRepo.save(order);
+  }
 
   async remove(id: string) {
     const found = await this.orderRepo.findOneBy({ id });
@@ -196,5 +233,140 @@ async update(id: string, dto: UpdatePurchaseOrderDto, userId: string) {
 
     await this.orderRepo.delete(id);
     return { message: 'Orden eliminada correctamente' };
+  }
+
+  async importPurchaseOrderFromFile(
+    filePath: string,
+    ext: string,
+    userId: string,
+  ) {
+    const content = fs.readFileSync(filePath);
+
+    // Parsear filas según extensión
+    const rows =
+      ext === '.csv'
+        ? parse(content, {
+            columns: true,
+            skip_empty_lines: true,
+            delimiter: ',',
+          })
+        : XLSX.utils.sheet_to_json(
+            XLSX.read(content, { type: 'buffer' }).Sheets['Sheet1'],
+          );
+    const supplierNames = new Set(rows.map((row) => row['supplierName']));
+
+    if (supplierNames.size > 1) {
+      throw new BadRequestException(
+        'El archivo contiene múltiples proveedores. Solo se permite un proveedor por orden de compra.',
+      );
+    }
+
+    // Buscar o crear usuario
+    let user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) {
+      user = this.userRepo.create({
+        id: userId,
+        name: 'Usuario Importado',
+      });
+      user = await this.userRepo.save(user);
+    }
+
+    const createDto = new CreatePurchaseOrderDto();
+    createDto.supplierId = '';
+    createDto.invoice_number = '';
+    createDto.notes = '';
+
+    const items: CreateProductPurchaseDto[] = [];
+
+    for (const row of rows) {
+      // Proveedor
+      let supplier = await this.supplierRepo.findOne({
+        where: { name: row['supplierName'] },
+      });
+      if (!supplier) {
+        supplier = this.supplierRepo.create({ name: row['supplierName'] });
+        supplier = await this.supplierRepo.save(supplier);
+      }
+      if (!createDto.supplierId) createDto.supplierId = supplier.id;
+
+      if (!createDto.invoice_number && row['invoice_number']) {
+        createDto.invoice_number = row['invoice_number'];
+      }
+
+      // Producto
+      let product = await this.productRepo.findOne({
+        where: { name: row['productName'] },
+        relations: ['brand', 'unit_of_measure'],
+      });
+      if (!product) {
+        product = this.productRepo.create({ name: row['productName'] });
+        product = await this.productRepo.save(product);
+      }
+
+      // Marca
+      let brand: Brand | null = null;
+
+      if (row['brandName']) {
+        brand = await this.brandRepo.findOne({
+          where: { name: row['brandName'] },
+        });
+        if (!brand) {
+          brand = this.brandRepo.create({ name: row['brandName'] });
+          brand = await this.brandRepo.save(brand);
+        }
+      }
+
+      // Unidad de medida
+      let unitOfMeasure: UnitOfMeasure | null = null;
+      if (row['unitOfMeasureName']) {
+        unitOfMeasure = await this.unitOfMeasureRepo.findOne({
+          where: { name: row['unitOfMeasureName'] },
+        });
+        if (!unitOfMeasure) {
+          unitOfMeasure = this.unitOfMeasureRepo.create({
+            name: row['unitOfMeasureName'],
+          });
+          unitOfMeasure = await this.unitOfMeasureRepo.save(unitOfMeasure);
+        }
+      }
+
+      // Actualizar producto con marca y unidad si no están
+      let updateNeeded = false;
+      if (brand && !product.brand) {
+        product.brand = brand;
+        updateNeeded = true;
+      }
+      if (unitOfMeasure && !product.unit_of_measure) {
+        product.unit_of_measure = unitOfMeasure;
+        updateNeeded = true;
+      }
+      if (updateNeeded) {
+        await this.productRepo.save(product);
+      }
+      items.push({
+        productId: product.id,
+        supplierId: supplier.id,
+        invoice_number: row['invoice_number'],
+        quantity: Number(row['quantity']),
+        unit_cost: Number(row['unit_cost']),
+        total_cost: Number(row['total_cost']),
+        notes: row['notes'] || null,
+        brandId: product.brand ? product.brand.id : undefined,
+        unitOfMeasureId: product.unit_of_measure
+          ? product.unit_of_measure.id
+          : undefined, // undefined en vez de null
+      });
+    }
+
+    createDto.items = items;
+
+    const createdOrder = await this.create(createDto, user);
+
+    fs.unlinkSync(filePath);
+
+    return {
+      message: 'Orden de compra importada con éxito',
+      order: createdOrder,
+    };
   }
 }

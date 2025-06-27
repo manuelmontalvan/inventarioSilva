@@ -17,16 +17,14 @@ export const getSaleById = async (id: string): Promise<SaleI> => {
   return data;
 };
 
-export const createSale = async (
-  sale: CreateSaleDto
-): Promise<SaleI> => {
+export const createSale = async (sale: CreateSaleDto): Promise<SaleI> => {
   const { data } = await api.post("/sales", sale);
   return data;
 };
 
 export const updateSale = async (
   id: string,
-  sale: Partial<Omit<CreateSaleDto, 'productSales'>>
+  sale: Partial<Omit<CreateSaleDto, "productSales">>
 ): Promise<SaleI> => {
   const { data } = await api.patch(`/sales/${id}`, sale);
   return data;
@@ -34,4 +32,16 @@ export const updateSale = async (
 
 export const deleteSale = async (id: string): Promise<void> => {
   await api.delete(`/sales/${id}`);
+};
+export const importSalesFromExcel = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await api.post("/sales/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data; // { message: string, sale: SaleI }
 };

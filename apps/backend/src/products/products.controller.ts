@@ -45,13 +45,31 @@ export class ProductsController {
     const user = req.user as User;
     return this.productsService.create(createProductDto, user);
   }
+  //devuelve todos los productos
 
-  @Get()
-  // Usa RoleType.admin, RoleType.bodeguero, RoleType.vendedor
-  @Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)
-  async findAll(@Query('search') search?: string) {
-    return this.productsService.findAll(search);
+@Get()
+@Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)
+async findAll(
+  @Query('page') page = 1,
+  @Query('limit') limit = 10,
+  @Query('categoryIds') categoryIds?: string | string[], // puede llegar como string o array
+  @Query('search') search?: string,
+) {
+  // Si categoryIds viene como string separado por comas, convertir a array
+  let categoriesArray: string[] | undefined;
+  if (typeof categoryIds === 'string') {
+    categoriesArray = categoryIds.split(',');
+  } else {
+    categoriesArray = categoryIds;
   }
+
+  return this.productsService.findAllPaginated(
+    +page,
+    +limit,
+    categoriesArray,
+    search,
+  );
+}
 
   @Get(':id/cost-history')
   getProductCostHistory(@Param('id') id: string) {
@@ -86,6 +104,10 @@ export class ProductsController {
   @Roles(RoleType.admin)
   async remove(@Param('id') id: string) {
     return this.productsService.remove(id);
+  }
+  @Delete()
+  removeAll(): Promise<void> {
+    return this.productsService.removeAll();
   }
 
   @Post('upload')

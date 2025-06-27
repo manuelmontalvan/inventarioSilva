@@ -51,22 +51,15 @@ export class CreateProductDto {
   @Type(() => Number)
   max_stock: number;
 
-
   @IsNotEmpty()
   @IsUUID()
   unitOfMeasureId: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   purchase_price: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  sale_price: number;
 
   @IsOptional()
   @IsNumber()
@@ -85,7 +78,4 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   notes?: string;
-
- 
-  
 }

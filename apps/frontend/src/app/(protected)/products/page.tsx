@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
-import { getProducts, deleteProduct } from "@/lib/api/products/products";
+import {
+  getProducts,
+  deleteProduct,
+  deleteAllProducts,
+  uploadProducts 
+} from "@/lib/api/products/products";
+import { getCategories} from "@/lib/api/products/categories";
+import {Category } from "@/types/product";
 import ProductTable from "@/components/products/productTable";
 import { CreateProductModal } from "@/components/products/createProductModal";
 import EditProductModal from "@/components/products/editProductModal";
@@ -10,7 +17,14 @@ import DeleteProductModal from "@/components/products/deleteProductModal";
 import ProductDetailsModal from "@/components/products/viewProductModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@heroui/button";
-import { Search, Filter, Settings2, PlusCircle, Box } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Settings2,
+  PlusCircle,
+  Box,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { productColumnOptions } from "@/constants/productColumns";
 import { addToast } from "@heroui/react";
-import ProductUpload from "@/components/products/productUpload";
+import  FileUpload from "@/components/fileUpload";
+
 
 export default function ProductAdminPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
@@ -34,6 +49,10 @@ export default function ProductAdminPage() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [allDeleteMode, setAllDeleteMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [visibleColumns, setVisibleColumns] = useState<
     Record<keyof ProductI, boolean>
@@ -55,43 +74,49 @@ export default function ProductAdminPage() {
     return initial;
   });
 
+  const fetchCategories = async () => {
+    try {
+      const cats = await getCategories();
+      setCategories(cats);
+    } catch (error) {
+      addToast({ title: "Error cargando categorías", color: "danger" });
+    }
+  };
+
   const fetchProducts = async () => {
     try {
-      const data = await getProducts();
-      setProducts(data);
+      const response = await getProducts({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+      });
+      setProducts(response.data);
+      setTotalPages(response.totalPages);
     } catch (err: any) {
-      setError(err.message || "Error al cargar productos");
+      addToast({ title: "Productos no se pudieron cargar", color: "danger" });
+      setError("Error al cargar productos");
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchCategories();
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const fullText = `${product.name} ${product.category?.name ?? ""} ${
-      product.brand?.name ?? ""
-    }`.toLowerCase();
-    const matchesSearch = fullText.includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategories.length === 0 ||
-      selectedCategories.includes(product.category?.name?.toLowerCase() ?? "");
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleBulkDelete = async () => {
-    await Promise.all(
-      selectedProducts.map((id) => deleteProduct(id.toString()))
-    );
-    setSelectedProducts([]);
+  useEffect(() => {
     fetchProducts();
-  };
+  }, [currentPage]);
 
-  const toggleCategory = (category: string) => {
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchProducts();
+  }, [searchTerm, selectedCategories]);
+
+  const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
+      prev.includes(categoryId)
+        ? prev.filter((c) => c !== categoryId)
+        : [...prev, categoryId]
     );
   };
 
@@ -100,6 +125,22 @@ export default function ProductAdminPage() {
       ...prev,
       [column]: !prev[column],
     }));
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      if (selectedProducts.length === 0) {
+        await deleteAllProducts();
+      } else {
+        await Promise.all(
+          selectedProducts.map((id) => deleteProduct(id.toString()))
+        );
+      }
+      setSelectedProducts([]);
+      fetchProducts();
+    } catch (error) {
+      addToast({ title: "Error al eliminar productos", color: "danger" });
+    }
   };
 
   if (error) {
@@ -121,9 +162,9 @@ export default function ProductAdminPage() {
           Gestión de Productos
         </h1>
 
-        {/* Agrupamos botones en un flex con gap */}
         <div className="flex items-center gap-4">
-          <ProductUpload onSuccess={fetchProducts} />
+         <FileUpload uploadFunction={uploadProducts} onSuccess={fetchProducts} />
+
           <Button
             onPress={() => setShowCreateModal(true)}
             className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
@@ -134,15 +175,29 @@ export default function ProductAdminPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">
-        <div className="relative w-full sm:w-[250px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-4 py-2 rounded"
-          />
+        <div className="flex w-full sm:w-auto items-center gap-4 p-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-4 py-2 rounded"
+            />
+          </div>
+
+          <Button
+            onPress={() => {
+              setSelectedProduct(null);
+              setBulkDeleteMode(true);
+              setShowDeleteModal(true);
+              setAllDeleteMode(true);
+            }}
+            className="bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 border-red-600/30 flex items-center gap-2 whitespace-nowrap"
+          >
+            <Trash2 className="w-4 h-4" /> Eliminar Todos
+          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -154,13 +209,13 @@ export default function ProductAdminPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-gray-800 text-white border-gray-600">
               <DropdownMenuLabel>Filtrar por categoría</DropdownMenuLabel>
-              {["ferretería", "eléctrico", "plomería"].map((category) => (
+              {categories.map(({ id, name }) => (
                 <DropdownMenuCheckboxItem
-                  key={category}
-                  checked={selectedCategories.includes(category)}
-                  onCheckedChange={() => toggleCategory(category)}
+                  key={id}
+                  checked={selectedCategories.includes(id)}
+                  onCheckedChange={() => toggleCategory(id)}
                 >
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                  {name.charAt(0).toUpperCase() + name.slice(1)}
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuContent>
@@ -209,7 +264,7 @@ export default function ProductAdminPage() {
 
       <div className="rounded-md border border-white overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
         <ProductTable
-          products={filteredProducts}
+          products={products}
           onView={(product) => {
             setSelectedProduct(product);
             setShowDetailsModal(true);
@@ -227,6 +282,23 @@ export default function ProductAdminPage() {
           setSelectedProducts={setSelectedProducts}
           visibleColumns={visibleColumns}
         />
+      </div>
+
+      <div className="flex justify-center gap-2 mt-4">
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i + 1)}
+            disabled={currentPage === i + 1}
+            className={`px-3 py-1 rounded ${
+              currentPage === i + 1
+                ? "bg-green-600 text-white"
+                : "bg-gray-700 text-gray-300"
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
       </div>
 
       <ProductDetailsModal
@@ -251,9 +323,11 @@ export default function ProductAdminPage() {
           setShowDeleteModal(false);
           setBulkDeleteMode(false);
           setSelectedProduct(null);
+          setAllDeleteMode(false);
         }}
         product={selectedProduct}
         multiple={bulkDeleteMode}
+        all={allDeleteMode}
         onDelete={fetchProducts}
         onConfirm={handleBulkDelete}
       />
