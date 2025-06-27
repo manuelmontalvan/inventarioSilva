@@ -16,7 +16,6 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as fs from 'fs';
 
 @Controller('sales')
 export class SalesController {
@@ -45,27 +44,30 @@ export class SalesController {
     return this.salesService.findAll();
   }
 
- @UseGuards(JwtAuthGuard)
-@Post('import')
-@UseInterceptors(FileInterceptor('file'))
-async importFromExcel(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-  if (!file) {
-    throw new BadRequestException('Archivo no recibido');
+  @UseGuards(JwtAuthGuard)
+  @Post('import')
+  @UseInterceptors(FileInterceptor('file'))
+  async importFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file?.buffer) {
+      throw new BadRequestException('No se recibió archivo válido');
+    }
+
+    const user = req.user as any;
+
+    try {
+      const sale = await this.salesService.importSalesFromExcel(
+        file.buffer,
+        user,
+      );
+      return {
+        message: 'Ventas importadas exitosamente',
+        sale,
+      };
+    } catch (error) {
+      throw error;
+    }
   }
-
-  const user = req.user as any;
-
-  try {
-    const sale = await this.salesService.importSalesFromExcel(file.path, user);
-    return {
-      message: 'Ventas importadas exitosamente',
-      sale,
-    };
-  } catch (error) {
-    // Opcional: borrar archivo si hay error
-    fs.unlinkSync(file.path);
-    throw error;
-  }
-}
-
 }

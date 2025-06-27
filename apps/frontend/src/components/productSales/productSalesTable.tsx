@@ -19,6 +19,17 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<SaleI | null>(null);
   const itemsPerPage = 5;
+  const statusMap: Record<string, string> = {
+    paid: "Pagado",
+    pending: "Pendiente",
+    cancelled: "Cancelado",
+  };
+
+  const paymentMethodMap: Record<string, string> = {
+    cash: "Efectivo",
+    credit: "Crédito",
+    transfer: "Transferencia",
+  };
 
   if (loading) {
     return <p className="text-center py-4">Cargando ventas...</p>;
@@ -29,7 +40,6 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
     const status = sale.status?.toLowerCase() || "";
     const orderNumber = sale.orderNumber?.toLowerCase() || "";
     const query = search.toLowerCase();
-
     return (
       customerName.includes(query) ||
       status.includes(query) ||
@@ -45,11 +55,17 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
 
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
 
-  // Export report completo
   function handleExportPdf() {
     const doc = new jsPDF();
     const title = "Reporte de ventas";
-    const tableColumn = ["Orden", "Cliente", "Fecha", "Total", "Estado", "Vendedor"];
+    const tableColumn = [
+      "Orden",
+      "Cliente",
+      "Fecha",
+      "Total",
+      "Estado",
+      "Vendedor",
+    ];
     const tableRows: (string | number)[][] = [];
     let grandTotal = 0;
 
@@ -85,7 +101,6 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
     doc.save("ventas.pdf");
   }
 
-  // Export Excel completo
   function handleExportExcel() {
     const data = sales.map((sale) => ({
       Orden: sale.orderNumber || sale.id,
@@ -103,13 +118,10 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
       bookType: "xlsx",
       type: "array",
     });
-    const blob = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(blob, "ventas.xlsx");
   }
 
-  // Export CSV completo
   function handleExportCsv() {
     const data = sales.map((sale) => ({
       Orden: sale.orderNumber || sale.id,
@@ -126,20 +138,25 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
     saveAs(blob, "ventas.csv");
   }
 
-  // Export PDF individual
   function handleExportSinglePdf(sale: SaleI) {
     const doc = new jsPDF();
-    const tableColumn = ["Producto", "Cantidad", "Precio Unitario", "Total"];
+    const tableColumn = [
+      "Producto",
+      "Marca",
+      "Unidad",
+      "Cantidad",
+      "Precio Unitario",
+      "Total",
+    ];
     const tableRows: (string | number)[][] = [];
 
     const totalAmount = Number(sale.total_amount);
 
     sale.productSales.forEach((item) => {
-      const productName =
-        products.find((p) => p.id === item.productId)?.name || item.productId;
-
       const row = [
-        productName,
+        item.product?.name || "N/A",
+        item.product?.brand?.name || "N/A",
+        item.product?.unit_of_measure?.name || "N/A",
         item.quantity,
         `$${Number(item.unit_price).toFixed(2)}`,
         `$${Number(item.total_price).toFixed(2)}`,
@@ -174,7 +191,7 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
 
   return (
     <div className="flex flex-col">
-      {/* Buscador y botones de exportación global */}
+      {/* Buscador y botones */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -194,7 +211,7 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
         </button>
       </div>
 
-      {/* Lista paginada de ventas */}
+      {/* Lista de ventas */}
       {paginatedSales.length === 0 ? (
         <p className="text-gray-500 italic">No hay ventas registradas.</p>
       ) : (
@@ -222,22 +239,24 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm dark:text-white">
                 <p>
-                  <strong>Total:</strong> ${Number(sale.total_amount).toFixed(2)}
+                  <strong>Total:</strong> $
+                  {Number(sale.total_amount).toFixed(2)}
                 </p>
                 <p>
-                  <strong>Estado:</strong> {sale.status}
+                  <strong>Estado:</strong>{" "}
+                  {statusMap[sale.status] || sale.status}
                 </p>
                 <p>
                   <strong>Vendedor:</strong> {sale.soldBy?.name || "N/A"}{" "}
                   {sale.soldBy?.lastname || ""}
                 </p>
                 <p>
-                  <strong>Pago:</strong> {sale.payment_method}
+                  <strong>Pago:</strong>{" "}
+                  {paymentMethodMap[sale.payment_method] || sale.payment_method}
                 </p>
               </div>
             </div>
           ))}
-
           <div className="flex justify-center gap-2 mt-4">
             {Array.from({ length: totalPages }, (_, index) => (
               <button
@@ -256,11 +275,16 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
         </div>
       )}
 
-      {/* Modal para venta seleccionada */}
+      {/* Modal de detalle */}
       {selectedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-3xl w-full overflow-y-auto max-h-[90vh]">
-            {/* Header con botones de exportación individual */}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur bg-opacity-50 p-4"
+          onClick={() => setSelectedSale(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-3xl w-full overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4 border-b flex justify-between items-center">
               <h2 className="text-lg font-semibold text-indigo-700 dark:text-indigo-400">
                 Venta Orden: {selectedSale.orderNumber || selectedSale.id}
@@ -275,42 +299,47 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
                 <button
                   onClick={() => setSelectedSale(null)}
                   className="text-gray-500 hover:text-red-600 text-xl"
-                  aria-label="Cerrar modal"
                 >
                   ✕
                 </button>
               </div>
             </div>
 
-            {/* Contenido del modal */}
             <div className="p-4 space-y-4 text-sm dark:text-white grid grid-cols-2 gap-4">
               <div>
                 <p>
-                  <strong>Cliente:</strong> {selectedSale.customer?.name || "N/A"}
+                  <strong>Cliente:</strong>{" "}
+                  {selectedSale.customer?.name || "N/A"}
                 </p>
                 <p>
                   <strong>Fecha:</strong>{" "}
-                  {new Date(selectedSale.sale_date).toLocaleDateString("es-EC", {
-                    timeZone: "UTC",
-                  })}
+                  {new Date(selectedSale.sale_date).toLocaleDateString(
+                    "es-EC",
+                    { timeZone: "UTC" }
+                  )}
                 </p>
                 <p>
-                  <strong>Estado:</strong> {selectedSale.status}
+                  <strong>Estado:</strong>{" "}
+                  {statusMap[selectedSale.status] || selectedSale.status}
                 </p>
+
                 <p>
-                  <strong>Método de pago:</strong> {selectedSale.payment_method}
+                  <strong>Método de pago:</strong>{" "}
+                  {paymentMethodMap[selectedSale.payment_method] ||
+                    selectedSale.payment_method}
                 </p>
               </div>
               <div>
                 <p>
-                  <strong>Vendedor:</strong>{" "}
-                  {selectedSale.soldBy?.name || ""} {selectedSale.soldBy?.lastname || ""}
+                  <strong>Vendedor:</strong> {selectedSale.soldBy?.name || ""}{" "}
+                  {selectedSale.soldBy?.lastname || ""}
                 </p>
                 <p>
                   <strong>Notas:</strong> {selectedSale.notes || "N/A"}
                 </p>
                 <p>
-                  <strong>Total:</strong> ${Number(selectedSale.total_amount).toFixed(2)}
+                  <strong>Total:</strong> $
+                  {Number(selectedSale.total_amount).toFixed(2)}
                 </p>
               </div>
 
@@ -321,6 +350,12 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
                     <tr>
                       <th className="p-2 border dark:border-gray-700 text-left">
                         Producto
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-left">
+                        Marca
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-left">
+                        Unidad
                       </th>
                       <th className="p-2 border dark:border-gray-700 text-right">
                         Cantidad
@@ -336,36 +371,38 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
                   <tbody>
                     {[...selectedSale.productSales]
                       .sort((a, b) => {
-                        const nameA =
-                          products.find((p) => p.id === a.productId)?.name || "";
-                        const nameB =
-                          products.find((p) => p.id === b.productId)?.name || "";
+                        const nameA = a.product?.name || "";
+                        const nameB = b.product?.name || "";
                         return nameA.localeCompare(nameB);
                       })
-                      .map((item) => {
-                        const productName =
-                          products.find((p) => p.id === item.productId)?.name ||
-                          item.productId;
-                        return (
-                          <tr key={item.id} className="border-t dark:border-gray-700">
-                            <td className="p-2 border dark:border-gray-700">
-                              {productName}
-                            </td>
-                            <td className="p-2 border dark:border-gray-700 text-right">
-                              {item.quantity}
-                            </td>
-                            <td className="p-2 border dark:border-gray-700 text-right">
-                              ${Number(item.unit_price).toFixed(2)}
-                            </td>
-                            <td className="p-2 border dark:border-gray-700 text-right font-semibold">
-                              ${Number(item.total_price).toFixed(2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      .map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-t dark:border-gray-700"
+                        >
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.name || item.productId}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.brand?.name || "N/A"}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.unit_of_measure.name || "N/A"}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right">
+                            {Number(item.quantity).toFixed(2)}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right">
+                            ${Number(item.unit_price).toFixed(2)}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right font-semibold">
+                            ${Number(item.total_price).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
                     <tr className="font-bold bg-gray-100 dark:bg-gray-800">
                       <td
-                        colSpan={3}
+                        colSpan={5}
                         className="p-2 text-right border dark:border-gray-700"
                       >
                         Total general

@@ -1,14 +1,17 @@
-// app/(protected)/sales/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
 import SalesForm from "@/components/productSales/productSalesFrom";
 import { SalesTable } from "@/components/productSales/productSalesTable";
+import FileUpload from "@/components/fileUpload";
 import { SaleI, CreateSaleDto } from "@/types/productSales";
 import { ProductI, Category, UnitOfMeasure } from "@/types/product";
 import { Customer } from "@/types/customer";
-import { getSales, createSale } from "@/lib/api/sales/productSales";
+import {
+  getSales,
+  createSale,
+  importSalesFromExcel,
+} from "@/lib/api/sales/productSales";
 import { getProducts } from "@/lib/api/products/products";
 import { getCategories } from "@/lib/api/products/categories";
 import { getUnitsOfMeasure } from "@/lib/api/products/unitOfMeasures";
@@ -22,6 +25,7 @@ export default function SalesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -53,9 +57,28 @@ export default function SalesPage() {
     loadData();
   }, []);
 
-  // Aquí el formulario envía CreateSaleDto
-  // Pero puede enviar status con valores frontend (ejemplo: "completed")
-  // Así que mapeamos antes de enviar al backend
+  // Función para subir archivo de ventas
+  const handleUploadSales = async (file: File) => {
+    return await importSalesFromExcel(file);
+  };
+
+  // Recarga ventas tras importar archivo
+  const onUploadSuccess = () => {
+    async function reloadSales() {
+      try {
+        setLoading(true);
+        const salesData = await getSales();
+        setSales(salesData);
+      } catch (error) {
+        console.error("Error recargando ventas:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    reloadSales();
+  };
+
+  // Maneja creación de venta desde formulario
   const handleSaleCreated = async (data: CreateSaleDto) => {
     try {
       setSaving(true);
@@ -71,7 +94,7 @@ export default function SalesPage() {
         ...data,
         status: statusMap[data.status] || data.status,
       };
-      console.log("Payload a enviar:", backendData);
+
       const createdSale = await createSale(backendData);
       setSales((prev) => [createdSale, ...prev]);
 
@@ -89,10 +112,14 @@ export default function SalesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
+        <div className="w-72">
+          <FileUpload uploadFunction={handleUploadSales} onSuccess={onUploadSuccess} />
+        </div>
+      </div>
 
       <SalesForm
-        products={products}
         categories={categories}
         units={units}
         customers={customers}

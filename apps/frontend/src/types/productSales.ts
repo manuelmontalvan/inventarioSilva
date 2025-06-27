@@ -1,5 +1,6 @@
 // types/sales.ts
 import { UserI } from "./user";
+import { ProductI } from "./product";
 
 export interface ProductSale {
   id: string;
@@ -10,6 +11,7 @@ export interface ProductSale {
   notes?: string;
   invoice_number?: string;  // Nuevo campo
   sale_date?: string;       // Fecha en formato ISO string
+ product?: ProductI;
 }
 
 export interface Customer {

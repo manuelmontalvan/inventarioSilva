@@ -6,10 +6,10 @@ import {
   getProducts,
   deleteProduct,
   deleteAllProducts,
-  uploadProducts 
+  uploadProducts,
 } from "@/lib/api/products/products";
-import { getCategories} from "@/lib/api/products/categories";
-import {Category } from "@/types/product";
+import { getCategories } from "@/lib/api/products/categories";
+import { Category } from "@/types/product";
 import ProductTable from "@/components/products/productTable";
 import { CreateProductModal } from "@/components/products/createProductModal";
 import EditProductModal from "@/components/products/editProductModal";
@@ -34,8 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { productColumnOptions } from "@/constants/productColumns";
 import { addToast } from "@heroui/react";
-import  FileUpload from "@/components/fileUpload";
-
+import FileUpload from "@/components/fileUpload";
 
 export default function ProductAdminPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
@@ -89,7 +88,8 @@ export default function ProductAdminPage() {
         page: currentPage,
         limit: 10,
         search: searchTerm,
-        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+        categoryIds:
+          selectedCategories.length > 0 ? selectedCategories : undefined,
       });
       setProducts(response.data);
       setTotalPages(response.totalPages);
@@ -163,7 +163,10 @@ export default function ProductAdminPage() {
         </h1>
 
         <div className="flex items-center gap-4">
-         <FileUpload uploadFunction={uploadProducts} onSuccess={fetchProducts} />
+          <FileUpload
+            uploadFunction={uploadProducts}
+            onSuccess={fetchProducts}
+          />
 
           <Button
             onPress={() => setShowCreateModal(true)}
@@ -183,8 +186,18 @@ export default function ProductAdminPage() {
               placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-4 py-2 rounded"
+              className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-10 py-2 rounded"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
+                aria-label="Limpiar búsqueda"
+                type="button"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <Button
