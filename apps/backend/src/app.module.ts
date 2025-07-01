@@ -20,6 +20,7 @@ import {PricingModule} from './pricing/pricing.module'
 import{ProductStockModule} from './products/product-stock/product-stock.module'
 import { SalesModule } from './productSales/sales.module';
 import { ShelfModule } from './products/locality/shelves/shelf.module';
+import { PagesModule } from './page/page.module';
 
 
 @Module({
@@ -62,7 +63,8 @@ import { ShelfModule } from './products/locality/shelves/shelf.module';
     PricingModule,
     ProductStockModule,
     SalesModule,
-    ShelfModule
+    ShelfModule,
+    PagesModule 
   
   ],
   providers: [RolesSeed, UserSeed],

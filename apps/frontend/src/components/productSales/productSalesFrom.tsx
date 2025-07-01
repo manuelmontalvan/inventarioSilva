@@ -300,6 +300,8 @@ export default function SalesForm({
         onPageChange={setCurrentPage}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        localities={[]} // o tu lista real de localidades si aplica
+        mode="compra"
       />
 
       {items.length > 0 && (

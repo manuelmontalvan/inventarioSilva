@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import { User } from './users/user.entity'; // Ajusta según ruta real
-import { Role } from './users/roles/role.entity'; // Ajusta según ruta real
+import { Role } from './users/roles/entities/role.entity'; // Ajusta según ruta real
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -9,8 +9,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'eros2021',
   database: process.env.DB_NAME || 'inventarioSilva',
-  entities: [User, Role], // Lista todas las entidades que uses
-  migrations: ['src/migrations/*.ts'], // Ruta donde guardarás migraciones
+  entities: [User, Role], // Lista todas las entidades que uses  
   synchronize: false, // Siempre false para producción
   logging: false,
 });

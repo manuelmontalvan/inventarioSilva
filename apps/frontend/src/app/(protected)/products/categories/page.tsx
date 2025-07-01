@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useState, useEffect } from "react";
 import {
   Category,
@@ -256,6 +256,7 @@ export default function CategoriesPage() {
   };
 
   return (
+  <ProtectedRoute>
     <main className="p-6 min-h-screen dark:text-white bg-gray-50 dark:bg-gray-900 transition-colors">
       <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold mb-6">Gestion Categorías</h1>
@@ -289,5 +290,6 @@ export default function CategoriesPage() {
               onCancel={() => setModalOpen(false)}
             />
     </main>
+  </ProtectedRoute>
   );
 }

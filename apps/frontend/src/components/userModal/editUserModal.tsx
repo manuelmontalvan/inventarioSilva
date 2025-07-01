@@ -1,11 +1,13 @@
 "use client";
 
-import { Role } from "@/types/role";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getRoles } from "@/lib/api/users/role";
+import { Role } from "@/types/role";
+
 import {
   Form,
   FormField,
@@ -32,14 +34,13 @@ import {
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/react";
 import { UserI } from "@/types/user";
-
 const formSchema = z.object({
   name: z.string().optional(),
   lastname: z.string().optional(),
   email: z.string().email().optional(),
   password: z.string().optional(),
   hiredDate: z.string().optional(),
-  roleId: z.number().optional(),
+  roleId: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -66,7 +67,7 @@ export default function EditUserModal({
       email: "",
       password: "",
       hiredDate: "",
-      roleId: undefined,
+      roleId: "",
       isActive: true,
     },
   });
@@ -90,33 +91,28 @@ export default function EditUserModal({
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/roles");
-        const data = await res.json();
-        setRoles(data);
+        const roles = await getRoles();
+        setRoles(roles); // ✅
       } catch (error) {
-        console.error("Error al cargar roles:", error);
+        console.error("Error al obtener roles:", error);
       }
     };
 
-    fetchRoles();
-  }, []);
+    if (open) fetchRoles();
+  }, [open]);
 
   const onSubmit = async (values: FormValues): Promise<void> => {
     if (!user) return;
 
-    // Construimos el payload copiando valores
     const payload: any = {
       ...values,
       roleId: values.roleId ?? user.role.id,
       isActive: values.isActive ?? user.isActive,
     };
 
-    // Si la contraseña está vacía, la eliminamos para no enviarla
     if (!payload.password || payload.password.trim() === "") {
       delete payload.password;
     }
-
-    console.log("Payload a enviar:", payload);
 
     try {
       const res = await fetch(`http://localhost:3001/api/users/${user.id}`, {
@@ -135,10 +131,10 @@ export default function EditUserModal({
         return;
       }
       addToast({
-                  title: "Usuario actualizado",
-                  description: "El usuario se ha actualizado exitosamente.",                 
-                  color: "success",
-                });
+        title: "Usuario actualizado",
+        description: "El usuario se ha actualizado exitosamente.",
+        color: "success",
+      });
 
       onUpdated();
       onClose();
@@ -149,20 +145,15 @@ export default function EditUserModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent
-        className="
-          bg-gradient-to-br from-gray-900 via-purple-900 to-black 
-          border border-white/10 text-white shadow-lg 
-          max-w-2xl w-full mx-4 sm:mx-auto
-          p-6 sm:p-8
-        "
-      >
+      <DialogContent className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg">
         <DialogHeader>
-          <DialogTitle>Editar Usuario</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            Editar Usuario
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -240,7 +231,7 @@ export default function EditUserModal({
                   <FormItem>
                     <FormLabel>Rol</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      onValueChange={(value) => field.onChange(value)}
                       defaultValue={String(field.value)}
                     >
                       <FormControl>
@@ -287,7 +278,7 @@ export default function EditUserModal({
           </form>
         </Form>
 
-        <DialogFooter className="pt-4">
+        <DialogFooter className="pt-6 flex justify-end gap-4">
           <Button variant="bordered" color="danger" onPress={onClose}>
             Cancelar
           </Button>

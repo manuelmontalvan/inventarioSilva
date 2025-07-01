@@ -8,6 +8,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorator/roles.decorator';
 import { RoleType } from '../common/enum/roles.enum';
 import { Delete, Param, Put } from '@nestjs/common';
+import { Request } from 'express';
+import { ConflictException, Req } from '@nestjs/common';
 
 
 
@@ -19,14 +21,23 @@ export class UsersController {
   async create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
+async validate(payload: any) {
+  return { id: payload.sub, email: payload.email, role: payload.role };
+}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    // Ya no uses +id, pasa directamente el string UUID
-    return this.usersService.delete(id);
+ @Delete(':id')
+async remove(@Param('id') id: string, @Req() req: Request) {
+  const userId = req.user?.id; // <- del token JWT o sesión
+
+  if (id === userId) {
+    throw new ConflictException('No puedes eliminar tu propia cuenta');
   }
+
+  return this.usersService.delete(id);
+
+}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)

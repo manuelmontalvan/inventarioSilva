@@ -36,7 +36,6 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const [loading, setLoading] = useState(false);
   const [localities, setLocalities] = useState<Locality[]>([]);
 
-
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -56,18 +55,18 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
     };
     fetch();
   }, [currentPage, searchTerm]);
-  
-useEffect(() => {
-  const fetchLocalities = async () => {
-    try {
-      const res = await getLocalities();
-      setLocalities(res);
-    } catch (err) {
-      console.error("Error cargando localidades", err);
-    }
-  };
-  fetchLocalities();
-}, []);
+
+  useEffect(() => {
+    const fetchLocalities = async () => {
+      try {
+        const res = await getLocalities();
+        setLocalities(res);
+      } catch (err) {
+        console.error("Error cargando localidades", err);
+      }
+    };
+    fetchLocalities();
+  }, []);
 
   const handleAdd = (product: ProductI, unitId: string, quantity: number) => {
     if (movementList.find((m) => m.productId === product.id)) {
@@ -107,26 +106,26 @@ useEffect(() => {
     }));
 
     try {
-  await onSubmit({
-    type,
-    movements: movementsWithType,
-    invoice_number: invoiceNumber || undefined,
-    orderNumber: orderNumber || undefined,
-    notes: notes || undefined,
-  });
+      await onSubmit({
+        type,
+        movements: movementsWithType,
+        invoice_number: invoiceNumber || undefined,
+        orderNumber: orderNumber || undefined,
+        notes: notes || undefined,
+      });
 
-  addToast({ title: "Movimiento guardado", color: "success" });
-  setMovementList([]);
-  setInvoiceNumber("");
-  setOrderNumber("");
-  setNotes("");
-} catch (error: any) {
-  console.error('Error guardando movimiento:', error);
-  // Si usas axios, el error puede estar en error.response.data.message
-  const message = error?.response?.data?.message || "Error guardando movimiento";
-  addToast({ title: message, color: "danger" });
-}
-
+      addToast({ title: "Movimiento guardado", color: "success" });
+      setMovementList([]);
+      setInvoiceNumber("");
+      setOrderNumber("");
+      setNotes("");
+    } catch (error: any) {
+      console.error("Error guardando movimiento:", error);
+      // Si usas axios, el error puede estar en error.response.data.message
+      const message =
+        error?.response?.data?.message || "Error guardando movimiento";
+      addToast({ title: message, color: "danger" });
+    }
   };
 
   return (
@@ -210,7 +209,8 @@ useEffect(() => {
               setSearchTerm(val);
               setCurrentPage(1);
             }}
-             localities={localities}
+            localities={[]} // o tu lista real de localidades si aplica
+            mode="compra"
           />
         </div>
       </div>

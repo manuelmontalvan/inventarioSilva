@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -329,6 +329,7 @@ export default function CustomersPage() {
   }
 
   return (
+  <ProtectedRoute>
     <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold dark:text-white">
@@ -367,5 +368,6 @@ export default function CustomersPage() {
         onCancel={() => setModalOpen(false)}
       />
     </main>
+  </ProtectedRoute>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useState, useEffect } from "react";
 import {
   UnitOfMeasure,
@@ -262,6 +262,7 @@ export default function UnitOfMeasurePage() {
   };
 
   return (
+  <ProtectedRoute>
     <main className="p-6 min-h-screen bg-gray-50 dark:text-white dark:bg-gray-900 transition-colors">
       <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold mb-6">Unidades de Medida</h1>
@@ -299,5 +300,6 @@ export default function UnitOfMeasurePage() {
             onCancel={() => setModalOpen(false)}
           />
     </main>
+  </ProtectedRoute>
   );
 }

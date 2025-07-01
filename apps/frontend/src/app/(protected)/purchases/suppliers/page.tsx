@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useState,  useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -37,6 +37,7 @@ function SupplierTable({
   onDelete: (id: string) => void;
 }) {
   return (
+    
     <div className="overflow-x-auto">
       <table className="min-w-full border-collapse dark:text-white">
         <thead>
@@ -247,6 +248,7 @@ async function handleDeleteConfirmed() {
 }
 
   return (
+    <ProtectedRoute>
     <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold dark:text-white">Gestión de Proveedores</h1>
@@ -267,5 +269,6 @@ async function handleDeleteConfirmed() {
     />
     
     </main>
+    </ProtectedRoute>
   );
 }

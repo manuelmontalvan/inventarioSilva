@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import { useEffect, useState } from "react";
 import { getCategories } from "@/lib/api/products/categories";
 import {
@@ -110,111 +110,118 @@ export default function MarginAndTaxConfigPage() {
   };
 
   return (
-    <div className="p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Configuración de Margen e Impuestos</h1>
+    <ProtectedRoute>
+      <div className="p-6 space-y-8">
+        <h1 className="text-2xl font-bold">
+          Configuración de Margen e Impuestos
+        </h1>
 
-      {/* MÁRGENES */}
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          <h2 className="text-xl font-semibold">Márgenes de ganancia</h2>
+        {/* MÁRGENES */}
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <h2 className="text-xl font-semibold">Márgenes de ganancia</h2>
 
-          <div className="flex gap-2">
-            <Combobox
-              items={[
-                { label: "Global", value: "" },
-                ...categories.map((cat) => ({
-                  label: cat.name,
-                  value: cat.id,
-                })),
-              ]}
-              value={newMargin.categoryId}
-              onChange={(val) =>
-                setNewMargin((prev) => ({ ...prev, categoryId: val ?? "" }))
-              }
-              placeholder="Seleccione una categoría"
-            />
+            <div className="flex gap-2">
+              <Combobox
+                items={[
+                  { label: "Global", value: "" },
+                  ...categories.map((cat) => ({
+                    label: cat.name,
+                    value: cat.id,
+                  })),
+                ]}
+                value={newMargin.categoryId}
+                onChange={(val) =>
+                  setNewMargin((prev) => ({ ...prev, categoryId: val ?? "" }))
+                }
+                placeholder="Seleccione una categoría"
+              />
 
-            <Input
-              type="number"
-              placeholder="%"
-              value={newMargin.percentage}
-              onFocus={() =>
-                setNewMargin((prev) => ({ ...prev, percentage: "" }))
-              }
-              onChange={(e) =>
-                setNewMargin((prev) => ({ ...prev, percentage: e.target.value }))
-              }
-            />
+              <Input
+                type="number"
+                placeholder="%"
+                value={newMargin.percentage}
+                onFocus={() =>
+                  setNewMargin((prev) => ({ ...prev, percentage: "" }))
+                }
+                onChange={(e) =>
+                  setNewMargin((prev) => ({
+                    ...prev,
+                    percentage: e.target.value,
+                  }))
+                }
+              />
 
-            <Button onClick={handleAddMargin}>Agregar</Button>
-          </div>
+              <Button onClick={handleAddMargin}>Agregar</Button>
+            </div>
 
-          <ul className="space-y-2">
-            {margins.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between border p-2 rounded"
-              >
-                <span>
-                  {m.category?.name ?? "Global"}: {m.percentage}%
-                </span>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteMargin(m.id)}
+            <ul className="space-y-2">
+              {margins.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between border p-2 rounded"
                 >
-                  Eliminar
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+                  <span>
+                    {m.category?.name ?? "Global"}: {m.percentage}%
+                  </span>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteMargin(m.id)}
+                  >
+                    Eliminar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
 
-      {/* IMPUESTOS */}
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          <h2 className="text-xl font-semibold">Impuestos</h2>
+        {/* IMPUESTOS */}
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <h2 className="text-xl font-semibold">Impuestos</h2>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="Nombre"
-              value={newTax.name}
-              onChange={(e) =>
-                setNewTax((prev) => ({ ...prev, name: e.target.value }))
-              }
-            />
-            <Input
-              type="number"
-              placeholder="%"
-              value={newTax.rate}
-              onFocus={() => setNewTax((prev) => ({ ...prev, rate: "" }))}
-              onChange={(e) =>
-                setNewTax((prev) => ({ ...prev, rate: e.target.value }))
-              }
-            />
-            <Button onClick={handleAddTax}>Agregar</Button>
-          </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nombre"
+                value={newTax.name}
+                onChange={(e) =>
+                  setNewTax((prev) => ({ ...prev, name: e.target.value }))
+                }
+              />
+              <Input
+                type="number"
+                placeholder="%"
+                value={newTax.rate}
+                onFocus={() => setNewTax((prev) => ({ ...prev, rate: "" }))}
+                onChange={(e) =>
+                  setNewTax((prev) => ({ ...prev, rate: e.target.value }))
+                }
+              />
+              <Button onClick={handleAddTax}>Agregar</Button>
+            </div>
 
-          <ul className="space-y-2">
-            {taxes.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between border p-2 rounded"
-              >
-                <span>
-                  {t.name}: {t.rate}%
-                </span>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteTax(t.id)}
+            <ul className="space-y-2">
+              {taxes.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between border p-2 rounded"
                 >
-                  Eliminar
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+                  <span>
+                    {t.name}: {t.rate}%
+                  </span>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteTax(t.id)}
+                  >
+                    Eliminar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </ProtectedRoute>
   );
 }

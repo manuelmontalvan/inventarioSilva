@@ -36,6 +36,10 @@ def fetch_sales_data():
 def train_models_from_db():
     sales_data = fetch_sales_data()
 
+    if not sales_data:
+        print("⚠️  No se encontraron ventas en la base de datos.")
+        return {}
+
     grouped = defaultdict(list)
     for row in sales_data:
         key = (row['product_name'], row['brand'], row['unit'])
@@ -46,7 +50,6 @@ def train_models_from_db():
         df = pd.DataFrame(records)
         df = df.groupby("ds").sum().reset_index()
 
-        # Validar si hay suficientes datos
         if df.shape[0] < 2:
             print(f"⏭️  Skip: No hay suficientes datos para entrenar '{key[0]}' ({df.shape[0]} fila)")
             continue
@@ -54,8 +57,6 @@ def train_models_from_db():
         model = Prophet()
         model.fit(df)
         models[key] = model
-        print(f"✅ Modelo entrenado para: {key[0]} | Marca: {key[1]} | Unidad: {key[2]}")
+        print(f"✅ Modelo entrenado para: {key}")
 
     return models
-
-    

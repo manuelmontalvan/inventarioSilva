@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Role } from './roles/role.entity';
+import { Role } from './roles/entities/role.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -61,7 +61,7 @@ export class UsersService {
     return bcrypt.hash(password, salt);
   }
 
- async update(id: string, dto: UpdateUserDto) {
+async update(id: string, dto: UpdateUserDto) {
   const user = await this.usersRepository.findOne({
     where: { id },
     relations: ['role'],
@@ -69,13 +69,23 @@ export class UsersService {
 
   if (!user) throw new NotFoundException('Usuario no encontrado');
 
-  Object.assign(user, dto); // actualiza cualquier campo opcional
+  // Extrae roleId y elimina de dto para evitar conflictos
+  const { roleId, ...restDto } = dto;
+
+  if (roleId) {
+    const role = await this.rolesRepository.findOneBy({ id: roleId });
+    if (!role) throw new NotFoundException('Rol no encontrado');
+    user.role = role; // Actualiza la relación
+  }
+
+  Object.assign(user, restDto); // Actualiza el resto de campos
 
   const saved = await this.usersRepository.save(user);
+
   const { password, ...userWithoutPassword } = saved;
   return userWithoutPassword;
-
 }
+
 
 async updatePassword(userId: string, newHashedPassword: string): Promise<void> {
   await this.usersRepository.update(userId, {

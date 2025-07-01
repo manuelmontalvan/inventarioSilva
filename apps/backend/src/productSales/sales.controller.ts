@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -27,7 +28,10 @@ export class SalesController {
     const user = req.user as any;
     return this.salesService.create(dto, user);
   }
-
+  @Get('search')
+  async searchProducts(@Query('query') query: string) {
+    return this.salesService.searchProducts(query);
+  }
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: string) {

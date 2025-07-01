@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import { useEffect, useState } from "react";
 import SalesForm from "@/components/productSales/productSalesFrom";
 import { SalesTable } from "@/components/productSales/productSalesTable";
@@ -111,6 +111,8 @@ export default function SalesPage() {
   };
 
   return (
+    <ProtectedRoute>
+      
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
@@ -130,5 +132,6 @@ export default function SalesPage() {
         <SalesTable sales={sales} products={products} loading={loading} />
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

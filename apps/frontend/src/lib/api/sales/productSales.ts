@@ -1,7 +1,11 @@
 // api/sales.ts
 import axios from "axios";
 import { SaleI, CreateSaleDto } from "@/types/productSales";
-
+export interface ProductSearchResult {
+  product_name: string;
+  brands: string[];
+  units: string[];
+}
 const api = axios.create({
   baseURL: "http://localhost:3001/api", // Ajusta según tu configuración
   withCredentials: true, // Para enviar cookies HttpOnly si usas autenticación por cookie
@@ -33,6 +37,17 @@ export const updateSale = async (
 export const deleteSale = async (id: string): Promise<void> => {
   await api.delete(`/sales/${id}`);
 };
+
+export const searchPredictiveProducts = async (
+  query: string
+): Promise<ProductSearchResult[]> => {
+  const res = await api.get("/sales/search", {
+   
+    params: { query },
+  });
+  return res.data;
+};
+
 export const importSalesFromExcel = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);

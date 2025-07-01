@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useState, useEffect } from "react";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
@@ -133,6 +133,7 @@ export default function LocalityShelfManager() {
   }
 
   return (
+    <ProtectedRoute>
     <main className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold dark:text-white">Localidades & Perchas</h1>
@@ -265,5 +266,6 @@ export default function LocalityShelfManager() {
         </aside>
       )}
     </main>
+    </ProtectedRoute>
   );
 }

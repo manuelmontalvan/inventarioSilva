@@ -87,59 +87,68 @@ export default function PurchaseOrderForm({
   const totalGeneral = items.reduce((sum, item) => sum + item.total_cost, 0);
 
   const handleAddProduct = (
-  product: ProductI,
-  unitId: string,
-  quantity: number,
-  purchasePrice?: number
-): boolean => {   // <-- Aquí retorno boolean
-  if (!supplierId) {
-    addToast({title:"Selecciona un proveedor antes de agregar productos", color:"danger"});
-    return false;
-  }
+    product: ProductI,
+    unitId: string,
+    quantity: number,
+    purchasePrice?: number
+  ): boolean => {
+    // <-- Aquí retorno boolean
+    if (!supplierId) {
+      addToast({
+        title: "Selecciona un proveedor antes de agregar productos",
+        color: "danger",
+      });
+      return false;
+    }
 
-  const exists = items.find(
-    (i) => i.productId === product.id && i.unit_id === unitId
-  );
-  if (exists) {
-    addToast({title:"Este producto con la unidad seleccionada ya fue agregado.", color:"danger"});
-    return false;
-  }
+    const exists = items.find(
+      (i) => i.productId === product.id && i.unit_id === unitId
+    );
+    if (exists) {
+      addToast({
+        title: "Este producto con la unidad seleccionada ya fue agregado.",
+        color: "danger",
+      });
+      return false;
+    }
 
-  const unit_cost = purchasePrice ?? product.purchase_price ?? 0;
-  if (unit_cost <= 0) {
-    addToast({title:"El producto no tiene precio de compra válido.", color:"danger"});
-    return false;
-  }
+    const unit_cost = purchasePrice ?? product.purchase_price ?? 0;
+    if (unit_cost <= 0) {
+      addToast({
+        title: "El producto no tiene precio de compra válido.",
+        color: "danger",
+      });
+      return false;
+    }
 
-  const total_cost = unit_cost * quantity;
+    const total_cost = unit_cost * quantity;
 
-  setItems((prev) => [
-    ...prev,
-    {
-      productId: product.id,
-      supplierId,
-      invoice_number: invoiceNumber,
-      quantity,
-      unit_cost,
-      total_cost,
-      notes: "",
-      name: product.name,
-      unit_id: unitId,
-      brand: product.brand
-        ? { id: product.brand.id, name: product.brand.name }
-        : undefined,
-      unit_of_measure: product.unit_of_measure
-        ? {
-            id: product.unit_of_measure.id,
-            name: product.unit_of_measure.name,
-          }
-        : undefined,
-    },
-  ]);
-  
-  return true; // agregado con éxito
-};
+    setItems((prev) => [
+      ...prev,
+      {
+        productId: product.id,
+        supplierId,
+        invoice_number: invoiceNumber,
+        quantity,
+        unit_cost,
+        total_cost,
+        notes: "",
+        name: product.name,
+        unit_id: unitId,
+        brand: product.brand
+          ? { id: product.brand.id, name: product.brand.name }
+          : undefined,
+        unit_of_measure: product.unit_of_measure
+          ? {
+              id: product.unit_of_measure.id,
+              name: product.unit_of_measure.name,
+            }
+          : undefined,
+      },
+    ]);
 
+    return true; // agregado con éxito
+  };
 
   const handleRemoveItem = (productId: string, unitId: string) => {
     setItems((prev) =>
@@ -150,8 +159,13 @@ export default function PurchaseOrderForm({
   };
 
   const handleSubmit = async () => {
-    if (!supplierId) return  addToast({title:"Selecciona un proveedor ", color:"danger"})  ;
-    if (items.length === 0) return  addToast({title:"Agrega al menos un producto ", color:"danger"});
+    if (!supplierId)
+      return addToast({ title: "Selecciona un proveedor ", color: "danger" });
+    if (items.length === 0)
+      return addToast({
+        title: "Agrega al menos un producto ",
+        color: "danger",
+      });
 
     try {
       const newOrder: CreatePurchaseOrderDto = {
@@ -222,6 +236,8 @@ export default function PurchaseOrderForm({
             setSearch(newSearch);
             setPage(1);
           }}
+          localities={[]} // o tu lista real de localidades si aplica
+          mode="compra"
         />
       </div>
 

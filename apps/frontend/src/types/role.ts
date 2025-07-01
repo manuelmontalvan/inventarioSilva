@@ -1,4 +1,7 @@
+import { Page } from "./page";
+
 export interface Role {
-  id: number;
+  id: string;
   name: string;
+  pages?: Page[];
 }

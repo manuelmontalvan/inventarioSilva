@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import { useEffect, useState, useRef } from "react";
 import { ProductStock } from "@/types/productStock";
 import {
@@ -197,6 +197,7 @@ export default function ProductStockPage() {
   };
 
   return (
+    <ProtectedRoute>
     <div className="flex gap-6 p-6">
       <aside className="w-1/3 space-y-4 bg-gray-100 p-4 rounded shadow">
         <h2 className="text-xl font-bold mb-2">Registrar Stock</h2>
@@ -285,5 +286,6 @@ export default function ProductStockPage() {
         {loading ? <p>Cargando...</p> : <ProductStockTable stocks={stocks} />}
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

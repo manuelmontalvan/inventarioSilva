@@ -14,6 +14,7 @@ import { Customer } from './customers/customer.entity';
 import { User } from '../users/user.entity';
 import { OrderNumberCounter } from './entities/order-number-counter.entity';
 import * as XLSX from 'xlsx';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class SalesService {
@@ -28,39 +29,39 @@ export class SalesService {
     private readonly customerRepository: Repository<Customer>,
     @InjectRepository(OrderNumberCounter)
     private readonly orderNumberCounterRepository: Repository<OrderNumberCounter>,
+    private readonly dataSource: DataSource,
   ) {}
 
   private parseDateDMY(dateStr: any): Date | null {
-  if (!dateStr) return null;
+    if (!dateStr) return null;
 
-  if (typeof dateStr === 'string') {
-    // Caso string tipo "25/06/2024"
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const [day, month, year] = parts.map(Number);
-    if (!day || !month || !year) return null;
-    return new Date(year, month , day);
+    if (typeof dateStr === 'string') {
+      // Caso string tipo "25/06/2024"
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return null;
+      const [day, month, year] = parts.map(Number);
+      if (!day || !month || !year) return null;
+      return new Date(year, month, day);
+    }
+
+    if (dateStr instanceof Date) {
+      // Si ya es un objeto Date, devuelve directamente
+      if (isNaN(dateStr.getTime())) return null;
+      return dateStr;
+    }
+
+    if (typeof dateStr === 'number') {
+      // Excel a veces envía fechas como número (timestamp)
+      // Convertir número Excel a JS Date
+      // En Excel el 1 es 1900-01-01, ajustamos:
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
+      if (isNaN(jsDate.getTime())) return null;
+      return jsDate;
+    }
+
+    return null; // Para cualquier otro tipo desconocido
   }
-
-  if (dateStr instanceof Date) {
-    // Si ya es un objeto Date, devuelve directamente
-    if (isNaN(dateStr.getTime())) return null;
-    return dateStr;
-  }
-
-  if (typeof dateStr === 'number') {
-    // Excel a veces envía fechas como número (timestamp)
-    // Convertir número Excel a JS Date
-    // En Excel el 1 es 1900-01-01, ajustamos:
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
-    if (isNaN(jsDate.getTime())) return null;
-    return jsDate;
-  }
-
-  return null; // Para cualquier otro tipo desconocido
-}
-
 
   async create(createSaleDto: CreateSaleDto, user: User): Promise<Sale> {
     const sale = new Sale();
@@ -145,82 +146,82 @@ export class SalesService {
     return this.saleRepository.save(savedSale);
   }
 
- async importSalesFromExcel(fileBuffer: Buffer, user: User) {
-  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });  
-  const salesPromises: Promise<Sale>[] = [];
+  async importSalesFromExcel(fileBuffer: Buffer, user: User) {
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const salesPromises: Promise<Sale>[] = [];
 
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+      if (rows.length === 0) continue;
 
-    if (rows.length === 0) continue;
+      const productSalesToCreate: CreateProductSaleDto[] = [];
 
-    const productSalesToCreate: CreateProductSaleDto[] = [];
-
-    let customer: Customer | null = null;
-    const firstCustomerName = rows[0]?.['customerName']?.trim();
-    if (firstCustomerName) {
-      customer = await this.customerRepository.findOne({
-        where: { name: firstCustomerName },
-      });
-      if (!customer) {
-        customer = this.customerRepository.create({ name: firstCustomerName });
-        customer = await this.customerRepository.save(customer);
+      let customer: Customer | null = null;
+      const firstCustomerName = rows[0]?.['customerName']?.trim();
+      if (firstCustomerName) {
+        customer = await this.customerRepository.findOne({
+          where: { name: firstCustomerName },
+        });
+        if (!customer) {
+          customer = this.customerRepository.create({
+            name: firstCustomerName,
+          });
+          customer = await this.customerRepository.save(customer);
+        }
       }
+
+      for (const row of rows) {
+        const product = await this.productRepository.findOne({
+          where: {
+            name: row['productName'],
+            brand: { name: row['brandName'] },
+            unit_of_measure: { name: row['unitName'] },
+          },
+          relations: ['brand', 'unit_of_measure'],
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
+          );
+        }
+
+        if (product.sale_price === undefined) {
+          throw new BadRequestException(
+            `El producto ${product.name} no tiene precio de venta asignado.`,
+          );
+        }
+
+        const rawDate = row['saleDate'];
+        const parsedDate = this.parseDateDMY(rawDate) ?? new Date();
+
+        productSalesToCreate.push({
+          productId: product.id,
+          quantity: Number(row['quantity']),
+          unit_price: product.sale_price,
+          notes: row['notes'] || '',
+          sale_date: parsedDate.toISOString(),
+          invoice_number: row['invoice_number'] || '',
+        });
+      }
+
+      const createSaleDto: CreateSaleDto = {
+        productSales: productSalesToCreate,
+        payment_method: 'cash',
+        status: 'paid',
+        notes: `Importado desde  ${sheetName}`,
+        invoice_number: rows[0]?.['invoice_number'] || '',
+        customerId: customer?.id,
+      };
+
+      salesPromises.push(this.create(createSaleDto, user));
     }
 
-    for (const row of rows) {
-      const product = await this.productRepository.findOne({
-        where: {
-          name: row['productName'],
-          brand: { name: row['brandName'] },
-          unit_of_measure: { name: row['unitName'] },
-        },
-        relations: ['brand', 'unit_of_measure'],
-      });
-
-      if (!product) {
-        throw new NotFoundException(
-          `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
-        );
-      }
-
-      if (product.sale_price === undefined) {
-        throw new BadRequestException(
-          `El producto ${product.name} no tiene precio de venta asignado.`,
-        );
-      }
-
-      const rawDate = row['saleDate'];
-      const parsedDate = this.parseDateDMY(rawDate) ?? new Date();
-
-      productSalesToCreate.push({
-        productId: product.id,
-        quantity: Number(row['quantity']),
-        unit_price: product.sale_price,
-        notes: row['notes'] || '',
-        sale_date: parsedDate.toISOString(),
-        invoice_number: row['invoice_number'] || '',
-      });
-    }
-
-    const createSaleDto: CreateSaleDto = {
-      productSales: productSalesToCreate,
-      payment_method: 'cash',
-      status: 'paid',
-      notes: `Importado desde  ${sheetName}`,
-      invoice_number: rows[0]?.['invoice_number'] || '',
-      customerId: customer?.id,
-    };
-
-    salesPromises.push(this.create(createSaleDto, user));
+    // Aquí podrías usar await Promise.all(salesPromises) para esperar todas
+    return Promise.all(salesPromises);
   }
-
-  // Aquí podrías usar await Promise.all(salesPromises) para esperar todas
-  return Promise.all(salesPromises);
-}
-
 
   async getNextOrderNumber(): Promise<string> {
     const date = new Date();
@@ -273,5 +274,56 @@ export class SalesService {
     if (dto.notes !== undefined) sale.notes = dto.notes;
 
     return this.saleRepository.save(sale);
+  }
+  async searchProducts(query: string) {
+    type RawResult = {
+      ps_product_name: string;
+      ps_brand_name: string | null;
+      ps_unit_of_measure_name: string | null;
+    };
+
+    const results = await this.dataSource
+      .getRepository(ProductSale)
+      .createQueryBuilder('ps')
+      .select([
+        'ps.product_name AS ps_product_name',
+        'ps.brand_name AS ps_brand_name',
+        'ps.unit_of_measure_name AS ps_unit_of_measure_name',
+      ])
+      .where('ps.product_name ILIKE :query', { query: `%${query}%` })
+      .groupBy('ps.product_name, ps.brand_name, ps.unit_of_measure_name')
+      .limit(20)
+      .getRawMany<RawResult>();
+
+    const grouped = results.reduce(
+      (acc, item) => {
+        const { ps_product_name, ps_brand_name, ps_unit_of_measure_name } =
+          item;
+
+        if (!acc[ps_product_name]) {
+          acc[ps_product_name] = {
+            product_name: ps_product_name,
+            brands: new Set<string>(),
+            units: new Set<string>(),
+          };
+        }
+
+        if (ps_brand_name) acc[ps_product_name].brands.add(ps_brand_name);
+        if (ps_unit_of_measure_name)
+          acc[ps_product_name].units.add(ps_unit_of_measure_name);
+
+        return acc;
+      },
+      {} as Record<
+        string,
+        { product_name: string; brands: Set<string>; units: Set<string> }
+      >,
+    );
+
+    return Object.values(grouped).map((item) => ({
+      product_name: item.product_name,
+      brands: Array.from(item.brands),
+      units: Array.from(item.units),
+    }));
   }
 }

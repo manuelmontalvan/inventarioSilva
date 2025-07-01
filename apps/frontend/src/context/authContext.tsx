@@ -10,12 +10,13 @@ import React, {
 import SessionExpiredModal from "@/components/SessionExpiredModal";
 import axiosInstance, { setSessionExpiredHandler } from "@/lib/axiosInstance";
 import { setIsLoggingOut } from "@/lib/axiosInstance";
+import { Role } from "@/types/role";
 interface User {
   id: number;
   name: string; 
   lastname: string;
   email: string;
-  role: string;
+  role: Role;  
 }
 interface AuthContextType {
   user: User | null;

@@ -82,12 +82,8 @@ const Header = () => {
               <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configuración</DropdownMenuItem>
-            <DropdownMenuSeparator />
+          <DropdownMenuContent align="end" className="w-56">           
+           
              <DropdownMenuItem onClick={logout}>Cerrar sesión</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

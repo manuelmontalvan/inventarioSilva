@@ -5,10 +5,8 @@ import {
   getInventoryMovements,
   createInventoryMovement,
 } from "@/lib/api/inventory";
-import {
-  InventoryMovement,
-  CreateInventoryMovementsDto,
-} from "@/types/inventory";
+import { InventoryMovement } from "@/types/inventory";
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 
 import {
   Card,
@@ -70,38 +68,40 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Registrar Movimiento</CardTitle>
-          <CardDescription>
-            Registra entradas o salidas de productos al inventario.
-          </CardDescription>
-          <CardAction></CardAction>
-        </CardHeader>
-        <CardContent>
-          {/* PASAMOS handleSubmit CORRECTAMENTE */}
-          <InventoryForm onSubmit={handleSubmit} />
-        </CardContent>
-        <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            Todos los campos marcados son obligatorios.
-          </p>
-        </CardFooter>
-      </Card>
+    <ProtectedRoute>
+      <div className="p-4 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrar Movimiento</CardTitle>
+            <CardDescription>
+              Registra entradas o salidas de productos al inventario.
+            </CardDescription>
+            <CardAction></CardAction>
+          </CardHeader>
+          <CardContent>
+            {/* PASAMOS handleSubmit CORRECTAMENTE */}
+            <InventoryForm onSubmit={handleSubmit} />
+          </CardContent>
+          <CardFooter>
+            <p className="text-xs text-muted-foreground">
+              Todos los campos marcados son obligatorios.
+            </p>
+          </CardFooter>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Historial de Movimientos</CardTitle>
-          <CardDescription>
-            Visualiza todos los movimientos registrados, incluyendo entradas y
-            salidas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <InventoryTable movements={movements} />
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Historial de Movimientos</CardTitle>
+            <CardDescription>
+              Visualiza todos los movimientos registrados, incluyendo entradas y
+              salidas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InventoryTable movements={movements} />
+          </CardContent>
+        </Card>
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -1,5 +1,7 @@
 import { Button } from "@heroui/button";
 import { Input } from "../ui/input";
+import { getRoles } from "@/lib/api/users/role";
+import { Role } from "@/types/role";
 import {
   Modal,
   ModalContent,
@@ -34,11 +36,6 @@ interface Props {
   onClose: () => void;
   onCreated: () => void;
 }
-interface Role {
-  id: number;
-  name: string;
-}
-
 const formSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
   lastname: z.string().min(1, "Apellido requerido"),
@@ -46,7 +43,7 @@ const formSchema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
   hiredDate: z.string().min(1, "Fecha requerida"),
   isActive: z.boolean(),
-  roleId: z.number(),
+  roleId: z.string(),
 });
 
 export default function CreateUserModal({ open, onClose, onCreated }: Props) {
@@ -61,16 +58,20 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
       password: "",
       hiredDate: "",
       isActive: true,
-      roleId: 1,
+      roleId: "",
     },
   });
 
   useEffect(() => {
     const fetchRoles = async () => {
-      const res = await fetch("http://localhost:3001/api/roles");
-      const data = await res.json();
-      setRoles(data);
+      try {
+        const roles = await getRoles();
+        setRoles(roles); // ✅
+      } catch (error) {
+        console.error("Error al obtener roles:", error);
+      }
     };
+
     if (open) fetchRoles();
   }, [open]);
 
@@ -80,26 +81,41 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
-      
       const res = await fetch("http://localhost:3001/api/users", {
         method: "POST",
-         credentials: "include",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          
         },
         body: JSON.stringify(data),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        if (errorData.message === "email ya en uso") {
+
+        if (res.status === 409 && errorData.message === "email ya en uso") {
           form.setError("email", {
             type: "manual",
             message: "Este correo ya está en uso.",
           });
+
+          addToast({
+            title: "Error",
+            description: "Este correo ya está en uso.",
+            color: "danger",
+          });
+
           return;
         }
+
+        // Otro tipo de error
+        addToast({
+          title: "Error",
+          description: errorData.message || "Error al crear usuario",
+          color: "danger",
+        });
+
+        return;
       }
 
       addToast({
@@ -118,7 +134,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
       });
     }
   };
-
+  
   return (
     <Modal
       isOpen={open}
@@ -127,29 +143,25 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
       isDismissable={false}
     >
       <ModalContent
-        className="
-          bg-gradient-to-br from-gray-900 via-purple-900 to-black 
-          border border-white/10 text-white shadow-lg 
-          max-w-2xl w-full mx-4 sm:mx-auto
-          p-6 sm:p-8
-        "
+        className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg"
       >
         <ModalHeader>
           <div className="flex flex-col items-center text-center">
-            <h1 className="text-white text-2xl flex items-center gap-2 justify-center">
-              <UserPlus className="w-6 h-6 text-blue-500" />
+            <h1 className="text-2xl font-bold text-center dark:text-white">
               Crear Usuario
             </h1>
-            <p className="text-gray-300 mt-1 max-w-md">
+            <UserPlus className="w-8 h-8 text-gray-500 dark:text-gray-400 mt-2" />
+
+            <p className="text-gray-700 dark:text-gray-300 mt-1 max-w-md">
               Completa los datos para registrar un nuevo usuario.
             </p>
           </div>
         </ModalHeader>
 
-        <ModalBody>
+        <ModalBody className="overflow-y-auto max-h-[80vh]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -226,8 +238,8 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
                     <FormItem>
                       <FormLabel>Rol</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
-                        defaultValue={String(field.value)}
+                        onValueChange={(value) => field.onChange(value)} // ✅ eliminar Number()
+                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -236,7 +248,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
                         </FormControl>
                         <SelectContent>
                           {roles.map((role) => (
-                            <SelectItem key={role.id} value={String(role.id)}>
+                            <SelectItem key={role.id} value={role.id}>
                               {role.name}
                             </SelectItem>
                           ))}

@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { IsOptional, MinLength } from 'class-validator';
-import { Role } from './roles/role.entity';
+import { Role } from './roles/entities/role.entity';
 
 @Entity()
 export class User {
@@ -35,6 +35,9 @@ export class User {
   @JoinColumn({ name: 'roleId' })
   role: Role;
 
+  @Column({ type: 'uuid', nullable: true })
+  roleId: string | null;
+
   @Column({ type: 'text', nullable: true })
   refreshToken?: string | null;
 
@@ -53,6 +56,4 @@ export class User {
   @IsOptional()
   @Column({ name: 'hired_date', type: 'date', nullable: true })
   hiredDate: Date;
-
-   
 }

@@ -1,171 +1,176 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Role  } from "@/types/role";
-import { getRoles } from "@/lib/api/users/role";
-import RoleTable from "@/components/rolesModal/roleTable";
-import CreateRoleModal from "@/components/rolesModal/createRoleModal";
-import EditRoleModal from "@/components/rolesModal/editRoleModal";
-import DeleteRoleModal from "@/components/rolesModal/deleteRoleModal";
-import { Input } from "@/components/ui/input";
+import ProtectedRoute from "@/components/restricted/protectedRoute";
+import React, { useState, useEffect } from "react";
+import {
+  createRole,
+  getRoles,
+  updateRole,
+  deleteRole,
+} from "@/lib/api/users/role";
+import { RoleDrawer } from "@/components/roles/rolesDrawer";
+import { Role } from "@/types/role";
+import { Page } from "@/types/page";
+
+import { getPages } from "@/lib/api/config/page";
 import { Button } from "@heroui/button";
-import { ShieldPlus, Shield, Search, Settings2 } from "lucide-react";
+import ConfirmModal from "@/components/confirmModal";
+import { addToast } from "@heroui/toast";
 
-
-export default function RolePage() {
+export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
-  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
-
-  const [visibleColumns, setVisibleColumns] = useState({
-    name: true,
-  
-  });
-
-  const fetchRoles = async () => {
-    try {
-      const data = await getRoles();
-      setRoles(data);
-    } catch (err: any) {
-      setError(err.message || "Error al cargar roles");
-    }
-  };
+  const [pages, setPages] = useState<Page[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editing, setEditing] = useState<Role | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchRoles();
+    loadAll();
   }, []);
 
-  const filteredRoles = roles.filter((role) =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  async function loadAll() {
+    try {
+      const [rls, pgs] = await Promise.all([getRoles(), getPages()]);
+      setRoles(rls);
+      setPages(pgs);
+    } catch {
+      addToast({ title: "Error cargando roles/páginas", color: "danger" });
+    }
+  }
 
-  const handleBulkDelete = async () => {
-    await Promise.all(
-      selectedRoles.map((id) =>
-        fetch(`http://localhost:3001/api/roles/${id}`, {
-          method: "DELETE",
-          credentials: "include",
-        })
-      )
-    );
-    setSelectedRoles([]);
-    fetchRoles();
-  };
+  function openCreate() {
+    setEditing(null);
+    setDrawerOpen(true);
+  }
+  function openEdit(role: Role) {
+    setEditing(role);
+    setDrawerOpen(true);
+  }
+  function close() {
+    setDrawerOpen(false);
+    setEditing(null);
+  }
 
-  const toggleColumn = (column: keyof typeof visibleColumns) => {
-    setVisibleColumns((prev) => ({
-      ...prev,
-      [column]: !prev[column],
-    }));
-  };
+  async function handleSave(name: string, selectedPageIds: string[]) {
+    try {
+      let saved: Role;
+      if (editing) {
+        saved = await updateRole(editing.id, name, selectedPageIds);
+        setRoles((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+        addToast({ title: "Rol actualizado", color: "success" });
+      } else {
+        saved = await createRole(name, selectedPageIds);
+        setRoles((prev) => [...prev, saved]);
+        addToast({ title: "Rol creado", color: "success" });
+      }
+      close();
+    } catch (e: any) {
+      addToast({
+        title: "Error guardando rol",
+        description: e.message,
+        color: "danger",
+      });
+    }
+  }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
-        <div className="text-center text-white space-y-4">
-          <h2 className="text-2xl font-bold text-red-400">Error</h2>
-          <p className="text-red-300">{error}</p>
-        </div>
-      </div>
-    );
+  function askDelete(id: string) {
+    setSelectedId(id);
+    setModalOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!selectedId) return;
+    try {
+      await deleteRole(selectedId);
+      setRoles((r) => r.filter((x) => x.id !== selectedId));
+      addToast({ title: "Rol eliminado", color: "success" });
+    } catch (e: any) {
+      addToast({
+        title: "Error eliminando rol",
+        description: e.message,
+        color: "danger",
+      });
+    } finally {
+      setModalOpen(false);
+      setSelectedId(null);
+    }
   }
 
   return (
-    <div className="p-6 min-h-screen dark:bg-gray-950">
-      <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-blue-500  dark:text-white flex items-center gap-2">
-          <Shield className="w-6 h-6 text-blue-500" />
-          Gestión de Roles
-        </h1>
-        <Button
-          onPress={() => setShowCreateModal(true)}
-         className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none hover:from-purple-600 hover:to-blue-600"
-        >
-          <ShieldPlus className="w-4 h-4" /> Crear Rol
+    <ProtectedRoute>
+     
+    <main className="p-6 bg-gray-50 dark:bg-gray-900 dark:text-white min-h-screen">
+      <header className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Gestión de Roles</h1>
+        <Button color="success" variant="bordered" onPress={openCreate}>
+          + Nuevo Rol
         </Button>
+      </header>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border">
+          <thead className="bg-gray-200 dark:bg-gray-700">
+            <tr>
+              <th className="p-2">Rol</th>
+              <th className="p-2">Páginas asignadas</th>
+              <th className="p-2 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((r) => (
+              <tr key={r.id} className="even:bg-gray-100 dark:even:bg-gray-800">
+                <td className="p-2">{r.name}</td>
+                <td className="p-2">
+                  {r.pages?.map((p) => p.name).join(", ")}
+                </td>
+                <td className="p-2 flex justify-center space-x-2">
+                  <Button
+                    color="success"
+                    variant="bordered"
+                    onPress={() => openEdit(r)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    color="danger"
+                    variant="bordered"
+                    onPress={() => askDelete(r.id)}
+                  >
+                    Eliminar
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {roles.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-4 text-center">
+                  No hay roles
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">
-        <div className="relative w-full sm:w-[250px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Buscar rol..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-4 py-2 rounded"
-          />
-        </div>
-
-      
-
-        {selectedRoles.length > 0 && (
-          <div className="bg-gray-800 px-3 py-2 rounded text-white flex items-center gap-2">
-            <span className="text-sm">{selectedRoles.length} seleccionado(s)</span>
-            <Button
-              variant="bordered"
-              color="danger"
-              onPress={() => {
-                setBulkDeleteMode(true);
-                setSelectedRole(null);
-                setShowDeleteModal(true);
-              }}
-            >
-              Eliminar
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-md border border-gray-800 overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
-        <RoleTable
-          roles={filteredRoles}
-        
-          onUpdated={(role) => {
-            setSelectedRole(role);
-            setShowEditModal(true);
-          }}
-          onDelete={(role) => {
-            setSelectedRole(role);
-            setBulkDeleteMode(false);
-            setShowDeleteModal(true);
-          }}
-          selectedRoles={selectedRoles}
-          setSelectedRoles={setSelectedRoles}
-     
+      {/* Drawer del formulario */}
+      {drawerOpen && (
+        <RoleDrawer
+          isOpen
+          onClose={close}
+          onSave={handleSave}
+          initialData={editing}
+          allPages={pages}
         />
-      </div>
+      )}
 
-     
-      <CreateRoleModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreated={fetchRoles}
+      <ConfirmModal
+        isOpen={modalOpen}
+        title="Eliminar rol?"
+        message="Esta acción no se puede deshacer."
+        onConfirm={confirmDelete}
+        onCancel={() => setModalOpen(false)}
       />
-      <EditRoleModal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        role={selectedRole}
-        onUpdated={fetchRoles}
-      />
-      <DeleteRoleModal
-        open={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setBulkDeleteMode(false);
-          setSelectedRole(null);
-        }}
-        role={selectedRole}
-        multiple={bulkDeleteMode}
-        onDelete={fetchRoles}
-        onConfirm={handleBulkDelete}
-      />
-    </div>
+    </main>
+    </ProtectedRoute>
   );
 }

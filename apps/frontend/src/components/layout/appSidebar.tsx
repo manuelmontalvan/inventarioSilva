@@ -25,7 +25,9 @@ ShieldUser,
   History,
   ContactRound,
   TrendingUp,
-  Layers2
+  Layers2,
+  FileBoxIcon
+
 } from "lucide-react";
 import {
   Sidebar,
@@ -179,6 +181,11 @@ const items: SidebarItem[] = [
         title: "Margen e impuesto",
         url: "/config/margins-and-taxes",
         icon:TrendingUp,
+      },
+       {
+        title: "Gestion paginas",
+        url: "/page",
+        icon: FileBoxIcon,
       },
     
     ],

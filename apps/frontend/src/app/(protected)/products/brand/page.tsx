@@ -1,4 +1,5 @@
 "use client";
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -21,6 +22,9 @@ function BrandTable({
   onDelete: (id: string) => void;
 }) {
   return (
+   
+
+
     <div className="overflow-x-auto">
       <table className="min-w-full border-collapse dark:text-white">
         <thead>
@@ -265,6 +269,8 @@ export default function BrandsPage() {
   }
 
   return (
+    <ProtectedRoute>
+     
     <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900 dark:text-white transition-colors">
       <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -304,5 +310,6 @@ export default function BrandsPage() {
         onCancel={() => setModalOpen(false)}
       />
     </main>
+    </ProtectedRoute>
   );
 }

@@ -38,7 +38,6 @@ export class InventoryService {
   async create(dto: CreateInventoryMovementsDto) {
     const results: InventoryMovement[] = [];
 
-
     for (const m of dto.movements) {
       const product = await this.productRepo.findOne({
         where: { id: m.productId },
@@ -144,6 +143,14 @@ export class InventoryService {
       // Guardar movimiento
       const savedMovement = await this.movementRepo.save(movement);
       results.push(savedMovement);
+      if (dto.type === MovementType.OUT) {
+        product.last_sale_date = savedMovement.createdAt;
+        await this.productRepo.save(product);
+      }
+      if (dto.type === MovementType.IN) {
+        product.last_purchase_date = savedMovement.createdAt;
+        await this.productRepo.save(product);
+      }
     }
 
     return results;

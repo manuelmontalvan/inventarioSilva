@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import React, { useEffect, useState } from "react";
 import {
   getPurchaseOrders,
@@ -58,6 +58,7 @@ export default function PurchasesPage() {
   };
 
   return (
+    <ProtectedRoute>    
     <div className="min-h-screen bg-gray-50 dark:bg-black max-w-7xl mx-auto px-6 py-10">
       {/* Título + Upload agrupados y con margen abajo */}
       <div className="mb-10 flex justify-between  gap-4">
@@ -86,5 +87,6 @@ export default function PurchasesPage() {
         </section>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

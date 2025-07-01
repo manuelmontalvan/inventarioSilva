@@ -1,5 +1,5 @@
 "use client";
-
+import ProtectedRoute from "@/components/restricted/protectedRoute";
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
 import {
@@ -155,6 +155,7 @@ export default function ProductAdminPage() {
   }
 
   return (
+    <ProtectedRoute>
     <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
       <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
@@ -345,5 +346,6 @@ export default function ProductAdminPage() {
         onConfirm={handleBulkDelete}
       />
     </div>
+    </ProtectedRoute>
   );
 }
