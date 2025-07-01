@@ -20,14 +20,13 @@ interface ComboboxItem {
   label: string;
   value: string;
 }
-
 interface ComboboxProps {
   items: ComboboxItem[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  onReachEnd?: () => void;
+  onSearch?: (query: string) => void; // 👈 NUEVA
 }
 
 export function Combobox({
@@ -36,10 +35,10 @@ export function Combobox({
   onChange,
   placeholder = "Seleccione una opción...",
   className = "w-[200px]",
+  onSearch,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Busca el label correspondiente al valor, incluso si es cadena vacía
   const selectedLabel = React.useMemo(() => {
     const found = items.find((item) => item.value === value);
     return found ? found.label : placeholder;
@@ -60,7 +59,13 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className={cn("p-0", className)}>
         <Command>
-          <CommandInput placeholder="Buscar..." className="h-9" />
+          <CommandInput
+            placeholder="Buscar..."
+            className="h-9"
+            onValueChange={(query) => {
+              if (onSearch) onSearch(query); // 👈 llama a tu búsqueda
+            }}
+          />
           <CommandList>
             <CommandEmpty>No se encontró resultado.</CommandEmpty>
             <CommandGroup>

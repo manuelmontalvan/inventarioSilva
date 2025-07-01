@@ -7,10 +7,11 @@ import {
   Unique,
 } from 'typeorm';
 import { Product } from '../entities/product.entity';
-import { Locality } from '../locality/locality.entity';
+import { Locality } from '../locality/entities/locality.entity';
+import { Shelf } from '../locality/shelves/entities/shelf.entity';
 
 @Entity('product_stocks')
-@Unique(['product', 'locality'])
+@Unique(['product', 'shelf'])
 export class ProductStock {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,6 +21,12 @@ export class ProductStock {
 
   @ManyToOne(() => Locality, { eager: true })
   locality: Locality;
+
+  @ManyToOne(() => Shelf, { eager: true })
+  shelf: Shelf;
+
+  @Column()
+  shelfId: string;
 
   @Column({ type: 'int', default: 0 })
   quantity: number;

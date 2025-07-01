@@ -19,6 +19,7 @@ import {AnalyticsModule} from './analytics/analytics.module'
 import {PricingModule} from './pricing/pricing.module'
 import{ProductStockModule} from './products/product-stock/product-stock.module'
 import { SalesModule } from './productSales/sales.module';
+import { ShelfModule } from './products/locality/shelves/shelf.module';
 
 
 @Module({
@@ -60,7 +61,9 @@ import { SalesModule } from './productSales/sales.module';
     AnalyticsModule,
     PricingModule,
     ProductStockModule,
-    SalesModule
+    SalesModule,
+    ShelfModule
+  
   ],
   providers: [RolesSeed, UserSeed],
 })

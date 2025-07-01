@@ -1,5 +1,6 @@
 // types/product.ts
 import { UserI } from "./user"; // Tu interfaz de usuario
+import {ProductStock} from './productStock'
 
 export interface Category {
   id: string;
@@ -19,8 +20,7 @@ export interface UnitOfMeasure {
 }
 export interface Locality {
   id: string;
-  name: string;  
-  category: Category;
+  name: string;    
 }
 export interface ProductI {
   id: string;
@@ -50,4 +50,5 @@ export interface ProductI {
   current_trend?: "growing" | "declining" | "stable";
   createdBy: UserI; // Objeto completo debido a eager loading
   updatedBy: UserI; // Objeto completo
+   stocks?: ProductStock[];
 }

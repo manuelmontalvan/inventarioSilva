@@ -7,13 +7,12 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Product } from '../products/entities/product.entity';
-import { Locality } from '../products/locality/locality.entity';
+import { Locality } from '../products/locality/entities/locality.entity';
 
 export enum MovementType {
   IN = 'IN',
   OUT = 'OUT',
 }
-
 @Entity()
 export class InventoryMovement {
   @PrimaryGeneratedColumn('uuid')
@@ -28,10 +27,19 @@ export class InventoryMovement {
   @ManyToOne(() => Product, (product) => product.inventoryMovements)
   product: Product;
 
+  @Column({ type: 'varchar', nullable: true })
+  brandName: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  productName: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  unitName: string;
+
   @ManyToOne(() => Locality, { eager: true })
   locality: Locality;
 
-  @Column({ nullable: true }) // ✅ Permite sincronizar sin error
+  @Column({ nullable: true })
   localityId: string;
 
   @Column({ nullable: true })

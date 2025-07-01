@@ -16,10 +16,10 @@ import { UnitOfMeasure } from './unit-of-measure.entity';
 import { ProductSale } from '../../productSales/entities/product-sale.entity';
 import { ProductPurchase } from '../../productPurchase/entities/product-purchase.entity';
 import { User } from '../../users/user.entity';
-import { Locality } from '../locality/locality.entity';
 import { ProductCostHistory } from '../../productPurchase/entities/product-cost-history.entity';
 import { InventoryMovement } from '../../Inventory/inventory-movement.entity';
 import { ProductStock } from '../product-stock/product-stock.entity';
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
@@ -36,9 +36,6 @@ export class Product {
   @JoinColumn({ name: 'categoryId' })
   category: Category;
 
-  @OneToMany(() => InventoryMovement, (movement) => movement.product)
-  inventoryMovements: InventoryMovement[];
-
   @Column()
   categoryId: string;
 
@@ -48,16 +45,6 @@ export class Product {
 
   @Column()
   brandId: string;
-
-  @ManyToOne(() => Locality, { eager: true, nullable: true })
-  @JoinColumn({ name: 'localityId' })
-  locality?: Locality;
-
-  @Column({ nullable: true })
-  localityId?: string;
-
-  @OneToMany(() => ProductStock, (stock) => stock.product)
-  stocks: ProductStock[];
 
   @Column({ nullable: true })
   @Index()
@@ -74,9 +61,6 @@ export class Product {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   max_stock: number;
-
-  @OneToMany(() => ProductCostHistory, (costHistory) => costHistory.product)
-  costHistories: ProductCostHistory[];
 
   @ManyToOne(() => UnitOfMeasure, (unit) => unit.products, { eager: true })
   @JoinColumn({ name: 'unitOfMeasureId' })
@@ -145,12 +129,6 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @OneToMany(() => ProductSale, (sale) => sale.product)
-  sales_history: ProductSale[];
-
-  @OneToMany(() => ProductPurchase, (purchase) => purchase.product)
-  purchase_history: ProductPurchase[];
-
   @Column({
     type: 'enum',
     enum: ['growing', 'declining', 'stable'],
@@ -171,4 +149,22 @@ export class Product {
 
   @Column({ nullable: true })
   updatedById?: string;
+
+  // 🔁 Relaciones con historial
+  @OneToMany(() => ProductSale, (sale) => sale.product)
+  sales_history: ProductSale[];
+
+  @OneToMany(() => ProductPurchase, (purchase) => purchase.product)
+  purchase_history: ProductPurchase[];
+
+  @OneToMany(() => ProductCostHistory, (costHistory) => costHistory.product)
+  costHistories: ProductCostHistory[];
+
+  @OneToMany(() => InventoryMovement, (movement) => movement.product)
+  inventoryMovements: InventoryMovement[];
+
+  // ✅ Relación con stock por localidad
+  @OneToMany(() => ProductStock, (stock) => stock.product, { cascade: true })
+  stocks: ProductStock[];
+  
 }

@@ -94,7 +94,6 @@ export default function ProductTable({
   });
 
   // Paginación
-  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
   const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage

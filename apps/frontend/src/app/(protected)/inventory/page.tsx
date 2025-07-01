@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getInventoryMovements } from '@/lib/api/inventory';
-import { InventoryMovement } from '@/types/inventory';
+import { useEffect, useState } from "react";
+import {
+  getInventoryMovements,
+  createInventoryMovement,
+} from "@/lib/api/inventory";
+import {
+  InventoryMovement,
+  CreateInventoryMovementsDto,
+} from "@/types/inventory";
 
 import {
   Card,
@@ -12,10 +18,10 @@ import {
   CardContent,
   CardFooter,
   CardAction,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 
-import InventoryForm from '@/components/inventory/InventoryForm';
-import InventoryTable from '@/components/inventory/InventoryTable';
+import InventoryForm from "@/components/inventory/InventoryForm";
+import InventoryTable from "@/components/inventory/InventoryTable";
 
 export default function InventoryPage() {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
@@ -25,7 +31,7 @@ export default function InventoryPage() {
       const data = await getInventoryMovements();
       setMovements(data);
     } catch (error) {
-      console.error('Error cargando movimientos:', error);
+      console.error("Error cargando movimientos:", error);
     }
   };
 
@@ -33,39 +39,65 @@ export default function InventoryPage() {
     loadMovements();
   }, []);
 
+  // Función que pasaremos a InventoryForm para crear movimientos
+  const handleSubmit = async (data: {
+    type: "IN" | "OUT";
+    movements: {
+      productId: string;
+      quantity: number;
+      unitId: string;
+      productName: string;
+      brandName: string;
+      unitName: string;
+    }[];
+    invoice_number?: string;
+    orderNumber?: string;
+    notes?: string;
+  }) => {
+    // Aquí iteramos para crear movimientos uno por uno (o hacer batch si tu backend lo soporta)
+    for (const movement of data.movements) {
+      await createInventoryMovement({
+        type: data.type,
+        movements: data.movements,
+        invoice_number: data.invoice_number,
+        orderNumber: data.orderNumber,
+        notes: data.notes,
+      });
+      // Llamas a tu API para crear el movimiento
+    }
+    // Luego recargas movimientos
+    await loadMovements();
+  };
+
   return (
     <div className="p-4 space-y-6">
-      {/* Sección para registrar movimiento */}
       <Card>
         <CardHeader>
           <CardTitle>Registrar Movimiento</CardTitle>
           <CardDescription>
             Registra entradas o salidas de productos al inventario.
           </CardDescription>
-          <CardAction>
-            {/* Puedes agregar un botón aquí si lo deseas */}
-            {/* Ejemplo: <Button size="sm">Ayuda</Button> */}
-          </CardAction>
+          <CardAction></CardAction>
         </CardHeader>
-
         <CardContent>
-          <InventoryForm onCreated={loadMovements} />
+          {/* PASAMOS handleSubmit CORRECTAMENTE */}
+          <InventoryForm onSubmit={handleSubmit} />
         </CardContent>
-
         <CardFooter>
-          <p className="text-xs text-muted-foreground">Todos los campos marcados son obligatorios.</p>
+          <p className="text-xs text-muted-foreground">
+            Todos los campos marcados son obligatorios.
+          </p>
         </CardFooter>
       </Card>
 
-      {/* Sección de historial */}
       <Card>
         <CardHeader>
           <CardTitle>Historial de Movimientos</CardTitle>
           <CardDescription>
-            Visualiza todos los movimientos registrados, incluyendo entradas y salidas.
+            Visualiza todos los movimientos registrados, incluyendo entradas y
+            salidas.
           </CardDescription>
         </CardHeader>
-
         <CardContent>
           <InventoryTable movements={movements} />
         </CardContent>

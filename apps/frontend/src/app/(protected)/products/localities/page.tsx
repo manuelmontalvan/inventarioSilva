@@ -1,358 +1,269 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Locality,
-  Category,
-  getLocalities,
-  createLocality,
-  updateLocality,
-  deleteLocality,
-  getCategories,
-} from "@/lib/api/products/localities";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
-import ConfirmModal from "@/components/confirmModal";
+import {
+  getLocalities,
+  createLocality,
+  deleteLocality,
+   getShelvesByLocality,
+  createShelf,
+  deleteShelf,
+} from "@/lib/api/products/localities";
+import { getCategories } from "@/lib/api/products/categories";
 
-function LocalityTable({
-  localities,
-  onEdit,
-  onDelete,
-}: {
-  localities: Locality[];
-  onEdit: (locality: Locality) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse dark:text-white">
-        <thead>
-          <tr className="bg-gray-200 dark:bg-gray-700 ">
-            <th className="p-2 border border-gray-300 dark:border-gray-600 text-left">
-              Nombre
-            </th>
-            <th className="p-2 border border-gray-300 dark:border-gray-600 text-left">
-              Categoria
-            </th>
-            <th className="p-2 border border-gray-300 dark:border-gray-600 text-center">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {localities.map((locality) => (
-            <tr
-              key={locality.id}
-              className="even:bg-gray-100 dark:even:bg-gray-800"
-            >
-              <td className="p-2 border border-gray-300 dark:border-gray-600">
-                {locality.name}
-              </td>
-              <td className="p-2 border border-gray-300 dark:border-gray-600">
-                {locality.category?.name || "-"}
-              </td>
-              <td className="p-2 border border-gray-300 dark:border-gray-600 space-x-2 flex justify-center">
-                <Button
-                  onPress={() => onEdit(locality)}
-                  color="success"
-                  variant="bordered"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onPress={() => onDelete(locality.id)}
-                  color="danger"
-                  variant="bordered"
-                >
-                  Delete
-                </Button>
-              </td>
-            </tr>
-          ))}
-          {localities.length === 0 && (
-            <tr>
-              <td
-                colSpan={3}
-                className="p-4 text-center text-gray-500 dark:text-gray-400"
-              >
-                No localities to display
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+interface Locality {
+  id: string;
+  name: string;
 }
 
-function LocalityDrawer({
-  isOpen,
-  onClose,
-  onSave,
-  initialData,
-  categories,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (name: string, categoryId: string) => void;
-  initialData: Locality | null;
-  categories: Category[];
-}) {
-  const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setCategoryId(initialData.category?.id || "");
-    } else {
-      setName("");
-      setCategoryId("");
-    }
-  }, [initialData, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return alert("Name is required");
-    if (!categoryId) return alert("Category is required");
-    onSave(name.trim(), categoryId);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-opacity-30 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        className="
-          fixed top-0 right-0 h-full bg-white dark:bg-gray-900 shadow-lg p-6 overflow-auto z-50
-          w-full max-w-xs sm:max-w-sm transition-transform
-        "
-      >
-        <Button
-          className="mb-4 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          onPress={onClose}
-          aria-label="Close panel"
-          variant="bordered"
-          color="danger"
-        >
-          × Close
-        </Button>
-
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {initialData ? "Edit Locality" : "Create Locality"}
-          </h2>
-
-          <label className="flex flex-col">
-            <span className="mb-1 text-gray-700 dark:text-gray-300">
-              Nombre
-            </span>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              required
-              autoFocus
-            />
-          </label>
-
-          <label className="flex flex-col">
-            <span className="mb-1 text-gray-700 dark:text-gray-300">
-              Categoria
-            </span>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              required
-            >
-              <option value="" disabled>
-                seleccionar una categoria
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <Button type="submit" color="success" variant="bordered">
-            Save
-          </Button>
-        </form>
-      </aside>
-    </>
-  );
+interface Category {
+  id: string;
+  name: string;
 }
 
-export default function LocalitiesPage() {
+interface Shelf {
+  id: string;
+  name: string;
+  category: Category;
+  localityId: string;
+}
+
+export default function LocalityShelfManager() {
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingLocality, setEditingLocality] = useState<Locality | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [selectedLocalityId, setSelectedLocalityId] = useState<string>("");
+  const [shelves, setShelves] = useState<Shelf[]>([]);
 
-  // Confirmation modal state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [idToDelete, setIdToDelete] = useState<string | null>(null);
+  const [drawerLocalityOpen, setDrawerLocalityOpen] = useState(false);
+  const [drawerShelfOpen, setDrawerShelfOpen] = useState(false);
+
+  const [localityName, setLocalityName] = useState("");
+  const [shelfName, setShelfName] = useState("");
+  const [shelfLocalityId, setShelfLocalityId] = useState<string>("");
+  const [shelfCategoryId, setShelfCategoryId] = useState<string>("");
 
   useEffect(() => {
-    loadData();
+    loadInitial();
   }, []);
 
-  async function loadData() {
-    setLoading(true);
+  useEffect(() => {
+    if (selectedLocalityId) loadShelves(selectedLocalityId);
+    else setShelves([]);
+  }, [selectedLocalityId]);
+
+  async function loadInitial() {
     try {
-      const [localitiesData, categoriesData] = await Promise.all([
+      const [locs, cats] = await Promise.all([
         getLocalities(),
         getCategories(),
       ]);
-      setLocalities(localitiesData);
-      setCategories(categoriesData);
-    } catch (error) {
-      addToast({
-        title: "Error loading data",
-        description: "Could not load localities or categories.",
-        color: "danger",
-        timeout: 5000,
-      });
-    } finally {
-      setLoading(false);
+      setLocalities(locs);
+      setCategories(cats);
+      if (locs.length) setSelectedLocalityId(locs[0].id);
+    } catch {
+      addToast({ title: "Error", description: "Falló carga inicial", color: "danger" });
     }
   }
 
-  function openCreate() {
-    setEditingLocality(null);
-    setDrawerOpen(true);
-  }
-
-  function openEdit(locality: Locality) {
-    setEditingLocality(locality);
-    setDrawerOpen(true);
-  }
-
-  function closeDrawer() {
-    setDrawerOpen(false);
-    setEditingLocality(null);
-  }
-
-  async function handleSave(name: string, categoryId: string) {
+  async function loadShelves(localityId: string) {
     try {
-      if (editingLocality) {
-        // Update
-        const updated = await updateLocality(editingLocality.id, {
-          name,
-          categoryId,
-        });
-        setLocalities((prev) =>
-          prev.map((loc) => (loc.id === updated.id ? updated : loc))
-        );
-        addToast({
-          title: "Localidad actualizada",
-          color: "success",
-          variant: "bordered",
-        });
-      } else {
-        // Create
-        const created = await createLocality({ name, categoryId });
-        setLocalities((prev) => [...prev, created]);
-        addToast({
-          title: "Localidad creada",
-          color: "success",
-          variant: "bordered",
-        });
+      const sh = await getShelvesByLocality(localityId);
+      setShelves(sh);
+    } catch {
+      addToast({ title: "Error", description: "Falló carga perchas", color: "danger" });
+    }
+  }
+
+  async function handleCreateLocality() {
+    if (!localityName.trim()) return;
+    try {
+      const newLoc = await createLocality({ name: localityName });
+      setLocalities(prev => [...prev, newLoc]);
+      setLocalityName("");
+      setDrawerLocalityOpen(false);
+      addToast({ title: "Éxito", description: "Localidad creada", color: "success" });
+    } catch {
+      addToast({ title: "Error", description: "No se pudo crear localidad", color: "danger" });
+    }
+  }
+
+  async function handleDeleteLocality(id: string) {
+    if (!confirm("¿Eliminar localidad?")) return;
+    try {
+      await deleteLocality(id);
+      setLocalities(prev => prev.filter(l => l.id !== id));
+      addToast({ title: "Éxito", description: "Localidad eliminada", color: "success" });
+    } catch {
+      addToast({ title: "Error", description: "No se pudo eliminar localidad", color: "danger" });
+    }
+  }
+
+  async function handleCreateShelf() {
+    if (!shelfName.trim() || !shelfLocalityId || !shelfCategoryId) return;
+    try {
+      const newSh = await createShelf({
+        name: shelfName,
+        localityId: shelfLocalityId,
+        categoryId: shelfCategoryId,
+      });
+      if (shelfLocalityId === selectedLocalityId) {
+        setShelves(prev => [...prev, newSh]);
       }
-      closeDrawer();
-    } catch (error) {
-      addToast({
-        title: "Error",
-        description: "Falla al guardar localidad.",
-        color: "danger",
-        variant: "bordered",
-      });
+      setShelfName("");
+      setShelfLocalityId("");
+      setShelfCategoryId("");
+      setDrawerShelfOpen(false);
+      addToast({ title: "Éxito", description: "Percha creada", color: "success" });
+    } catch {
+      addToast({ title: "Error", description: "No se pudo crear percha", color: "danger" });
     }
   }
 
-  function handleDeleteClick(id: string) {
-    setIdToDelete(id);
-    setConfirmOpen(true);
-  }
-
-  async function confirmDelete() {
-    if (!idToDelete) return;
+  async function handleDeleteShelf(id: string) {
+    if (!confirm("¿Eliminar percha?")) return;
     try {
-      await deleteLocality(idToDelete);
-      setLocalities((prev) => prev.filter((loc) => loc.id !== idToDelete));
-      addToast({
-        title: "Localidad Eliminada",
-        color: "success",
-        variant: "bordered",
-      });
-    } catch (error) {
-      addToast({
-        title: "Error",
-        description: "Fallo al eliminar localidad.",
-        color: "danger",
-        variant: "bordered",
-      });
-    } finally {
-      setConfirmOpen(false);
-      setIdToDelete(null);
+      await deleteShelf(id);
+      setShelves(prev => prev.filter(s => s.id !== id));
+      addToast({ title: "Éxito", description: "Percha eliminada", color: "success" });
+    } catch {
+      addToast({ title: "Error", description: "No se pudo eliminar percha", color: "danger" });
     }
-  }
-
-  function cancelDelete() {
-    setConfirmOpen(false);
-    setIdToDelete(null);
   }
 
   return (
-    <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900 dark:text-white transition-colors">
-      <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold mb-4 dark:text-white">Localidad</h1>
-
-        <Button
-          color="success"
-          variant="bordered"
-          onPress={openCreate}
-          className="mb-4"
-        >
-          + Create Locality
-        </Button>
+    <main className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors">
+      <header className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold dark:text-white">Localidades & Perchas</h1>
+        <div className="space-x-2">
+          <Button onPress={() => setDrawerLocalityOpen(true)} variant="bordered" color="success" >
+            Crear Localidad
+          </Button>
+          <Button onPress={() => setDrawerShelfOpen(true)} variant="bordered" color="success" >
+            Crear Percha
+          </Button>
+        </div>
       </header>
 
-      {loading ? (
-        <p className="dark:text-white">Loading...</p>
-      ) : (
-        <LocalityTable
-          localities={localities}
-          onEdit={openEdit}
-          onDelete={handleDeleteClick}
-        />
+      {/* Localidades Table */}
+      <section className="mb-8">
+        <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">
+          <thead className="bg-gray-200 dark:bg-gray-700">
+            <tr>
+              <th className="p-3 text-left">Nombre</th>
+              <th className="p-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {localities.map(loc => (
+              <tr key={loc.id} className="even:bg-gray-100 dark:even:bg-gray-700">
+                <td className="p-3">{loc.name}</td>
+                <td className="p-3 text-center space-x-2">
+                  <Button onPress={() => handleDeleteLocality(loc.id)} variant="ghost" color="danger" >
+                    Eliminar
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      {/* Selector Localidad */}
+      <label className="block mb-4 dark:text-white">
+        Mostrar Perchas de:
+        <select
+          value={selectedLocalityId}
+          onChange={e => setSelectedLocalityId(e.target.value)}
+          className="ml-2 p-2 border rounded"
+        >
+          {localities.map(loc => (
+            <option key={loc.id} value={loc.id}>{loc.name}</option>
+          ))}
+        </select>
+      </label>
+
+      {/* Shelves Table */}
+      <section>
+        <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">
+          <thead className="bg-gray-200 dark:bg-gray-700">
+            <tr>
+              <th className="p-3 text-left">Nombre Percha</th>
+              <th className="p-3 text-left">Categoría</th>
+              <th className="p-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shelves.map(sh => (
+              <tr key={sh.id} className="even:bg-gray-100 dark:even:bg-gray-700">
+                <td className="p-3">{sh.name}</td>
+                <td className="p-3">{sh.category.name}</td>
+                <td className="p-3 text-center">
+                  <Button onPress={() => handleDeleteShelf(sh.id)} variant="ghost" color="danger" >
+                    Eliminar
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      {/* Drawers */}
+      {drawerLocalityOpen && (
+        <aside className="fixed inset-0 flex justify-end z-50">
+          <div className="absolute inset-0 bg-black opacity-30" onClick={() => setDrawerLocalityOpen(false)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 p-6 grid gap-4 shadow-xl">
+            <h2 className="text-xl font-semibold">Crear Localidad</h2>
+            <input
+              value={localityName}
+              onChange={e => setLocalityName(e.target.value)}
+              placeholder="Nombre"
+              className="p-2 border rounded"
+              autoFocus
+            />
+            <Button onPress={handleCreateLocality} variant="solid" color="primary" >
+              Guardar
+            </Button>
+          </div>
+        </aside>
       )}
 
-      <LocalityDrawer
-        isOpen={drawerOpen}
-        onClose={closeDrawer}
-        onSave={handleSave}
-        initialData={editingLocality}
-        categories={categories}
-      />
-
-      <ConfirmModal
-        isOpen={confirmOpen}
-        title="¿Eliminar Localidad?"
-        message="Esta acción no se puede deshacer."
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-      />
+      {drawerShelfOpen && (
+        <aside className="fixed inset-0 flex justify-end z-50">
+          <div className="absolute inset-0 bg-black opacity-30" onClick={() => setDrawerShelfOpen(false)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 p-6 grid gap-4 shadow-xl">
+            <h2 className="text-xl font-semibold">Crear Percha</h2>
+            <input
+              value={shelfName}
+              onChange={e => setShelfName(e.target.value)}
+              placeholder="Nombre"
+              className="p-2 border rounded"
+              autoFocus
+            />
+            <select
+              value={shelfLocalityId}
+              onChange={e => setShelfLocalityId(e.target.value)}
+              className="p-2 border rounded"
+            >
+              <option value="">Selecciona Localidad</option>
+              {localities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+            <select
+              value={shelfCategoryId}
+              onChange={e => setShelfCategoryId(e.target.value)}
+              className="p-2 border rounded"
+            >
+              <option value="">Selecciona Categoría</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <Button onPress={handleCreateShelf} variant="solid" color="primary" >
+              Guardar
+            </Button>
+          </div>
+        </aside>
+      )}
     </main>
   );
 }

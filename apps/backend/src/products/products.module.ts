@@ -6,7 +6,7 @@ import { ProductsController } from './products.controller';
 import { Category } from './entities/category.entity';
 import { Brand } from './entities/brand.entity';
 import { UnitOfMeasure } from './entities/unit-of-measure.entity';
-import { Locality } from './locality/locality.entity';
+import { Locality } from './locality/entities/locality.entity';
 import {ProductCostHistory} from '../productPurchase/entities/product-cost-history.entity'
 import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
 import { ProductStock } from './product-stock/product-stock.entity';

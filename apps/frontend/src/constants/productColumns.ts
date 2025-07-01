@@ -3,8 +3,7 @@ import { ProductI } from "@/types/product";
 export const productColumnOptions: { key: keyof ProductI; label: string }[] = [
   { key: "name", label: "Nombre" },
   { key: "description", label: "Descripción" },
-  { key: "internal_code", label: "Código interno" },
-  { key: "locality", label: "Ubicación" },
+  { key: "internal_code", label: "Código interno" }, 
   { key: "category", label: "Categoría" },
   { key: "brand", label: "Marca" },
   { key: "current_quantity", label: "Cantidad" },

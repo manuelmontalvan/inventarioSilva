@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Patch, Delete, ParseUUIDPipe,Query } from '@nestjs/common';
 import { LocalityService } from './locality.service';
 import { CreateLocalityDto } from './dto/create-locality.dto';
 import { UpdateLocalityDto } from './dto/update-locality.dto';
@@ -31,4 +31,9 @@ export class LocalityController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.localityService.remove(id);
   }
+  @Get('search')
+search(@Query('term') term: string) {
+  return this.localityService.search(term);
+}
+
 }

@@ -18,11 +18,17 @@ export interface InventoryMovement {
   };
 }
 
-export interface CreateInventoryMovementDto {
-  type: MovementType;
-  quantity: number;
-  productId: string;
-  localityId: string;
+export interface CreateInventoryMovementsDto {
+  type: 'IN' | 'OUT';
+  movements: {
+    productId: string;
+    quantity: number;
+    unitId: string;
+    localityId: string; // ← agregar esto por producto
+    productName?: string;
+    brandName?: string;
+    unitName?: string;
+  }[];
   invoice_number?: string;
   orderNumber?: string;
   notes?: string;

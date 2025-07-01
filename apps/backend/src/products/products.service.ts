@@ -13,7 +13,7 @@ import { Category } from './entities/category.entity';
 import { Brand } from './entities/brand.entity';
 import { UnitOfMeasure } from './entities/unit-of-measure.entity';
 import { User } from '../users/user.entity'; // Asegúrate de que la ruta sea correcta
-import { Locality } from './locality/locality.entity';
+import { Locality } from './locality/entities/locality.entity';
 import { ProductCostHistory } from 'src/productPurchase/entities/product-cost-history.entity';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
@@ -177,8 +177,7 @@ export class ProductsService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')
-      .leftJoinAndSelect('product.locality', 'locality')
+      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')    
       .leftJoinAndSelect('product.createdBy', 'createdBy')
       .leftJoinAndSelect('product.updatedBy', 'updatedBy');
 
@@ -210,8 +209,7 @@ export class ProductsService {
         'brand',
         'unit_of_measure',
         'createdBy',
-        'updatedBy',
-        'locality',
+        'updatedBy',        
       ],
     });
     if (!product) {
@@ -364,8 +362,7 @@ export class ProductsService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')
-      .leftJoinAndSelect('product.locality', 'locality')
+      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')  
       .leftJoinAndSelect('product.createdBy', 'createdBy')
       .leftJoinAndSelect('product.updatedBy', 'updatedBy');
 

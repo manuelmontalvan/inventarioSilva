@@ -1,7 +1,7 @@
 // src/categories/entities/category.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
-import { Locality } from '../../products/locality/locality.entity';
+import { Shelf } from '../locality/shelves/entities/shelf.entity';
 
 @Entity('categories')
 export class Category {
@@ -14,9 +14,9 @@ export class Category {
   @Column({ nullable: true })
   description?: string;
 
-  @OneToMany(() => Product, product => product.category)
+  @OneToMany(() => Product, (product) => product.category)
   products: Product[];
 
-   @OneToMany(() => Locality, locality => locality.category)
-  localities: Locality[];
+  @OneToMany(() => Shelf, (shelf) => shelf.category)
+  shelf: Shelf[];
 }

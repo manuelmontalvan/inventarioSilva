@@ -1,253 +1,275 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@heroui/button';
-import { Input } from '@heroui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Combobox } from '@/components/ui/combobox';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { addToast } from '@heroui/toast';
-
-import { createInventoryMovement } from '@/lib/api/inventory';
-import { getCategories } from '@/lib/api/products/categories';
-import { getProducts } from '@/lib/api/products/products';
-import { getLocalities } from '@/lib/api/products/localities';
-import { getPurchaseOrders, updatePurchaseOrder } from '@/lib/api/purchases/purchaseOrders';
-import { getProductStocks } from '@/lib/api/products/productStocks';
-
-import type { CreateInventoryMovementDto } from '@/types/inventory';
-import type { Category, ProductI, Locality } from '@/types/product';
-import type { PurchaseOrder } from '@/types/purchaseOrders';
-import type { ProductStock } from '@/types/productStock';
-
-interface Props {
-  onCreated: () => void;
+import React, { useEffect, useState } from "react";
+import { ProductI, Locality } from "@/types/product";
+import { getProducts } from "@/lib/api/products/products";
+import { ProductsTab } from "@/components/tabla/productTab";
+import { addToast } from "@heroui/toast";
+import { getLocalities } from "@/lib/api/products/localities";
+interface InventoryFormProps {
+  onSubmit: (data: {
+    type: "IN" | "OUT";
+    movements: {
+      productId: string;
+      quantity: number;
+      unitId: string;
+      productName: string;
+      brandName: string;
+      unitName: string;
+    }[];
+    invoice_number?: string;
+    orderNumber?: string;
+    notes?: string;
+  }) => Promise<void>;
 }
 
-export default function InventoryForm({ onCreated }: Props) {
-  const [categories, setCategories] = useState<Category[]>([]);
+export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const [products, setProducts] = useState<ProductI[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [movementList, setMovementList] = useState<any[]>([]);
+  const [type, setType] = useState<"IN" | "OUT">("IN");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
   const [localities, setLocalities] = useState<Locality[]>([]);
-  const [stocks, setStocks] = useState<ProductStock[]>([]);
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [quantityInput, setQuantityInput] = useState('1');
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const [form, setForm] = useState<Omit<CreateInventoryMovementDto, 'quantity'>>({
-    type: 'IN',
-    productId: '',
-    localityId: '',
-    notes: '',
-    invoice_number: '',
-    orderNumber: '',
-  });
-
-  // Carga inicial
   useEffect(() => {
-    getCategories().then(setCategories);
-    getProducts().then(setProducts);
-    getLocalities().then(setLocalities);
-    getPurchaseOrders().then(setOrders);
-  }, []);
-
-  // Filtrar productos por categoría
-  const filteredProducts = selectedCategoryId
-    ? products.filter((p) => p.category?.id === selectedCategoryId)
-    : products;
-
-
-  // Al cambiar producto, obtener stocks y localidades para ese producto
-  useEffect(() => {
-    if (!form.productId) {
-      setStocks([]);
-      setForm((prev) => ({ ...prev, localityId: '' }));
-      return;
-    }
-    getProductStocks(form.productId).then((data) => {
-      setStocks(data);
-      if (!data.find((s) => s.locality.id === form.localityId)) {
-        setForm((prev) => ({ ...prev, localityId: '' }));
+    const fetch = async () => {
+      try {
+        setLoading(true);
+        const res = await getProducts({
+          page: currentPage,
+          limit: 10,
+          search: searchTerm,
+        });
+        setProducts(res.data);
+        setTotalPages(res.totalPages);
+      } catch {
+        addToast({ title: "Error cargando productos", color: "danger" });
+      } finally {
+        setLoading(false);
       }
-    });
-  }, [form.productId]);
+    };
+    fetch();
+  }, [currentPage, searchTerm]);
+  
+useEffect(() => {
+  const fetchLocalities = async () => {
+    try {
+      const res = await getLocalities();
+      setLocalities(res);
+    } catch (err) {
+      console.error("Error cargando localidades", err);
+    }
+  };
+  fetchLocalities();
+}, []);
 
-  // Localidades filtradas según stocks del producto
- const filteredLocalities = selectedCategoryId
-  ? localities.filter((l) => l.category?.id === selectedCategoryId)
-  : localities;
+  const handleAdd = (product: ProductI, unitId: string, quantity: number) => {
+    if (movementList.find((m) => m.productId === product.id)) {
+      addToast({ title: "Producto ya agregado", color: "warning" });
+      return false;
+    }
 
-
-  // Al seleccionar orden de compra, setear orderNumber e invoice_number
-  const onSelectOrder = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    const order = orders.find((o) => o.id === orderId);
-    setForm((prev) => ({
+    setMovementList((prev) => [
       ...prev,
-      orderNumber: order?.orderNumber || '',
-      invoice_number: order?.invoice_number || '',
-    }));
+      {
+        productId: product.id,
+        productName: product.name,
+        brandName: product.brand?.name || "",
+        unitName: product.unit_of_measure?.name || "",
+        unitId,
+        quantity,
+      },
+    ]);
+    return true;
   };
 
-  // Guardar movimiento y actualizar factura
+  const handleRemove = (productId: string) => {
+    setMovementList((prev) => prev.filter((p) => p.productId !== productId));
+  };
+
   const handleSubmit = async () => {
-    const quantity = parseInt(quantityInput);
-    if (isNaN(quantity) || quantity <= 0) {
-      return addToast({ color: 'danger', title: 'Ingresa una cantidad válida' });
+    if (movementList.length === 0) {
+      addToast({ title: "Agrega al menos un producto", color: "warning" });
+      return;
     }
-    if (!form.productId || !form.localityId) {
-      return addToast({ color: 'danger', title: 'Completa todos los campos obligatorios' });
-    }
+
+    // Validar cada movimiento antes de enviar
+    const movementsWithType = movementList.map((m) => ({
+      ...m,
+      type, // agrega el tipo aquí
+      quantity: Number(m.quantity), // aseguramos que sea number
+    }));
 
     try {
-      // Actualizar factura en la orden si hay orden seleccionada
-      if (selectedOrderId) {
-        await updatePurchaseOrder(selectedOrderId, { invoice_number: form.invoice_number });
-      }
+  await onSubmit({
+    type,
+    movements: movementsWithType,
+    invoice_number: invoiceNumber || undefined,
+    orderNumber: orderNumber || undefined,
+    notes: notes || undefined,
+  });
 
-      // Crear movimiento de inventario
-      await createInventoryMovement({ ...form, quantity });
+  addToast({ title: "Movimiento guardado", color: "success" });
+  setMovementList([]);
+  setInvoiceNumber("");
+  setOrderNumber("");
+  setNotes("");
+} catch (error: any) {
+  console.error('Error guardando movimiento:', error);
+  // Si usas axios, el error puede estar en error.response.data.message
+  const message = error?.response?.data?.message || "Error guardando movimiento";
+  addToast({ title: message, color: "danger" });
+}
 
-      addToast({ title: 'Movimiento registrado', color: 'success' });
-
-      // Resetear formulario
-      setQuantityInput('1');
-      setSelectedCategoryId('');
-      setSelectedOrderId(null);
-      setStocks([]);
-      setForm({
-        type: 'IN',
-        productId: '',
-        localityId: '',
-        notes: '',
-        invoice_number: '',
-        orderNumber: '',
-      });
-
-      // Refrescar órdenes
-      const updatedOrders = await getPurchaseOrders();
-      setOrders(updatedOrders);
-
-      onCreated();
-    } catch (err: any) {
-      console.error('Error al crear movimiento:', err);
-      addToast({ color: 'danger', title: 'Error al registrar' });
-    }
   };
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
-      className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 bg-white dark:bg-gray-900 rounded-lg p-4 shadow-md border border-gray-200 dark:border-gray-700 max-h-[500px] overflow-y-auto"
-    >
-      <div className="flex flex-col">
-        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-          Tipo de movimiento
-        </label>
-        <Select
-          value={form.type}
-          onValueChange={(val) =>
-            setForm((prev) => ({ ...prev, type: val as 'IN' | 'OUT' }))
-          }
+    <div className="space-y-8">
+      {/* Cabecera */}
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+        Movimiento de Inventario
+      </h1>
+
+      {/* Panel de información principal */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+        {/* Tipo */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Tipo de Movimiento
+          </label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as "IN" | "OUT")}
+            className="w-full px-3 py-2 border rounded-md shadow-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
+          >
+            <option value="IN">Entrada</option>
+            <option value="OUT">Salida</option>
+          </select>
+        </div>
+
+        {/* Orden */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Número de Orden (Compra/Venta)
+          </label>
+          <input
+            value={orderNumber}
+            onChange={(e) => setOrderNumber(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md shadow-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
+            placeholder="Ej: ORD-20240627-001"
+          />
+        </div>
+
+        {/* Factura */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Número de Factura
+          </label>
+          <input
+            value={invoiceNumber}
+            onChange={(e) => setInvoiceNumber(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md shadow-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
+            placeholder="Ej: FAC-001234"
+          />
+        </div>
+
+        {/* Notas */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Notas (opcional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md shadow-sm resize-none dark:bg-gray-800 dark:text-white dark:border-gray-600"
+            rows={3}
+            placeholder="Observaciones adicionales..."
+          />
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+        {/* Tabla de productos (ocupa ambas columnas) */}
+        <div className="md:col-span-2 overflow-auto">
+          <ProductsTab
+            products={products}
+            units={[]}
+            onAdd={handleAdd}
+            showPurchasePrice={false}
+            showSalePrice={false}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            searchTerm={searchTerm}
+            onSearchChange={(val) => {
+              setSearchTerm(val);
+              setCurrentPage(1);
+            }}
+             localities={localities}
+          />
+        </div>
+      </div>
+
+      {/* Lista de productos agregados */}
+      {movementList.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+          <div className="md:col-span-2 overflow-auto">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+              Productos Agregados
+            </h3>
+            <div className="overflow-auto rounded-lg border dark:border-gray-700">
+              <table className="min-w-full text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900">
+                <thead className="bg-gray-100 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Producto</th>
+                    <th className="px-4 py-2 text-left">Marca</th>
+                    <th className="px-4 py-2 text-left">Unidad</th>
+                    <th className="px-4 py-2 text-left">Cantidad</th>
+                    <th className="px-4 py-2 text-left">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movementList.map((m) => (
+                    <tr
+                      key={m.productId}
+                      className="border-t border-gray-200 dark:border-gray-700"
+                    >
+                      <td className="px-4 py-2">{m.productName}</td>
+                      <td className="px-4 py-2">{m.brandName}</td>
+                      <td className="px-4 py-2">{m.unitName}</td>
+                      <td className="px-4 py-2">{m.quantity}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => handleRemove(m.productId)}
+                          className="text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Botón guardar */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg disabled:opacity-50 transition"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccione tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="IN">Entrada</SelectItem>
-            <SelectItem value="OUT">Salida</SelectItem>
-          </SelectContent>
-        </Select>
+          Guardar movimiento
+        </button>
       </div>
-
-      <div className="flex flex-col">
-        <label className="text-sm font-semibold mb-1 dark:text-gray-300">Categoría</label>
-        <Combobox
-          items={categories.map((cat) => ({ label: cat.name, value: cat.id }))}
-          value={selectedCategoryId}
-          onChange={(val) => {
-            setSelectedCategoryId(val);
-            setForm((prev) => ({ ...prev, productId: '', localityId: '' }));
-            setStocks([]);
-          }}
-          placeholder="Seleccionar categoría"
-        />
-      </div>
-
-      <div className="flex flex-col">
-        <label className="text-sm font-semibold mb-1 dark:text-gray-300">Producto</label>
-        <Combobox
-          items={filteredProducts.map((p) => ({ label: p.name, value: p.id }))}
-          value={form.productId}
-          onChange={(val) => setForm((prev) => ({ ...prev, productId: val, localityId: '' }))}
-          placeholder="Seleccionar producto"
-        />
-      </div>
-
-      <div className="flex flex-col">
-        <label className="text-sm font-semibold mb-1 dark:text-gray-300">Localidad</label>
-        <Combobox
-          items={filteredLocalities.map((l) => ({ label: l.name, value: l.id }))}
-          value={form.localityId}
-          onChange={(val) => setForm((prev) => ({ ...prev, localityId: val }))}
-          placeholder="Seleccionar localidad"
-        />
-      </div>
-
-      <Input
-        label="Cantidad"
-        type="number"
-        value={quantityInput}
-        onChange={(e) => setQuantityInput(e.target.value)}
-        min={1}
-      />
-
-      <div className="flex flex-col">
-        <label className="text-sm font-semibold mb-1 dark:text-gray-300">Orden de compra</label>
-        <Combobox
-          items={orders.map((o) => ({
-            label: `${o.orderNumber} - ${o.invoice_number || 'Sin factura'}`,
-            value: o.id,
-          }))}
-          value={selectedOrderId ?? ''}
-          onChange={onSelectOrder}
-          placeholder="Seleccionar orden de compra"
-        />
-      </div>
-
-      <Input
-        label="Número de factura"
-        value={form.invoice_number}
-        onChange={(e) => setForm((prev) => ({ ...prev, invoice_number: e.target.value }))}
-        placeholder="Ingrese el número de factura"
-      />
-
-      <label
-        htmlFor="notas"
-        className="text-sm font-semibold text-gray-700 dark:text-gray-300"
-      >
-        Notas
-      </label>
-      <Textarea
-        id="notas"
-        value={form.notes}
-        onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-        placeholder="Notas (opcional)"
-      />
-
-      <div className="md:col-span-2 flex justify-end">
-        <Button type="submit">Guardar movimiento</Button>
-      </div>
-    </form>
+    </div>
   );
 }

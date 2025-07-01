@@ -8,3 +8,12 @@ export interface Locality {
   name: string;
   category: Category;
 }
+
+export interface Shelf {
+  id: string;
+  name: string;
+  localityId: string;
+  locality?: Locality;
+  categoryId: string;
+  category?: Category;
+}

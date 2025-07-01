@@ -1,4 +1,5 @@
-import { IsUUID, IsInt, Min, IsNumber } from 'class-validator';
+import { IsUUID, IsInt, Min, IsNumber, Validate } from 'class-validator';
+import { MinMaxStockValidator } from '../min-max-stock.validator';
 
 export class CreateProductStockDto {
   @IsUUID()
@@ -6,6 +7,9 @@ export class CreateProductStockDto {
 
   @IsUUID()
   localityId: string;
+  
+  @IsUUID()
+   shelfId: string;
 
   @IsInt()
   @Min(0)
@@ -18,4 +22,7 @@ export class CreateProductStockDto {
   @IsNumber()
   @Min(0)
   max_stock: number;
+
+  @Validate(MinMaxStockValidator)
+  dummyFieldToValidateMinMax: any; // Necesario para que class-validator ejecute la validación cruzada
 }

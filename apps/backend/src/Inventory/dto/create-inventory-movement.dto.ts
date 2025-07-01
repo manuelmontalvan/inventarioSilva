@@ -1,25 +1,58 @@
-// create-inventory-movement.dto.ts
-import { IsEnum, IsInt, IsNotEmpty, IsUUID, IsOptional, Min, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  Min,
+  IsString,
+  ValidateNested,
+  ArrayNotEmpty,
+  IsArray,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { MovementType } from '../inventory-movement.entity';
 
-export class CreateInventoryMovementDto {
-  @IsEnum(MovementType)
-  type: MovementType;
+class MovementItemDto {
+  @IsUUID()
+  @IsNotEmpty()
+  productId: string;
 
   @IsInt()
   @Min(1)
   quantity: number;
 
   @IsUUID()
-  productId: string;
+  @IsNotEmpty()
+  unitId: string;
 
   @IsUUID()
-  @IsOptional()
-  localityId?: string;
+  @IsNotEmpty()
+  localityId: string;
 
   @IsString()
   @IsOptional()
-  notes?: string;
+  productName?: string;
+
+  @IsString()
+  @IsOptional()
+  brandName?: string;
+
+  @IsString()
+  @IsOptional()
+  unitName?: string;
+}
+
+export class CreateInventoryMovementsDto {
+  @IsEnum(MovementType)
+  @IsNotEmpty()
+  type: MovementType;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => MovementItemDto)
+  movements: MovementItemDto[];
 
   @IsString()
   @IsOptional()
@@ -28,4 +61,8 @@ export class CreateInventoryMovementDto {
   @IsString()
   @IsOptional()
   orderNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }
