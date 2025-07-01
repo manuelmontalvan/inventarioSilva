@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -19,7 +23,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      relations: ['role'],
+      relations: ['role', 'role.pages'], // ✅ ahora sí cargas las páginas
     });
   }
 
@@ -61,72 +65,77 @@ export class UsersService {
     return bcrypt.hash(password, salt);
   }
 
-async update(id: string, dto: UpdateUserDto) {
-  const user = await this.usersRepository.findOne({
-    where: { id },
-    relations: ['role'],
-  });
+  async update(id: string, dto: UpdateUserDto) {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['role'],
+    });
 
-  if (!user) throw new NotFoundException('Usuario no encontrado');
+    if (!user) throw new NotFoundException('Usuario no encontrado');
 
-  // Extrae roleId y elimina de dto para evitar conflictos
-  const { roleId, ...restDto } = dto;
+    // Extrae roleId y elimina de dto para evitar conflictos
+    const { roleId, ...restDto } = dto;
 
-  if (roleId) {
-    const role = await this.rolesRepository.findOneBy({ id: roleId });
-    if (!role) throw new NotFoundException('Rol no encontrado');
-    user.role = role; // Actualiza la relación
+    if (roleId) {
+      const role = await this.rolesRepository.findOneBy({ id: roleId });
+      if (!role) throw new NotFoundException('Rol no encontrado');
+      user.role = role; // Actualiza la relación
+    }
+
+    Object.assign(user, restDto); // Actualiza el resto de campos
+
+    const saved = await this.usersRepository.save(user);
+
+    const { password, ...userWithoutPassword } = saved;
+    return userWithoutPassword;
   }
 
-  Object.assign(user, restDto); // Actualiza el resto de campos
+  async updatePassword(
+    userId: string,
+    newHashedPassword: string,
+  ): Promise<void> {
+    await this.usersRepository.update(userId, {
+      password: newHashedPassword,
+    });
+  }
 
-  const saved = await this.usersRepository.save(user);
+  async findAll(): Promise<User[]> {
+    return this.usersRepository.find({
+      relations: ['role'],
+      select: {
+        password: false,
+      },
+    });
+  }
 
-  const { password, ...userWithoutPassword } = saved;
-  return userWithoutPassword;
-}
+  async delete(id: string): Promise<void> {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    await this.usersRepository.remove(user);
+  }
 
+  async findOne(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['role', 'role.pages'], // 👈 Aquí incluimos también las páginas
+    });
 
-async updatePassword(userId: string, newHashedPassword: string): Promise<void> {
-  await this.usersRepository.update(userId, {
-    password: newHashedPassword,
-  });
-}
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+    return user;
+  }
 
+  async updateRefreshToken(
+    userId: string,
+    token: string | null,
+  ): Promise<void> {
+    await this.usersRepository.update(userId, { refreshToken: token });
+  }
 
-
-async findAll(): Promise<User[]> {
-  return this.usersRepository.find({
-    relations: ['role'],
-    select: {
-      password: false,
-    },
-  });
-}
-
-async delete(id: string): Promise<void> {
-  const user = await this.usersRepository.findOneBy({ id });
-  if (!user) throw new NotFoundException('Usuario no encontrado');
-  await this.usersRepository.remove(user);
-}
-
-async findOne(id: string): Promise<User> {
-  const user = await this.usersRepository.findOne({
-    where: { id },
-    relations: ['role'],
-  });
-  if (!user) throw new NotFoundException('Usuario no encontrado');
-  return user;
-}
-
-async updateRefreshToken(userId: string, token: string | null): Promise<void> {
-  await this.usersRepository.update(userId, { refreshToken: token });
-}
-
-async findByIdWithRelations(id: string) {
+  async findByIdWithRelations(id: string) {
   return this.usersRepository.findOne({
     where: { id },
-    relations: ['role'],
+    relations: ['role', 'role.pages'], // ✅ Incluye las páginas del rol
   });
 }
+
 }

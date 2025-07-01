@@ -184,7 +184,7 @@ const items: SidebarItem[] = [
       },
        {
         title: "Gestion paginas",
-        url: "/page",
+        url: "/config/page",
         icon: FileBoxIcon,
       },
     

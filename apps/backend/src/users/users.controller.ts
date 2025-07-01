@@ -42,9 +42,7 @@ async remove(@Param('id') id: string, @Req() req: Request) {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleType.admin)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    console.log('Actualizando usuario con PATCH:', id, updateUserDto);
-    // Pasa id como string
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {   
     return this.usersService.update(id, updateUserDto);
   }
 

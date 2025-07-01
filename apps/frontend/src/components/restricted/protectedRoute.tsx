@@ -9,36 +9,40 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const pathname = usePathname();
   const router = useRouter();
 
-  const [authorized, setAuthorized] = useState(false);
+  // Inicializar en null para saber si ya se evaluó
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      if (user.role.name === "admin") {
-        setAuthorized(true);
-        return;
-      }
-
-      const allowedPaths = user.role?.pages?.map((p: any) => p.path) || [];
-
-      if (allowedPaths.includes(pathname)) {
-        setAuthorized(true);
-      } else {
-        setAuthorized(false);
-      }
+    if (loading) {
+      setAuthorized(null); // Mientras carga, no decidimos aún
+      return;
     }
+
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user.role?.name === "admin") {
+      setAuthorized(true);
+      return;
+    }
+
+    const allowedPaths = user.role?.pages?.map((p: any) => p.path) || [];
+
+    const isAllowed = allowedPaths.some(
+      (path: string) => pathname === path || pathname.startsWith(path + "/")
+    );
+
+    setAuthorized(isAllowed);
   }, [loading, user, pathname, router]);
 
-  if (loading) {
+  if (loading || authorized === null) {
     return <div className="p-4 text-center">Cargando...</div>;
   }
 
   if (!authorized) {
-    return <AccessDenied  />; // Muestra mensaje en el layout actual sin redirigir
+    return <AccessDenied />;
   }
 
   return <>{children}</>;
