@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { addToast } from "@heroui/toast";
 
-export function ProductStockTable({ stocks }: { stocks: ProductStock[] }) {
+ function ProductStockTable({ stocks }: { stocks: ProductStock[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full table-auto border border-gray-700">
