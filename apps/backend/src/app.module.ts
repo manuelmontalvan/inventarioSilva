@@ -33,12 +33,12 @@ import { PagesModule } from './page/page.module';
       useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
-        port: parseInt(configService.get('DB_PORT') || '5433', 10),
+        port: parseInt(configService.get('DB_PORT') || '5432', 10),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Solo en desarrollo
+        synchronize: false, // Solo en desarrollo
         migrations: [__dirname + '/migration/*.js'],
         migrationsRun: true,
         cli: {
