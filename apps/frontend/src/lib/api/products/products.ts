@@ -17,7 +17,7 @@ export const getProducts = async (
   limit: number;
   totalPages: number;
 }> => {
-  const res = await axios.get("http://localhost:3001/api/products", {
+  const res = await axios.get("/products", {
     params: {
       categoryIds:
         filters?.categoryIds && filters.categoryIds.length > 0
@@ -41,7 +41,7 @@ export const createProduct = async (product: Partial<ProductI>) => {
 
 export const updateProduct = async (id: string, product: Partial<ProductI>) => {
   const res = await axios.patch(
-    `http://localhost:3001/api/products/${id}`, // Asegúrate de incluir el dominio completo
+    `/products/${id}`, // Asegúrate de incluir el dominio completo
     product,
     {
       withCredentials: true, // importante si usas cookies

@@ -2,27 +2,24 @@
 import axios from "axios";
 import { PurchaseOrder, CreatePurchaseOrderDto } from "@/types/purchaseOrders";
 
-const api = axios.create({
-  baseURL: "http://localhost:3001/api", // Ajusta si tu base es diferente
-  withCredentials: true, // Para enviar cookies HttpOnly si usas
-});
+
 
 export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-  const { data } = await api.get("/purchase-orders");
+  const { data } = await axios.get("/purchase-orders");
   return data;
 };
 
 export const getPurchaseOrderById = async (
   id: string
 ): Promise<PurchaseOrder> => {
-  const { data } = await api.get(`/purchase-orders/${id}`);
+  const { data } = await axios.get(`/purchase-orders/${id}`);
   return data;
 };
 
 export const createPurchaseOrder = async (
   purchaseOrder: CreatePurchaseOrderDto
 ): Promise<PurchaseOrder> => {
-  const { data } = await api.post("/purchase-orders", purchaseOrder);
+  const { data } = await axios.post("/purchase-orders", purchaseOrder);
   return data;
 };
 
@@ -30,12 +27,12 @@ export const updatePurchaseOrder = async (
   id: string,
   purchaseOrder: Partial<Omit<CreatePurchaseOrderDto, "supplierId" | "items">>
 ): Promise<PurchaseOrder> => {
-  const { data } = await api.patch(`/purchase-orders/${id}`, purchaseOrder);
+  const { data } = await axios.patch(`/purchase-orders/${id}`, purchaseOrder);
   return data;
 };
 
 export const deletePurchaseOrder = async (id: string): Promise<void> => {
-  await api.delete(`/purchase-orders/${id}`);
+  await axios.delete(`/purchase-orders/${id}`);
 };
 export const uploadPurchaseOrderFile = async (
   file: File
@@ -43,7 +40,7 @@ export const uploadPurchaseOrderFile = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const { data } = await api.post("/purchase-orders/upload", formData, {
+  const { data } = await axios.post("/purchase-orders/upload", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

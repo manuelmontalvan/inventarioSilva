@@ -32,6 +32,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const { login } = useAuth();
   const router = useRouter();
+  const BASE_URL = process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +68,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const handlePasswordRecovery = async () => {
     if (!recoveryEmail) return;
     try {
-      await fetch("http://localhost:3001/api/auth/forgot-password", {
+      await fetch(`${BASE_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: recoveryEmail }),

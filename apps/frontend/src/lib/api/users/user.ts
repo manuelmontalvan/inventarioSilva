@@ -1,15 +1,14 @@
 // lib/api.ts
 import { UserI } from "@/types/user";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
+
 export const getUsers = async (): Promise<UserI[]> => {
-
-
-  const res = await fetch("http://localhost:3001/api/users", {
-   credentials: "include",
-   
+  const res = await fetch(`${BASE_URL}/users`, {
+    credentials: "include", // para enviar cookies
   });
 
-   if (!res.ok) {
+  if (!res.ok) {
     if (res.status === 403) {
       throw new Error("No tienes permisos de administrador.");
     } else if (res.status === 401) {
@@ -20,10 +19,10 @@ export const getUsers = async (): Promise<UserI[]> => {
     }
   }
 
-const data = await res.json();
+  const data = await res.json();
   console.log("Respuesta del backend:", data);
 
-  // ⚠️ Verifica si los datos están en `data.users` o en `data` directamente
+  // Retorna el array de usuarios según formato recibido
   if (Array.isArray(data)) {
     return data;
   } else if (Array.isArray(data.users)) {

@@ -1,4 +1,8 @@
 export const fetchWithAuth = async (url: string) => {
+const BASE_URL = process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
+
+
+
   let res = await fetch(url, {
     credentials: 'include',
   });
@@ -6,7 +10,7 @@ export const fetchWithAuth = async (url: string) => {
   if (res.status === 401) {
     // intenta refresh
     try {
-      const refreshRes = await fetch('http://localhost:3001/api/auth/refresh', {
+     const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });

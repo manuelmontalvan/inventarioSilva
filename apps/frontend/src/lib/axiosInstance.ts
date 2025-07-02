@@ -1,9 +1,12 @@
 import axios from "axios";
 
+const baseURL = process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:3001/api",
-  withCredentials: true, // 🔑 Siempre enviar cookies
+  baseURL,
+  withCredentials: true,
 });
+;
 
 // Añadir token a todas las peticiones
 export const setAuthToken = (token: string | null) => {
@@ -56,7 +59,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Intenta refresh
         const refreshResponse = await axios.post(
-          "http://localhost:3001/api/auth/refresh",
+          "auth/refresh",
           {},
           { withCredentials: true }
         );
