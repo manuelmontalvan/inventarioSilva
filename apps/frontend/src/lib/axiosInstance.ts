@@ -1,14 +1,16 @@
 import axios from "axios";
 
-const baseURL = process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
+// 👉 URL base desde .env o localhost por defecto
+const baseURL =
+  process.env.NEXT_PUBLIC_API_NEST || "http://localhost:3001/api";
 
+// 👉 Instancia principal de Axios
 const axiosInstance = axios.create({
   baseURL,
   withCredentials: true,
 });
-;
 
-// Añadir token a todas las peticiones
+// 👉 Agregar o remover token manualmente
 export const setAuthToken = (token: string | null) => {
   if (token) {
     axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -17,7 +19,7 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
-// Handler externo para sesión expirada (lo asignas desde tu contexto)
+// 👉 Manejadores de sesión expirada
 let onSessionExpired: (() => void) | null = null;
 let isLoggingOut = false;
 let modalShown = false;
@@ -28,26 +30,21 @@ export const setSessionExpiredHandler = (handler: () => void) => {
 
 export const setIsLoggingOut = (value: boolean) => {
   isLoggingOut = value;
-  if (!value) {
-    modalShown = false;
-  }
+  if (!value) modalShown = false;
 };
 
-// Interceptor de respuesta global
-// Interceptor de respuesta global con intento de refresh
+// 👉 Interceptor global para manejar errores 401 y reintentar con token renovado
 axiosInstance.interceptors.response.use(
-  response => response,
-  async error => {
+  (response) => response,
+  async (error) => {
     const originalRequest = error.config;
 
-    // ⚠️ Evitar que el interceptor actúe sobre /auth/login y /auth/refresh
     const ignoredPaths = ["/auth/login", "/auth/refresh"];
-    const isIgnored = ignoredPaths.some(path => originalRequest?.url?.includes(path));
-    if (isIgnored) {
-      return Promise.reject(error); // ignora
-    }
+    const isIgnored = ignoredPaths.some((path) =>
+      originalRequest?.url?.includes(path)
+    );
+    if (isIgnored) return Promise.reject(error);
 
-    // Interceptar solo errores 401 una sola vez
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -57,22 +54,18 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Intenta refresh
-        const refreshResponse = await axios.post(
-          "auth/refresh",
-          {},
-          { withCredentials: true }
-        );
+        // ✅ Usa la instancia configurada (misma baseURL + cookies)
+        const refreshResponse = await axiosInstance.post("/auth/refresh");
 
         const { access_token } = refreshResponse.data;
 
-        // Reintenta con nuevo token
+        // 🔐 Reintenta original con nuevo token
         setAuthToken(access_token);
         originalRequest.headers["Authorization"] = `Bearer ${access_token}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         modalShown = true;
-        console.warn("🔐 Sesión expirada y refresh fallido:", error.config?.url);
+        console.warn("🔐 Sesión expirada y refresh fallido:", originalRequest?.url);
         if (onSessionExpired) onSessionExpired();
         return Promise.reject(refreshError);
       }
@@ -81,6 +74,5 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 
 export default axiosInstance;
