@@ -2,7 +2,8 @@
 import axios from 'axios';
 import {
   InventoryMovement,
-  CreateInventoryMovementDto,
+ CreateInventoryMovementsDto,
+
 } from '@/types/inventory';
 
 const api = axios.create({
@@ -21,7 +22,7 @@ export const getInventoryMovementById = async (id: string): Promise<InventoryMov
 };
 
 export const createInventoryMovement = async (
-  movement: CreateInventoryMovementDto
+  movement: CreateInventoryMovementsDto
 ): Promise<InventoryMovement> => {
   const { data } = await api.post('/inventory', movement);
   return data;
@@ -29,7 +30,7 @@ export const createInventoryMovement = async (
 
 export const updateInventoryMovement = async (
   id: string,
-  movement: Partial<CreateInventoryMovementDto>
+  movement: Partial<CreateInventoryMovementsDto>
 ): Promise<InventoryMovement> => {
   const { data } = await api.patch(`/inventory/${id}`, movement);
   return data;
