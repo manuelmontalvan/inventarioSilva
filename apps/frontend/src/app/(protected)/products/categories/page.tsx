@@ -200,7 +200,7 @@ export default function CategoriesPage() {
       await loadCategories();
       setDrawerOpen(false);
       setEditCategory(null);
-    } catch (error) {
+    } catch {
       addToast({
         title: "Error",
         description: "No se pudo guardar la categoría. Inténtalo de nuevo.",

@@ -214,7 +214,7 @@ export default function UnitOfMeasurePage() {
       await loadUnits();
       setDrawerOpen(false);
       setEditUnit(null);
-    } catch (error: unknown) {
+    } catch  {
       addToast({
         title: "No se pudo crear unidad de medida",
         description: "Error al crear unidad de medida",

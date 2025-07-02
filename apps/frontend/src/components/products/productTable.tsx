@@ -180,22 +180,7 @@ export default function ProductTable({
                   const minStock = Number(p.min_stock);
                   const maxStock = Number(p.max_stock);
 
-                  let colorClass = "";
-
-                  if (
-                    isQuantity &&
-                    !isNaN(quantity) &&
-                    !isNaN(minStock) &&
-                    !isNaN(maxStock)
-                  ) {
-                    if (quantity < minStock) {
-                      colorClass = "text-red-500 font-semibold";
-                    } else if (quantity > maxStock) {
-                      colorClass = "text-green-600 font-semibold";
-                    } else {
-                      colorClass = "text-blue-600 font-semibold";
-                    }
-                  }
+                  // colorClass removed because it was unused
 
                   return (
                     <motion.tr

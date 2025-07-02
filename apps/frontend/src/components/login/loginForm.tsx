@@ -19,9 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { addToast } from "@heroui/toast";
 
-interface LoginFormProps {
-  onLogin: (email: string) => void;
-}
+
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -77,7 +75,7 @@ const LoginForm: React.FC = () => {
         title: "Correo de recuperación enviado.",
       });
       router.push("/login");
-    } catch (err) {
+    } catch {
       addToast({
         color: "danger",
         title: "Error al enviar correo de recuperación.",

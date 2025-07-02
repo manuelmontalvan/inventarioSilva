@@ -52,7 +52,7 @@ export default function PurchaseOrderForm({
 
   // Definir fetchProducts con useCallback para evitar warning de deps
   const fetchProducts = useCallback(
-    async (resetPage = false): Promise<void> => {
+    async (): Promise<void> => {
       try {
         const res = await getProducts({
           search,
@@ -81,7 +81,7 @@ export default function PurchaseOrderForm({
 
   useEffect(() => {
     setPage(1);
-    fetchProducts(true);
+    fetchProducts();
   }, [search, selectedCategoryId, fetchProducts]);
 
   useEffect(() => {
@@ -175,12 +175,13 @@ export default function PurchaseOrderForm({
         supplierId,
         invoice_number: invoiceNumber,
         notes,
-        items: items.map(({ name, brand, unit_of_measure, ...rest }) => ({
+        items: items.map(({ name: _name, brand: _brand, unit_of_measure: _unit_of_measure, ...rest }) => ({
           ...rest,
           invoice_number: invoiceNumber,
           supplierId,
         })),
       };
+
       await onCreate(newOrder);
       addToast({ color: "success", title: "Orden de compra creada" });
 
