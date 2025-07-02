@@ -21,7 +21,7 @@ async function bootstrap() {
   app.enableCors({
   origin: [
     'http://localhost:3000',
-    'https://inventario-silva.vercel.app', 
+    'https://inventario-silva.vercel.app/', 
   ],
   credentials: true,
 });
