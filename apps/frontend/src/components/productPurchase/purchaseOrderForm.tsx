@@ -51,33 +51,30 @@ export default function PurchaseOrderForm({
   const limit = 10;
 
   // Definir fetchProducts con useCallback para evitar warning de deps
-  const fetchProducts = useCallback(
-    async (): Promise<void> => {
-      try {
-        const res = await getProducts({
-          search,
-          page,
-          limit,
-          categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
-        });
+  const fetchProducts = useCallback(async (): Promise<void> => {
+    try {
+      const res = await getProducts({
+        search,
+        page,
+        limit,
+        categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
+      });
 
-        setProducts(res.data);
-        setTotalPages(res.totalPages);
+      setProducts(res.data);
+      setTotalPages(res.totalPages);
 
-        const uniqueUnitsMap: Record<string, UnitOfMeasure> = {};
-        res.data.forEach((p) => {
-          if (p.unit_of_measure && !uniqueUnitsMap[p.unit_of_measure.id]) {
-            uniqueUnitsMap[p.unit_of_measure.id] = p.unit_of_measure;
-          }
-        });
-        setUnits(Object.values(uniqueUnitsMap));
-      } catch (error) {
-        console.error("Error cargando productos", error);
-        addToast({ color: "danger", title: "Error cargando productos" });
-      }
-    },
-    [search, page, selectedCategoryId]
-  );
+      const uniqueUnitsMap: Record<string, UnitOfMeasure> = {};
+      res.data.forEach((p) => {
+        if (p.unit_of_measure && !uniqueUnitsMap[p.unit_of_measure.id]) {
+          uniqueUnitsMap[p.unit_of_measure.id] = p.unit_of_measure;
+        }
+      });
+      setUnits(Object.values(uniqueUnitsMap));
+    } catch (error) {
+      console.error("Error cargando productos", error);
+      addToast({ color: "danger", title: "Error cargando productos" });
+    }
+  }, [search, page, selectedCategoryId]);
 
   useEffect(() => {
     setPage(1);
@@ -175,7 +172,7 @@ export default function PurchaseOrderForm({
         supplierId,
         invoice_number: invoiceNumber,
         notes,
-        items: items.map(({ name: _name, brand: _brand, unit_of_measure: _unit_of_measure, ...rest }) => ({
+        items: items.map(({ name, brand, unit_of_measure, ...rest }) => ({
           ...rest,
           invoice_number: invoiceNumber,
           supplierId,
