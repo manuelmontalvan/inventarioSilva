@@ -17,10 +17,15 @@ async function bootstrap() {
     },
     }),
   );
-   app.enableCors({
-    origin: 'http://localhost:3000', // Cambia si tu frontend está en otro dominio o puerto
-    credentials: true,
-  });
+
+  app.enableCors({
+  origin: [
+    'http://localhost:3000',
+    'https://inventario-silva.vercel.app', 
+  ],
+  credentials: true,
+});
+   ;
   app.setGlobalPrefix('api');
   await app.listen(process.env.PORT ?? 3001);
 }
