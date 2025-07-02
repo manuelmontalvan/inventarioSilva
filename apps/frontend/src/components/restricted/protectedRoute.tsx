@@ -1,20 +1,24 @@
 "use client";
+
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/authContext";
 import AccessDenied from "@/components/restricted/accessDenied";
+
+interface PagePermission {
+  path: string;
+}
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Inicializar en null para saber si ya se evaluó
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (loading) {
-      setAuthorized(null); // Mientras carga, no decidimos aún
+      setAuthorized(null);
       return;
     }
 
@@ -28,7 +32,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       return;
     }
 
-    const allowedPaths = user.role?.pages?.map((p: any) => p.path) || [];
+    const allowedPages = (user.role?.pages || []) as PagePermission[];
+    const allowedPaths = allowedPages.map((p) => p.path);
 
     const isAllowed = allowedPaths.some(
       (path: string) => pathname === path || pathname.startsWith(path + "/")

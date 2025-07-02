@@ -62,10 +62,13 @@ export default function DeleteUserModal({
 
       onDelete();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Ocurrió un error al eliminar";
+
       addToast({
         title: "Error",
-        description: error.message || "Ocurrió un error al eliminar",
+        description: message,
         color: "danger",
       });
     }

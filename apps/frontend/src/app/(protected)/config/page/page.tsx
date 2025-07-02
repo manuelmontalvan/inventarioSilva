@@ -60,10 +60,11 @@ export default function PagesPage() {
         addToast({ title: "Página creada", color: "success" });
       }
       close();
-    } catch (e: any) {
+    } catch (e: unknown) {
+       const error = e instanceof Error ? e : new Error("Error desconocido");
       addToast({
         title: "Error guardando página",
-        description: e.message,
+        description: error.message,
         color: "danger",
       });
     }

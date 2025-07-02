@@ -7,13 +7,6 @@ interface ProductFilters {
   limit?: number;
   search?: string;
 }
-interface Pagination<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 export const getProducts = async (
   filters?: ProductFilters

@@ -22,9 +22,6 @@ function BrandTable({
   onDelete: (id: string) => void;
 }) {
   return (
-   
-
-
     <div className="overflow-x-auto">
       <table className="min-w-full border-collapse dark:text-white">
         <thead>
@@ -179,7 +176,7 @@ export default function BrandsPage() {
     try {
       const data = await getBrands();
       setBrands(data);
-    } catch (error) {
+    } catch {
       alert("Error cargando marcas");
     } finally {
       setLoading(false);
@@ -251,9 +248,11 @@ export default function BrandsPage() {
         variant: "bordered",
         color: "success",
       });
-    } catch (error: any) {
-      // Accedemos al mensaje que viene del backend (si existe)
-      const backendMessage = error?.response?.data?.message;
+    } catch (error: unknown) {
+      const backendMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as any)?.response?.data?.message
+          : undefined;
 
       addToast({
         title: "Error eliminando marca",
@@ -270,46 +269,45 @@ export default function BrandsPage() {
 
   return (
     <ProtectedRoute>
-     
-    <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900 dark:text-white transition-colors">
-      <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Gestión de Marcas
-        </h1>
-        <Button
-          onPress={openCreate}
-          disabled={loading}
-          color="success"
-          variant="bordered"
-        >
-          + Crear Marca
-        </Button>
-      </header>
+      <main className="p-6 min-h-screen bg-gray-50 dark:bg-gray-900 dark:text-white transition-colors">
+        <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Gestión de Marcas
+          </h1>
+          <Button
+            onPress={openCreate}
+            disabled={loading}
+            color="success"
+            variant="bordered"
+          >
+            + Crear Marca
+          </Button>
+        </header>
 
-      {loading && (
-        <p className="mb-4 text-gray-700 dark:text-gray-300">Cargando...</p>
-      )}
+        {loading && (
+          <p className="mb-4 text-gray-700 dark:text-gray-300">Cargando...</p>
+        )}
 
-      <BrandTable
-        brands={brands}
-        onEdit={openEdit}
-        onDelete={handleDeleteClick}
-      />
+        <BrandTable
+          brands={brands}
+          onEdit={openEdit}
+          onDelete={handleDeleteClick}
+        />
 
-      <BrandDrawer
-        isOpen={drawerOpen}
-        onClose={closeDrawer}
-        onSave={handleSave}
-        initialData={editingBrand}
-      />
-      <ConfirmModal
-        isOpen={modalOpen}
-        title="¿Eliminar Marca?"
-        message="Esta acción no se puede deshacer."
-        onConfirm={handleDeleteConfirmed}
-        onCancel={() => setModalOpen(false)}
-      />
-    </main>
+        <BrandDrawer
+          isOpen={drawerOpen}
+          onClose={closeDrawer}
+          onSave={handleSave}
+          initialData={editingBrand}
+        />
+        <ConfirmModal
+          isOpen={modalOpen}
+          title="¿Eliminar Marca?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setModalOpen(false)}
+        />
+      </main>
     </ProtectedRoute>
   );
 }

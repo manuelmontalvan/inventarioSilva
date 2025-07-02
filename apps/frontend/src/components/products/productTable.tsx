@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Trash2 } from "lucide-react";
 import { productColumnOptions } from "@/constants/productColumns";
 
-
 interface ProductTableProps {
   products: ProductI[];
   onView: (product: ProductI) => void;
@@ -18,6 +17,8 @@ interface ProductTableProps {
   setSelectedProducts: React.Dispatch<React.SetStateAction<string[]>>;
   visibleColumns: Record<string, boolean>;
 }
+
+type Named = { name: string };
 
 export default function ProductTable({
   products,
@@ -33,11 +34,8 @@ export default function ProductTable({
     direction: "ascending" | "descending";
   } | null>(null);
 
-  // Estado para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [selected, setSelected] = useState<ProductI | null>(null);
-  const [viewOpen, setViewOpen] = useState(false);
 
   const requestSort = (key: keyof ProductI) => {
     let direction: "ascending" | "descending" = "ascending";
@@ -45,7 +43,7 @@ export default function ProductTable({
       direction = "descending";
     }
     setSortConfig({ key, direction });
-    setCurrentPage(1); // Resetear a página 1 al ordenar
+    setCurrentPage(1); // Reset to page 1 on sort change
   };
 
   const getValue = (product: ProductI, key: keyof ProductI) => {
@@ -53,7 +51,7 @@ export default function ProductTable({
     if (val === undefined || val === null) return "";
 
     if (typeof val === "object") {
-      if ("name" in val) return (val as any).name;
+      if ("name" in val) return (val as Named).name;
       return JSON.stringify(val);
     }
 
@@ -69,6 +67,7 @@ export default function ProductTable({
         return `${numberVal.toFixed(2).replace(/\.?0+$/, "")}%`;
       }
     }
+
     if (
       key === "entry_date" ||
       key === "last_updated" ||
@@ -89,11 +88,10 @@ export default function ProductTable({
     const valA = getValue(a, sortConfig.key);
     const valB = getValue(b, sortConfig.key);
     if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;   
+    if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;
     return 0;
   });
 
-  // Paginación
   const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -176,115 +174,125 @@ export default function ProductTable({
                   </td>
                 </tr>
               ) : (
-                paginatedProducts.map((p) => (
-                  <motion.tr
-                    key={p.id}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={rowVariants}
-                    className={`transition-colors duration-300 ${
-                      selectedProducts.includes(p.id)
-                        ? "bg-blue-50 text-black"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      onView(p);
-                    }}
-                  >
-                    <td
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 border hover:bg-gray-100"
+                paginatedProducts.map((p) => {
+                  const isQuantity = visibleColumns["current_quantity"];
+                  const quantity = Number(p.current_quantity);
+                  const minStock = Number(p.min_stock);
+                  const maxStock = Number(p.max_stock);
+
+                  let colorClass = "";
+
+                  if (
+                    isQuantity &&
+                    !isNaN(quantity) &&
+                    !isNaN(minStock) &&
+                    !isNaN(maxStock)
+                  ) {
+                    if (quantity < minStock) {
+                      colorClass = "text-red-500 font-semibold";
+                    } else if (quantity > maxStock) {
+                      colorClass = "text-green-600 font-semibold";
+                    } else {
+                      colorClass = "text-blue-600 font-semibold";
+                    }
+                  }
+
+                  return (
+                    <motion.tr
+                      key={p.id}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={rowVariants}
+                      className={`transition-colors duration-300 ${
+                        selectedProducts.includes(p.id)
+                          ? "bg-blue-50 text-black"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        onView(p);
+                      }}
                     >
-                      <Checkbox
-                        checked={selectedProducts.includes(p.id)}
-                        onCheckedChange={(checked) =>
-                          handleSelect(p.id, Boolean(checked))
-                        }
-                        aria-label={`Seleccionar producto ${p.name}`}
-                      />
-                    </td>
-                    {productColumnOptions.map(({ key }) => {
-                      if (!visibleColumns[key]) return null;
-
-                      const isQuantity = key === "current_quantity";
-
-                      let colorClass = "";
-                      const quantity = Number(p.current_quantity);
-                      const minStock = Number(p.min_stock);
-                      const maxStock = Number(p.max_stock);
-
-                      if (
-                        isQuantity &&
-                        !isNaN(quantity) &&
-                        !isNaN(minStock) &&
-                        !isNaN(maxStock)
-                      ) {
-                        if (quantity < minStock) {
-                          colorClass = "text-red-500 font-semibold";
-                        } else if (quantity > maxStock) {
-                          colorClass = "text-green-600 font-semibold";
-                        } else {
-                          colorClass = "text-blue-600 font-semibold";
-                        }
-                      }
-
-                      return (
-                        <td
-                          key={key}
-                          className={`p-2 border hover:bg-gray-100 hover:text-black ${
-                            key === "name" ? "font-medium cursor-pointer" : ""
-                          } ${colorClass}`}
-                          onClick={
-                            key === "name"
-                              ? () => {
-                                  setSelected(p);
-                                  setViewOpen(true);
-                                }
-                              : undefined
+                      <td
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 border hover:bg-gray-100"
+                      >
+                        <Checkbox
+                          checked={selectedProducts.includes(p.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelect(p.id, Boolean(checked))
                           }
-                        >
-                          {isQuantity
-                            ? quantity.toFixed(2)
-                            : String(getValue(p, key as keyof ProductI))}
-                        </td>
-                      );
-                    })}
+                          aria-label={`Seleccionar producto ${p.name}`}
+                        />
+                      </td>
 
-                    <td
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 border flex gap-2 justify-center"
-                    >
-                      <Button
-                        color="success"
-                        variant="bordered"
-                        onPress={() => {
-                          onUpdated(p);
-                        }}
-                        aria-label={`Editar producto ${p.name}`}
+                      {productColumnOptions.map(({ key }) => {
+                        if (!visibleColumns[key]) return null;
+
+                        const isQty = key === "current_quantity";
+
+                        let tdColorClass = "";
+
+                        if (
+                          isQty &&
+                          !isNaN(quantity) &&
+                          !isNaN(minStock) &&
+                          !isNaN(maxStock)
+                        ) {
+                          if (quantity < minStock) {
+                            tdColorClass = "text-red-500 font-semibold";
+                          } else if (quantity > maxStock) {
+                            tdColorClass = "text-green-600 font-semibold";
+                          } else {
+                            tdColorClass = "text-blue-600 font-semibold";
+                          }
+                        }
+
+                        return (
+                          <td
+                            key={key}
+                            className={`p-2 border hover:bg-gray-100 hover:text-black ${
+                              key === "name"
+                                ? "font-medium cursor-pointer"
+                                : ""
+                            } ${tdColorClass}`}
+                          >
+                            {isQty
+                              ? quantity.toFixed(2)
+                              : String(getValue(p, key as keyof ProductI))}
+                          </td>
+                        );
+                      })}
+
+                      <td
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 border flex gap-2 justify-center"
                       >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        color="danger"
-                        variant="bordered"
-                        onPress={() => {
-                          onDelete(p);
-                        }}
-                        aria-label={`Eliminar producto ${p.name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </motion.tr>
-                ))
+                        <Button
+                          color="success"
+                          variant="bordered"
+                          onPress={() => onUpdated(p)}
+                          aria-label={`Editar producto ${p.name}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          color="danger"
+                          variant="bordered"
+                          onPress={() => onDelete(p)}
+                          aria-label={`Eliminar producto ${p.name}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </motion.tr>
+                  );
+                })
               )}
             </AnimatePresence>
           </tbody>
         </table>
       </div>
-
-    
     </div>
   );
 }

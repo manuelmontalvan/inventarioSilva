@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { SupplierI } from "@/types/supplier";
 import { Category, ProductI, UnitOfMeasure } from "@/types/product";
 import { Combobox } from "../ui/combobox";
@@ -50,39 +50,43 @@ export default function PurchaseOrderForm({
 
   const limit = 10;
 
-  const fetchProducts = async (reset: boolean = false): Promise<void> => {
-    try {
-      const res = await getProducts({
-        search,
-        page,
-        limit,
-        categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
-      });
+  // Definir fetchProducts con useCallback para evitar warning de deps
+  const fetchProducts = useCallback(
+    async (resetPage = false): Promise<void> => {
+      try {
+        const res = await getProducts({
+          search,
+          page,
+          limit,
+          categoryIds: selectedCategoryId ? [selectedCategoryId] : undefined,
+        });
 
-      setProducts(res.data);
-      setTotalPages(res.totalPages);
+        setProducts(res.data);
+        setTotalPages(res.totalPages);
 
-      const uniqueUnitsMap: Record<string, UnitOfMeasure> = {};
-      res.data.forEach((p) => {
-        if (p.unit_of_measure && !uniqueUnitsMap[p.unit_of_measure.id]) {
-          uniqueUnitsMap[p.unit_of_measure.id] = p.unit_of_measure;
-        }
-      });
-      setUnits(Object.values(uniqueUnitsMap));
-    } catch (error) {
-      console.error("Error cargando productos", error);
-      addToast({ color: "danger", title: "Error cargando productos" });
-    }
-  };
+        const uniqueUnitsMap: Record<string, UnitOfMeasure> = {};
+        res.data.forEach((p) => {
+          if (p.unit_of_measure && !uniqueUnitsMap[p.unit_of_measure.id]) {
+            uniqueUnitsMap[p.unit_of_measure.id] = p.unit_of_measure;
+          }
+        });
+        setUnits(Object.values(uniqueUnitsMap));
+      } catch (error) {
+        console.error("Error cargando productos", error);
+        addToast({ color: "danger", title: "Error cargando productos" });
+      }
+    },
+    [search, page, selectedCategoryId]
+  );
 
   useEffect(() => {
     setPage(1);
     fetchProducts(true);
-  }, [search, selectedCategoryId]);
+  }, [search, selectedCategoryId, fetchProducts]);
 
   useEffect(() => {
     if (page > 1) fetchProducts();
-  }, [page]);
+  }, [page, fetchProducts]);
 
   const totalGeneral = items.reduce((sum, item) => sum + item.total_cost, 0);
 
@@ -92,7 +96,6 @@ export default function PurchaseOrderForm({
     quantity: number,
     purchasePrice?: number
   ): boolean => {
-    // <-- Aquí retorno boolean
     if (!supplierId) {
       addToast({
         title: "Selecciona un proveedor antes de agregar productos",
@@ -172,11 +175,12 @@ export default function PurchaseOrderForm({
         supplierId,
         invoice_number: invoiceNumber,
         notes,
-        items: items.map(
-          ({ unit_id, name, brand, unit_of_measure, ...rest }) => rest
-        ),
+        items: items.map(({ name, brand, unit_of_measure, ...rest }) => ({
+          ...rest,
+          invoice_number: invoiceNumber,
+          supplierId,
+        })),
       };
-
       await onCreate(newOrder);
       addToast({ color: "success", title: "Orden de compra creada" });
 

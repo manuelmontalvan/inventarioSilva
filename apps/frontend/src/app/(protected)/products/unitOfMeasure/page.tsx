@@ -153,6 +153,7 @@ function UnitDrawer({
   );
 }
 
+
 export default function UnitOfMeasurePage() {
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -160,7 +161,6 @@ export default function UnitOfMeasurePage() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
 
   useEffect(() => {
     loadUnits();
@@ -171,17 +171,23 @@ export default function UnitOfMeasurePage() {
     try {
       const data = await getUnitsOfMeasure();
       setUnits(data);
-    } catch (error: any) {
-      console.error(
-        "Error cargando unidades de medida:",
-        error.response ?? error.message ?? error
-      );
+    } catch (error: unknown) {
+      let description = "No se pudieron cargar las unidades de medida.";
+      if (
+        typeof error === "object" &&
+        error &&
+        "response" in error &&
+        (error as any).response?.data?.message
+      ) {
+        description = (error as any).response.data.message;
+      }
+
+      console.error("Error cargando unidades de medida:", error);
       addToast({
         title: "Error",
-        description: "No se pudieron cargar las unidades de medida.",
-        color: "danger",       
+        description,
+        color: "danger",
       });
-     
     } finally {
       setLoading(false);
     }
@@ -203,28 +209,26 @@ export default function UnitOfMeasurePage() {
           title: "Unidad de medida creada",
           color: "success",
           variant: "bordered",
-        }); 
+        });
       }
       await loadUnits();
       setDrawerOpen(false);
       setEditUnit(null);
-    
-    } catch {
-        addToast({
-                title: "No se pudo crear unidad de medidad",
-                description: "Error al crear unidad de medida",
-                color: "danger",
-              });
-      
+    } catch (error: unknown) {
+      addToast({
+        title: "No se pudo crear unidad de medida",
+        description: "Error al crear unidad de medida",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
     }
   };
+
   function handleDeleteClick(id: string) {
     setSelectedId(id);
     setModalOpen(true);
   }
-
 
   async function handleDeleteConfirmed() {
     if (!selectedId) return;
@@ -232,24 +236,30 @@ export default function UnitOfMeasurePage() {
     try {
       await deleteUnitOfMeasure(selectedId);
       setUnits((prev) => prev.filter((s) => s.id !== selectedId));
-      addToast({ title: "Unidad de medida eliminada", color: "danger", variant: "bordered" });
-    } catch (error: any)
-    {
-        const backendMessage = error?.response?.data?.message;
-      
-            addToast({
-              title: "Error eliminando Unidad de Medida",
-              description: backendMessage || "Error desconocido",
-              variant: "bordered",
-              color: "danger",
-            });
+      addToast({
+        title: "Unidad de medida eliminada",
+        color: "danger",
+        variant: "bordered",
+      });
+    } catch (error: unknown) {
+      const backendMessage =
+        typeof error === "object" &&
+        error &&
+        "response" in error &&
+        (error as any).response?.data?.message;
+
+      addToast({
+        title: "Error eliminando Unidad de Medida",
+        description: backendMessage || "Error desconocido",
+        variant: "bordered",
+        color: "danger",
+      });
     } finally {
       setLoading(false);
       setModalOpen(false);
       setSelectedId(null);
     }
   }
-  
 
   const openEditDrawer = (unit: UnitOfMeasure) => {
     setEditUnit(unit);
@@ -262,44 +272,40 @@ export default function UnitOfMeasurePage() {
   };
 
   return (
-  <ProtectedRoute>
-    <main className="p-6 min-h-screen bg-gray-50 dark:text-white dark:bg-gray-900 transition-colors">
-      <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold mb-6">Unidades de Medida</h1>
+    <ProtectedRoute>
+      <main className="p-6 min-h-screen bg-gray-50 dark:text-white dark:bg-gray-900 transition-colors">
+        <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-2xl font-bold mb-6">Unidades de Medida</h1>
+          <Button onPress={openCreateDrawer} color="success" variant="bordered">
+            Nueva Unidad de Medida
+          </Button>
+        </header>
 
-        <Button
-          onPress={openCreateDrawer}
-            color="success"
-            variant="bordered"
-        >
-          Nueva Unidad de Medida
-        </Button>
-      </header>
-
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
-        <UnitTable
-          units={units}
-          onEdit={openEditDrawer}
-          onDelete={handleDeleteClick}
-        />
-      )}
-
-      <UnitDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onSave={handleSave}
-        initialData={editUnit}
-      />
-      <ConfirmModal
-            isOpen={modalOpen}
-            title="¿Eliminar Unidad de Medidad?"
-            message="Esta acción no se puede deshacer."
-            onConfirm={handleDeleteConfirmed}
-            onCancel={() => setModalOpen(false)}
+        {loading ? (
+          <p>Cargando...</p>
+        ) : (
+          <UnitTable
+            units={units}
+            onEdit={openEditDrawer}
+            onDelete={handleDeleteClick}
           />
-    </main>
-  </ProtectedRoute>
+        )}
+
+        <UnitDrawer
+          isOpen={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onSave={handleSave}
+          initialData={editUnit}
+        />
+
+        <ConfirmModal
+          isOpen={modalOpen}
+          title="¿Eliminar Unidad de Medida?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setModalOpen(false)}
+        />
+      </main>
+    </ProtectedRoute>
   );
 }

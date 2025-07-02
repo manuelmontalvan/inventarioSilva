@@ -64,10 +64,14 @@ export default function RolesPage() {
         addToast({ title: "Rol creado", color: "success" });
       }
       close();
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message =
+        e && typeof e === "object" && "message" in e && typeof e.message === "string"
+          ? e.message
+          : "Error desconocido";
       addToast({
         title: "Error guardando rol",
-        description: e.message,
+        description: message,
         color: "danger",
       });
     }
@@ -84,10 +88,14 @@ export default function RolesPage() {
       await deleteRole(selectedId);
       setRoles((r) => r.filter((x) => x.id !== selectedId));
       addToast({ title: "Rol eliminado", color: "success" });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message =
+        e && typeof e === "object" && "message" in e && typeof e.message === "string"
+          ? e.message
+          : "Error desconocido";
       addToast({
         title: "Error eliminando rol",
-        description: e.message,
+        description: message,
         color: "danger",
       });
     } finally {
@@ -98,79 +106,68 @@ export default function RolesPage() {
 
   return (
     <ProtectedRoute>
-     
-    <main className="p-6 bg-gray-50 dark:bg-gray-900 dark:text-white min-h-screen">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gestión de Roles</h1>
-        <Button color="success" variant="bordered" onPress={openCreate}>
-          + Nuevo Rol
-        </Button>
-      </header>
+      <main className="p-6 bg-gray-50 dark:bg-gray-900 dark:text-white min-h-screen">
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Gestión de Roles</h1>
+          <Button color="success" variant="bordered" onPress={openCreate}>
+            + Nuevo Rol
+          </Button>
+        </header>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border">
-          <thead className="bg-gray-200 dark:bg-gray-700">
-            <tr>
-              <th className="p-2">Rol</th>
-              <th className="p-2">Páginas asignadas</th>
-              <th className="p-2 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((r) => (
-              <tr key={r.id} className="even:bg-gray-100 dark:even:bg-gray-800">
-                <td className="p-2">{r.name}</td>
-                <td className="p-2">
-                  {r.pages?.map((p) => p.name).join(", ")}
-                </td>
-                <td className="p-2 flex justify-center space-x-2">
-                  <Button
-                    color="success"
-                    variant="bordered"
-                    onPress={() => openEdit(r)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    color="danger"
-                    variant="bordered"
-                    onPress={() => askDelete(r.id)}
-                  >
-                    Eliminar
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {roles.length === 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border">
+            <thead className="bg-gray-200 dark:bg-gray-700">
               <tr>
-                <td colSpan={3} className="p-4 text-center">
-                  No hay roles
-                </td>
+                <th className="p-2">Rol</th>
+                <th className="p-2">Páginas asignadas</th>
+                <th className="p-2 text-center">Acciones</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {roles.map((r) => (
+                <tr key={r.id} className="even:bg-gray-100 dark:even:bg-gray-800">
+                  <td className="p-2">{r.name}</td>
+                  <td className="p-2">{r.pages?.map((p) => p.name).join(", ")}</td>
+                  <td className="p-2 flex justify-center space-x-2">
+                    <Button color="success" variant="bordered" onPress={() => openEdit(r)}>
+                      Editar
+                    </Button>
+                    <Button color="danger" variant="bordered" onPress={() => askDelete(r.id)}>
+                      Eliminar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {roles.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="p-4 text-center">
+                    No hay roles
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Drawer del formulario */}
-      {drawerOpen && (
-        <RoleDrawer
-          isOpen
-          onClose={close}
-          onSave={handleSave}
-          initialData={editing}
-          allPages={pages}
+        {/* Drawer del formulario */}
+        {drawerOpen && (
+          <RoleDrawer
+            isOpen
+            onClose={close}
+            onSave={handleSave}
+            initialData={editing}
+            allPages={pages}
+          />
+        )}
+
+        <ConfirmModal
+          isOpen={modalOpen}
+          title="Eliminar rol?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={confirmDelete}
+          onCancel={() => setModalOpen(false)}
         />
-      )}
-
-      <ConfirmModal
-        isOpen={modalOpen}
-        title="Eliminar rol?"
-        message="Esta acción no se puede deshacer."
-        onConfirm={confirmDelete}
-        onCancel={() => setModalOpen(false)}
-      />
-    </main>
+      </main>
     </ProtectedRoute>
   );
 }

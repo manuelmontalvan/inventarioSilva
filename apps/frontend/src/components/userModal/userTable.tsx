@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit, Info, Users2 } from "lucide-react";
+import { Trash2, Edit } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {

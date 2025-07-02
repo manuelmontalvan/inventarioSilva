@@ -1,5 +1,4 @@
 "use client";
-import axiosInstance, { setIsLoggingOut } from "@/lib/axiosInstance";
 import React, { useState, useEffect, useRef } from "react";
 import { fetchCurrentUser } from "@/services/userService";
 import { ChevronDown } from "lucide-react";
@@ -11,8 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

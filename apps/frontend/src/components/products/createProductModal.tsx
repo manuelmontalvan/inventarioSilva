@@ -24,16 +24,27 @@ import { Switch } from "@heroui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { addToast } from "@heroui/react";
-import { z } from "zod";
-import { useWatch } from "react-hook-form";
 import { ProductSchema } from "@/lib/schemas/productSchema";
-import { createProduct } from "@/lib/api/products/products"; // Ajusta la ruta si es necesario
-
-
+import { createProduct } from "@/lib/api/products/products";
+import { z } from "zod";
 
 type ProductFormValues = z.infer<typeof ProductSchema>;
 
-/* ----------  Props del Modal  ---------- */
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  name: string;
+}
+
 interface CreateProductModalProps {
   open: boolean;
   onClose: () => void;
@@ -45,7 +56,6 @@ export const CreateProductModal = ({
   onClose,
   onSuccess,
 }: CreateProductModalProps) => {
-  /* ----------  React-Hook-Form  ---------- */
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductSchema),
     defaultValues: {
@@ -64,20 +74,13 @@ export const CreateProductModal = ({
     },
   });
 
-  /* ----------  Catálogos  ---------- */
-  const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
-  const selectedCategoryId = useWatch({
-    control: form.control,
-    name: "categoryId",
-  });
 
-  /* ----------  Fetch catálogos  ---------- */
   useEffect(() => {
     if (!open) {
-      // Cuando se cierra el modal, resetea formulario
       form.reset();
       return;
     }
@@ -87,7 +90,6 @@ export const CreateProductModal = ({
         const [catRes, brandRes, unitRes] = await Promise.all([
           fetch("http://localhost:3001/api/categories", {
             credentials: "include",
-           
           }),
           fetch("http://localhost:3001/api/brands", {
             credentials: "include",
@@ -97,10 +99,14 @@ export const CreateProductModal = ({
           }),
         ]);
         if (!catRes.ok || !brandRes.ok || !unitRes.ok) throw new Error();
-        setCategories(await catRes.json());
-        setBrands(await brandRes.json());
-        setUnits(await unitRes.json());
 
+        const catData: Category[] = await catRes.json();
+        const brandData: Brand[] = await brandRes.json();
+        const unitData: Unit[] = await unitRes.json();
+
+        setCategories(catData);
+        setBrands(brandData);
+        setUnits(unitData);
       } catch {
         addToast({
           title: "Error",
@@ -114,50 +120,48 @@ export const CreateProductModal = ({
     fetchData();
   }, [open, form]);
 
-  /* ----------  Envío del formulario  ---------- */
   const onSubmit = async (data: ProductFormValues) => {
-  setLoading(true);
-  try {
-    const cleaned = {
-      ...data,
-      expiration_date: data.expiration_date || undefined,
-    };
+    setLoading(true);
+    try {
+      const cleaned = {
+        ...data,
+        expiration_date: data.expiration_date || undefined,
+      };
 
-    const responseBody = await createProduct(cleaned); 
-    console.log("Respuesta del servidor:", responseBody);
-    
-    addToast({
-      title: "Producto creado",
-      description: "El producto fue registrado exitosamente",
-      variant: "bordered",
-      color: "success",
-    });
+      const responseBody = await createProduct(cleaned);
+      console.log("Respuesta del servidor:", responseBody);
 
-    onSuccess();
-    onClose();
-    form.reset();
-  } catch (error) {
-    console.error("Error al crear producto:", error);
-    addToast({
-      title: "Error",
-      description: "No se pudo crear el producto",
-      variant: "bordered",
-      color: "danger",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      addToast({
+        title: "Producto creado",
+        description: "El producto fue registrado exitosamente",
+        variant: "bordered",
+        color: "success",
+      });
 
-
-  /* ----------  Helper: limpia '0' al focus  ---------- */
-  const clearZeroOnFocus = (field: any) => () => {
-    if (field.value === 0) field.onChange("");
+      onSuccess();
+      onClose();
+      form.reset();
+    } catch (error) {
+      console.error("Error al crear producto:", error);
+      addToast({
+        title: "Error",
+        description: "No se pudo crear el producto",
+        variant: "bordered",
+        color: "danger",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const clearZeroOnFocus =
+    (field: { value: number | string; onChange: (value: string) => void }) =>
+    () => {
+      if (field.value === 0) field.onChange("");
+    };
 
   const isPerishable = form.watch("isPerishable");
 
-  /* ----------  Render  ---------- */
   return (
     <Modal
       isOpen={open}
@@ -341,8 +345,6 @@ export const CreateProductModal = ({
                 />
               ))}
 
-             
-
               {/* Perecedero */}
               <FormField
                 control={form.control}
@@ -352,7 +354,7 @@ export const CreateProductModal = ({
                     <FormLabel>¿Es perecedero?</FormLabel>
                     <FormControl>
                       <Switch
-                        isSelected={field.value}
+                        checked={field.value}
                         onChange={field.onChange}
                       >
                         Sí
@@ -396,7 +398,7 @@ export const CreateProductModal = ({
               />
 
               {/* Footer */}
-              <ModalFooter className="md:col-span-2">
+              <ModalFooter className="md:col-span-2 flex gap-2 justify-end">
                 <Button
                   type="submit"
                   disabled={loading}

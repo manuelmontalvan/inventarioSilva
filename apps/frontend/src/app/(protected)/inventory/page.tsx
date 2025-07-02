@@ -1,3 +1,4 @@
+// src/app/(protected)/inventory/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -37,33 +38,22 @@ export default function InventoryPage() {
     loadMovements();
   }, []);
 
-  // Función que pasaremos a InventoryForm para crear movimientos
   const handleSubmit = async (data: {
     type: "IN" | "OUT";
     movements: {
       productId: string;
       quantity: number;
       unitId: string;
-      productName: string;
-      brandName: string;
-      unitName: string;
+      localityId: string;
+      productName?: string;
+      brandName?: string;
+      unitName?: string;
     }[];
     invoice_number?: string;
     orderNumber?: string;
     notes?: string;
   }) => {
-    // Aquí iteramos para crear movimientos uno por uno (o hacer batch si tu backend lo soporta)
-    for (const movement of data.movements) {
-      await createInventoryMovement({
-        type: data.type,
-        movements: data.movements,
-        invoice_number: data.invoice_number,
-        orderNumber: data.orderNumber,
-        notes: data.notes,
-      });
-      // Llamas a tu API para crear el movimiento
-    }
-    // Luego recargas movimientos
+    await createInventoryMovement(data);
     await loadMovements();
   };
 
@@ -79,7 +69,6 @@ export default function InventoryPage() {
             <CardAction></CardAction>
           </CardHeader>
           <CardContent>
-            {/* PASAMOS handleSubmit CORRECTAMENTE */}
             <InventoryForm onSubmit={handleSubmit} />
           </CardContent>
           <CardFooter>
@@ -93,8 +82,7 @@ export default function InventoryPage() {
           <CardHeader>
             <CardTitle>Historial de Movimientos</CardTitle>
             <CardDescription>
-              Visualiza todos los movimientos registrados, incluyendo entradas y
-              salidas.
+              Visualiza todos los movimientos registrados, incluyendo entradas y salidas.
             </CardDescription>
           </CardHeader>
           <CardContent>

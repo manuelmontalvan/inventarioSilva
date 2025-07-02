@@ -8,15 +8,15 @@ import React, {
   ReactNode,
 } from "react";
 import SessionExpiredModal from "@/components/SessionExpiredModal";
-import axiosInstance, { setSessionExpiredHandler } from "@/lib/axiosInstance";
+import axiosInstance from "@/lib/axiosInstance";
 import { setIsLoggingOut } from "@/lib/axiosInstance";
 import { Role } from "@/types/role";
 interface User {
   id: number;
-  name: string; 
+  name: string;
   lastname: string;
   email: string;
-  role: Role;  
+  role: Role;
 }
 interface AuthContextType {
   user: User | null;
@@ -34,27 +34,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const router = useRouter();
   // AuthProvider.tsx
-useEffect(() => {
-  const isLoginPage = window.location.pathname === "/login";
-  if (isLoginPage) {
-    setLoading(false);
-    return;
-  }
-
-  const checkSession = async () => {
-    try {
-      const res = await axiosInstance.get("/auth/perfil");
-      setUser(res.data);
-    } catch (err) {
-      setUser(null);
-    } finally {
+  useEffect(() => {
+    const isLoginPage = window.location.pathname === "/login";
+    if (isLoginPage) {
       setLoading(false);
+      return;
     }
-  };
 
-  checkSession();
-}, []);
+    const checkSession = async () => {
+      try {
+        const res = await axiosInstance.get("/auth/perfil");
+        setUser(res.data);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    checkSession();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
@@ -66,11 +65,17 @@ useEffect(() => {
       const user = res.data;
 
       setUser(user); // Guarda objeto tipo User en el estado
-    } catch (error: any) {
+    } catch (error: unknown) {
       setUser(null);
-      throw new Error(
-        error?.response?.data?.message || "Error al iniciar sesión"
-      );
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response?.data?.message === "string"
+      ) {
+        throw new Error((error as any).response.data.message);
+      }
+      throw new Error("Error al iniciar sesión");
     }
   };
 

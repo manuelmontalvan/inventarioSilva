@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Modal,
   ModalBody,
@@ -22,8 +23,7 @@ export default function UserDetailsModal({
 }) {
   return (
     <Modal isOpen={open} onOpenChange={onClose} backdrop="blur">
-      <ModalContent  className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg">
-
+      <ModalContent className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg">
         <ModalHeader>
           <div className="flex flex-col gap-1 text-center sm:text-left">
             <h2 className="text-xl sm:text-2xl font-semibold dark:text-white">
@@ -40,10 +40,12 @@ export default function UserDetailsModal({
             <div className="flex flex-col sm:flex-row sm:items-start gap-6">
               {/* Imagen */}
               <div className="flex justify-center sm:justify-start">
-                <img
+                <Image
                   src={`https://api.dicebear.com/7.x/micah/svg?seed=${user.name}`}
                   alt={user.name}
-                  className="w-24 h-24 rounded-full border-2 border-white"
+                  width={96}
+                  height={96}
+                  className="rounded-full border-2 border-white"
                 />
               </div>
 

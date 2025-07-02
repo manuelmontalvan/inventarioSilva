@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-const toNumber = z.preprocess((val) => {
-  if (typeof val === "string" && val.trim() !== "") return Number(val);
-  return val;
-}, z.number().nonnegative());
-
 export const CategorySchema = z.object({
   id: z.string(),
   name: z.string(),

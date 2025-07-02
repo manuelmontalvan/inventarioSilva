@@ -77,7 +77,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
 
   useEffect(() => {
     if (!open) form.reset();
-  }, [open]);
+  }, [open, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
@@ -126,15 +126,18 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
 
       onCreated();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error al crear usuario";
+
       addToast({
         title: "Error",
-        description: error.message || "Error al crear usuario",
+        description: errorMessage,
         color: "danger",
       });
     }
   };
-  
+
   return (
     <Modal
       isOpen={open}
@@ -142,9 +145,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
       backdrop="blur"
       isDismissable={false}
     >
-      <ModalContent
-        className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg"
-      >
+      <ModalContent className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white shadow-xl max-w-2xl w-full mx-4 sm:mx-auto p-6 sm:p-8 rounded-lg">
         <ModalHeader>
           <div className="flex flex-col items-center text-center">
             <h1 className="text-2xl font-bold text-center dark:text-white">

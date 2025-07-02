@@ -62,7 +62,6 @@ export default function ProductStockPage() {
 
   const [productSearch, setProductSearch] = useState("");
   const [productId, setProductId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
   const [localityId, setLocalityId] = useState("");
   const [shelfId, setShelfId] = useState("");
   const [quantity, setQuantity] = useState("0");
@@ -169,28 +168,32 @@ export default function ProductStockPage() {
       // Reset
       setProductId("");
       setProductSearch("");
-      setCategoryId("");
       setShelfId("");
       setQuantity("0");
       setMinStock("0");
       setMaxStock("0");
       addToast({ title: "Stock creado exitosamente", color: "success" });
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
-        // ⚠️ El stock ya existe
+    } catch (err: unknown) {
+      if (
+        typeof err === "object" &&
+        err &&
+        "response" in err &&
+        (err as any).response?.status === 409
+      ) {
+        const res = (err as any).response;
         addToast({
           title: "Stock ya existe",
           color: "warning",
           description:
-            err.response.data.message ||
+            res.data?.message ||
             "Este producto ya tiene un stock registrado en esa ubicación.",
         });
       } else {
-        // ❌ Otro error inesperado
+        const res = (err as any)?.response;
         addToast({
           title: "Error al crear stock",
           color: "danger",
-          description: err?.response?.data?.message || "Ha ocurrido un error.",
+          description: res?.data?.message || "Ha ocurrido un error.",
         });
       }
     }
@@ -198,94 +201,92 @@ export default function ProductStockPage() {
 
   return (
     <ProtectedRoute>
-    <div className="flex gap-6 p-6">
-      <aside className="w-1/3 space-y-4 bg-gray-100 p-4 rounded shadow">
-        <h2 className="text-xl font-bold mb-2">Registrar Stock</h2>
+      <div className="flex gap-6 p-6">
+        <aside className="w-1/3 space-y-4 bg-gray-100 p-4 rounded shadow">
+          <h2 className="text-xl font-bold mb-2">Registrar Stock</h2>
 
-        <div className="relative" ref={dropdownRef}>
-          <Input
-            placeholder="Buscar producto..."
-            value={productSearch}
-            onChange={(e) => {
-              setProductSearch(e.target.value);
-              setProductId("");
-              setCategoryId("");
-            }}
+          <div className="relative" ref={dropdownRef}>
+            <Input
+              placeholder="Buscar producto..."
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                setProductId("");
+              }}
+            />
+
+            {showDropdown && products.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border mt-1 max-h-60 overflow-y-auto rounded shadow">
+                {products.map((p) => (
+                  <li
+                    key={p.id}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => {
+                      setProductId(p.id);
+                      setProductSearch(p.name);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    {p.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <Combobox
+            items={localities.map((l) => ({ label: l.name, value: l.id }))}
+            value={localityId}
+            onChange={setLocalityId}
+            placeholder="Selecciona una localidad"
           />
 
-          {showDropdown && products.length > 0 && (
-            <ul className="absolute z-10 w-full bg-white border mt-1 max-h-60 overflow-y-auto rounded shadow">
-              {products.map((p) => (
-                <li
-                  key={p.id}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    setProductId(p.id);
-                    setProductSearch(p.name);
-                    setCategoryId(p.category?.id ?? "");
-                    setShowDropdown(false);
-                  }}
-                >
-                  {p.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          <Combobox
+            items={shelves.map((s) => ({ label: s.name, value: s.id }))}
+            value={shelfId}
+            onChange={setShelfId}
+            placeholder="Selecciona una percha"
+          />
 
-        <Combobox
-          items={localities.map((l) => ({ label: l.name, value: l.id }))}
-          value={localityId}
-          onChange={setLocalityId}
-          placeholder="Selecciona una localidad"
-        />
+          <p>Cantidad</p>
+          <Input
+            type="number"
+            value={quantity}
+            onClick={() => clearIfZero(quantity, setQuantity)}
+            onChange={(e) => setQuantity(e.target.value)}
+            min={0}
+          />
 
-        <Combobox
-          items={shelves.map((s) => ({ label: s.name, value: s.id }))}
-          value={shelfId}
-          onChange={setShelfId}
-          placeholder="Selecciona una percha"
-        />
+          <p>Stock mínimo</p>
+          <Input
+            type="number"
+            value={minStock}
+            onClick={() => clearIfZero(minStock, setMinStock)}
+            onChange={(e) => setMinStock(e.target.value)}
+            min={0}
+          />
 
-        <p>Cantidad</p>
-        <Input
-          type="number"
-          value={quantity}
-          onClick={() => clearIfZero(quantity, setQuantity)}
-          onChange={(e) => setQuantity(e.target.value)}
-          min={0}
-        />
+          <p>Stock máximo</p>
+          <Input
+            type="number"
+            value={maxStock}
+            onClick={() => clearIfZero(maxStock, setMaxStock)}
+            onChange={(e) => setMaxStock(e.target.value)}
+            min={0}
+          />
 
-        <p>Stock mínimo</p>
-        <Input
-          type="number"
-          value={minStock}
-          onClick={() => clearIfZero(minStock, setMinStock)}
-          onChange={(e) => setMinStock(e.target.value)}
-          min={0}
-        />
+          <Button onClick={handleCreate} className="w-full mt-2">
+            Crear stock
+          </Button>
+        </aside>
 
-        <p>Stock máximo</p>
-        <Input
-          type="number"
-          value={maxStock}
-          onClick={() => clearIfZero(maxStock, setMaxStock)}
-          onChange={(e) => setMaxStock(e.target.value)}
-          min={0}
-        />
-
-        <Button onClick={handleCreate} className="w-full mt-2">
-          Crear stock
-        </Button>
-      </aside>
-
-      <main className="flex-1">
-        <h1 className="text-2xl font-bold mb-4">
-          Stock por producto y ubicación
-        </h1>
-        {loading ? <p>Cargando...</p> : <ProductStockTable stocks={stocks} />}
-      </main>
-    </div>
+        <main className="flex-1">
+          <h1 className="text-2xl font-bold mb-4">
+            Stock por producto y ubicación
+          </h1>
+          {loading ? <p>Cargando...</p> : <ProductStockTable stocks={stocks} />}
+        </main>
+      </div>
     </ProtectedRoute>
   );
 }

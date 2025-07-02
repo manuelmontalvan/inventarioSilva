@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
 
       addToast({ color: "success", title: "Contraseña actualizada correctamente" });
       router.push("/login");
-    } catch (error) {
+    } catch {
       addToast({ color: "danger", title: "Error de conexión" });
     } finally {
       setIsLoading(false);

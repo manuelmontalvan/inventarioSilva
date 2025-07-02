@@ -23,7 +23,7 @@ interface LoginFormProps {
   onLogin: (email: string) => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
+const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,8 +46,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       await login(email, password); // ✅ Llama al login centralizado
       router.push("/dashboard");
       addToast({ color: "success", title: "Usuario Inicio Sessión" });
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión. Inténtalo de nuevo.");
+    } catch (error: unknown) {
+      let message = "Error al iniciar sesión. Inténtalo de nuevo.";
+      if (
+        error &&
+        typeof error === "object" &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+      ) {
+        message = (error as { message: string }).message;
+      }
+      setError(message);
       addToast({ color: "danger", title: "Error al Inciar Sessión" });
     } finally {
       setIsLoading(false);

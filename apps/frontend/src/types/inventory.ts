@@ -33,3 +33,19 @@ export interface CreateInventoryMovementsDto {
   orderNumber?: string;
   notes?: string;
 }
+// types/inventory.ts
+
+export type InventoryFormInput = {
+  type: "IN" | "OUT";
+  movements: {
+    productId: string;
+    quantity: number;
+    unitId: string;
+    productName: string;
+    brandName: string;
+    unitName: string;
+  }[];
+  invoice_number?: string;
+  orderNumber?: string;
+  notes?: string;
+};

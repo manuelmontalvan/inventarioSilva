@@ -15,7 +15,6 @@ import { Button } from "@heroui/button";
 import ConfirmModal  from "@/components/confirmModal";
 import { addToast } from "@heroui/toast";
 
-// Zod schema para validar el formulario de proveedor
 const SupplierSchema = z.object({
   identification: z.string().min(1, "La cedula o ruc es obligatorio"),
   name: z.string().min(1, "El nombre es obligatorio"),
@@ -37,7 +36,6 @@ function SupplierTable({
   onDelete: (id: string) => void;
 }) {
   return (
-    
     <div className="overflow-x-auto">
       <table className="min-w-full border-collapse dark:text-white">
         <thead>
@@ -172,7 +170,6 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
   );
 }
 
-
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -203,13 +200,28 @@ export default function SuppliersPage() {
         addToast({ title: "Proveedor creado", color: "success", variant: "bordered" });
       }
       closeDrawer();
-    } catch (error: any) {
-      if (error.response?.status === 400) {
-        addToast({ title: "Error de validación", description: error.response.data.message, color: "danger", variant: "bordered" });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object"
+      ) {
+        const response = (error as any).response;
+        addToast({
+          title: "Error guardando proveedor",
+          description: response?.data?.message || "Error inesperado",
+          color: "danger",
+          variant: "bordered",
+        });
       } else {
-        addToast({ title: "Error guardando proveedor", description: error.message, color: "danger", variant: "bordered" });
+        addToast({
+          title: "Error desconocido",
+          description: "No se pudo completar la operación.",
+          color: "danger",
+          variant: "bordered",
+        });
       }
-      
     } finally { setLoading(false); }
   };
 
@@ -222,30 +234,41 @@ export default function SuppliersPage() {
     setModalOpen(true);
   }
 
-
-async function handleDeleteConfirmed() {
-  if (!selectedId) return;
-  setLoading(true);
-  try {
-    await deleteSupplier(selectedId);
-    setSuppliers((prev) => prev.filter((s) => s.id !== selectedId));
-    addToast({ title: "Proveedor eliminado", color: "success", variant: "bordered" });
-  } catch (error: any)
-  {
-      const backendMessage = error?.response?.data?.message;
-    
-          addToast({
-            title: "Error eliminando proveedor",
-            description: backendMessage || "Error desconocido",
-            variant: "bordered",
-            color: "danger",
-          });
-  } finally {
-    setLoading(false);
-    setModalOpen(false);
-    setSelectedId(null);
+  async function handleDeleteConfirmed() {
+    if (!selectedId) return;
+    setLoading(true);
+    try {
+      await deleteSupplier(selectedId);
+      setSuppliers((prev) => prev.filter((s) => s.id !== selectedId));
+      addToast({ title: "Proveedor eliminado", color: "success", variant: "bordered" });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object"
+      ) {
+        const response = (error as any).response;
+        addToast({
+          title: "Error eliminando proveedor",
+          description: response?.data?.message || "Error desconocido",
+          color: "danger",
+          variant: "bordered",
+        });
+      } else {
+        addToast({
+          title: "Error desconocido",
+          description: "No se pudo completar la operación.",
+          color: "danger",
+          variant: "bordered",
+        });
+      }
+    } finally {
+      setLoading(false);
+      setModalOpen(false);
+      setSelectedId(null);
+    }
   }
-}
 
   return (
     <ProtectedRoute>
@@ -267,7 +290,7 @@ async function handleDeleteConfirmed() {
       onConfirm={handleDeleteConfirmed}
       onCancel={() => setModalOpen(false)}
     />
-    
+
     </main>
     </ProtectedRoute>
   );

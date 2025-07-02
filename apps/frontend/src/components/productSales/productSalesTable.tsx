@@ -14,11 +14,20 @@ interface Props {
   loading?: boolean;
 }
 
-export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
+// Interfaz para tipar la propiedad lastAutoTable en jsPDF
+interface JsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
+export const SalesTable: React.FC<Props> = ({ sales, loading }) => {
+  // Eliminé products del destructuring porque no se usaba
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<SaleI | null>(null);
   const itemsPerPage = 5;
+
   const statusMap: Record<string, string> = {
     paid: "Pagado",
     pending: "Pendiente",
@@ -56,7 +65,7 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
 
   function handleExportPdf() {
-    const doc = new jsPDF();
+    const doc: JsPDFWithAutoTable = new jsPDF();
     const title = "Reporte de ventas";
     const tableColumn = [
       "Orden",
@@ -92,11 +101,8 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
       body: tableRows,
     });
 
-    doc.text(
-      `Total general: $${grandTotal.toFixed(2)}`,
-      14,
-      (doc as any).lastAutoTable.finalY + 10
-    );
+    const finalY = doc.lastAutoTable?.finalY ?? 40;
+    doc.text(`Total general: $${grandTotal.toFixed(2)}`, 14, finalY + 10);
 
     doc.save("ventas.pdf");
   }
@@ -139,7 +145,7 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
   }
 
   function handleExportSinglePdf(sale: SaleI) {
-    const doc = new jsPDF();
+    const doc: JsPDFWithAutoTable = new jsPDF();
     const tableColumn = [
       "Producto",
       "Marca",
@@ -180,11 +186,8 @@ export const SalesTable: React.FC<Props> = ({ sales, products, loading }) => {
       body: tableRows,
     });
 
-    doc.text(
-      `Total: $${totalAmount.toFixed(2)}`,
-      14,
-      (doc as any).lastAutoTable.finalY + 10
-    );
+    const finalY = doc.lastAutoTable?.finalY ?? 40;
+    doc.text(`Total: $${totalAmount.toFixed(2)}`, 14, finalY + 10);
 
     doc.save(`venta_${sale.orderNumber || sale.id}.pdf`);
   }

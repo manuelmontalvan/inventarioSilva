@@ -24,7 +24,6 @@ export default function SalesPage() {
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -81,8 +80,6 @@ export default function SalesPage() {
   // Maneja creación de venta desde formulario
   const handleSaleCreated = async (data: CreateSaleDto) => {
     try {
-      setSaving(true);
-
       // Mapear status frontend a backend
       const statusMap: Record<string, CreateSaleDto["status"]> = {
         pending: "pending",
@@ -99,39 +96,50 @@ export default function SalesPage() {
       setSales((prev) => [createdSale, ...prev]);
 
       alert("Venta creada con éxito");
-    } catch (error: any) {
-      console.error(
-        "Error al guardar la venta:",
-        error.response?.data || error.message
-      );
+    } catch (error: unknown) {
+      let message = "Error desconocido";
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+      ) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      console.error("Error al guardar la venta:", message);
       alert("Error al crear la venta");
-    } finally {
-      setSaving(false);
     }
   };
 
   return (
     <ProtectedRoute>
-      
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
-        <div className="w-72">
-          <FileUpload uploadFunction={handleUploadSales} onSuccess={onUploadSuccess} />
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
+          <div className="w-72">
+            <FileUpload uploadFunction={handleUploadSales} onSuccess={onUploadSuccess} />
+          </div>
+        </div>
+
+        <SalesForm
+          categories={categories}
+          units={units}
+          customers={customers}
+          onCreate={handleSaleCreated}
+        />
+
+        <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
+          <SalesTable sales={sales} products={products} loading={loading} />
         </div>
       </div>
-
-      <SalesForm
-        categories={categories}
-        units={units}
-        customers={customers}
-        onCreate={handleSaleCreated}
-      />
-
-      <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
-        <SalesTable sales={sales} products={products} loading={loading} />
-      </div>
-    </div>
     </ProtectedRoute>
   );
 }

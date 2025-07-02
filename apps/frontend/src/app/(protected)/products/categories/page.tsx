@@ -168,7 +168,7 @@ export default function CategoriesPage() {
     try {
       const cats = await getCategories();
       setCategories(cats);
-    } catch (error) {
+    } catch {
       alert("Error cargando categorías");
     } finally {
       setLoading(false);
@@ -228,9 +228,11 @@ export default function CategoriesPage() {
         color: "success",
         variant: "bordered",
       });
-    } catch (error: any) {
-      // Accedemos al mensaje que viene del backend (si existe)
-      const backendMessage = error?.response?.data?.message;
+    } catch (error: unknown) {
+      const backendMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as any)?.response?.data?.message
+          : undefined;
 
       addToast({
         title: "Error eliminando marca",
@@ -256,40 +258,40 @@ export default function CategoriesPage() {
   };
 
   return (
-  <ProtectedRoute>
-    <main className="p-6 min-h-screen dark:text-white bg-gray-50 dark:bg-gray-900 transition-colors">
-      <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold mb-6">Gestion Categorías</h1>
+    <ProtectedRoute>
+      <main className="p-6 min-h-screen dark:text-white bg-gray-50 dark:bg-gray-900 transition-colors">
+        <header className="flex flex-row sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-2xl font-bold mb-6">Gestion Categorías</h1>
 
-        <Button onPress={openCreateDrawer} color="success" variant="bordered">
-          + Nueva Categoría
-        </Button>
-      </header>
+          <Button onPress={openCreateDrawer} color="success" variant="bordered">
+            + Nueva Categoría
+          </Button>
+        </header>
 
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
-        <CategoryTable
-          categories={categories}
-          onEdit={openEditDrawer}
-          onDelete={handleDeleteClick}
+        {loading ? (
+          <p>Cargando...</p>
+        ) : (
+          <CategoryTable
+            categories={categories}
+            onEdit={openEditDrawer}
+            onDelete={handleDeleteClick}
+          />
+        )}
+
+        <CategoryDrawer
+          isOpen={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onSave={handleSave}
+          initialData={editCategory}
         />
-      )}
-
-      <CategoryDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onSave={handleSave}
-        initialData={editCategory}
-      />
-       <ConfirmModal
-              isOpen={modalOpen}
-              title="¿Eliminar Categoria?"
-              message="Esta acción no se puede deshacer."
-              onConfirm={handleDeleteConfirmed}
-              onCancel={() => setModalOpen(false)}
-            />
-    </main>
-  </ProtectedRoute>
+        <ConfirmModal
+          isOpen={modalOpen}
+          title="¿Eliminar Categoria?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setModalOpen(false)}
+        />
+      </main>
+    </ProtectedRoute>
   );
 }

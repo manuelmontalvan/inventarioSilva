@@ -16,7 +16,7 @@ interface Props {
   onClose: () => void;
   product: ProductI | null;
   multiple?: boolean;
-  all?: boolean;             // <-- nuevo prop para "eliminar todos"
+  all?: boolean; // <-- nuevo prop para "eliminar todos"
   onConfirm?: () => Promise<void>;
   onDelete: () => void;
 }
@@ -26,11 +26,10 @@ export default function DeleteProductModal({
   onClose,
   product,
   multiple = false,
-  all = false,               // <-- valor por defecto false
+  all = false, // <-- valor por defecto false
   onConfirm,
   onDelete,
 }: Props) {
-
   const handleDelete = async () => {
     try {
       if (all) {
@@ -50,7 +49,8 @@ export default function DeleteProductModal({
         await onConfirm?.();
         addToast({
           title: "Productos eliminados",
-          description: "Los productos seleccionados se eliminaron correctamente.",
+          description:
+            "Los productos seleccionados se eliminaron correctamente.",
           color: "success",
         });
         onClose();
@@ -70,10 +70,16 @@ export default function DeleteProductModal({
 
       onDelete();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let message = "Ocurrió un error al eliminar el producto.";
+
+      if (error instanceof Error) {
+        message = error.message;
+      }
+
       addToast({
         title: "Error",
-        description: error?.message || "Ocurrió un error al eliminar el producto.",
+        description: message,
         color: "danger",
       });
     }
@@ -83,9 +89,7 @@ export default function DeleteProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent
-        className="sm:max-w-md rounded-2xl p-6 border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xl transition-colors"
-      >
+      <DialogContent className="sm:max-w-md rounded-2xl p-6 border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xl transition-colors">
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl font-semibold">
             {all

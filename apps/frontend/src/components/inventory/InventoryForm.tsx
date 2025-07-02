@@ -6,17 +6,21 @@ import { getProducts } from "@/lib/api/products/products";
 import { ProductsTab } from "@/components/tabla/productTab";
 import { addToast } from "@heroui/toast";
 import { getLocalities } from "@/lib/api/products/localities";
+
+interface Movement {
+  productId: string;
+  quantity: number;
+  unitId: string;
+  productName: string;
+  brandName: string;
+  unitName: string;
+  localityId: string;
+}
+
 interface InventoryFormProps {
   onSubmit: (data: {
     type: "IN" | "OUT";
-    movements: {
-      productId: string;
-      quantity: number;
-      unitId: string;
-      productName: string;
-      brandName: string;
-      unitName: string;
-    }[];
+    movements: Movement[];
     invoice_number?: string;
     orderNumber?: string;
     notes?: string;
@@ -28,13 +32,14 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [movementList, setMovementList] = useState<any[]>([]);
+  const [movementList, setMovementList] = useState<Movement[]>([]);
   const [type, setType] = useState<"IN" | "OUT">("IN");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [localities, setLocalities] = useState<Locality[]>([]);
+  const [selectedLocality, setSelectedLocality] = useState<string>("");
 
   useEffect(() => {
     const fetch = async () => {
@@ -61,8 +66,9 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       try {
         const res = await getLocalities();
         setLocalities(res);
-      } catch (err) {
-        console.error("Error cargando localidades", err);
+        setSelectedLocality(res[0]?.id || "");
+      } catch {
+        addToast({ title: "Error cargando localidades", color: "danger" });
       }
     };
     fetchLocalities();
@@ -71,6 +77,11 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const handleAdd = (product: ProductI, unitId: string, quantity: number) => {
     if (movementList.find((m) => m.productId === product.id)) {
       addToast({ title: "Producto ya agregado", color: "warning" });
+      return false;
+    }
+
+    if (!selectedLocality) {
+      addToast({ title: "Selecciona una localidad", color: "warning" });
       return false;
     }
 
@@ -83,6 +94,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         unitName: product.unit_of_measure?.name || "",
         unitId,
         quantity,
+        localityId: selectedLocality,
       },
     ]);
     return true;
@@ -98,17 +110,10 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       return;
     }
 
-    // Validar cada movimiento antes de enviar
-    const movementsWithType = movementList.map((m) => ({
-      ...m,
-      type, // agrega el tipo aquí
-      quantity: Number(m.quantity), // aseguramos que sea number
-    }));
-
     try {
       await onSubmit({
         type,
-        movements: movementsWithType,
+        movements: movementList,
         invoice_number: invoiceNumber || undefined,
         orderNumber: orderNumber || undefined,
         notes: notes || undefined,
@@ -119,25 +124,34 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       setInvoiceNumber("");
       setOrderNumber("");
       setNotes("");
-    } catch (error: any) {
-      console.error("Error guardando movimiento:", error);
-      // Si usas axios, el error puede estar en error.response.data.message
-      const message =
-        error?.response?.data?.message || "Error guardando movimiento";
+    } catch (error: unknown) {
+      let message = "Error guardando movimiento";
+
+      if (
+        error &&
+        typeof error === "object"
+      ) {
+        if ("response" in error && error.response && typeof error.response === "object") {
+          const response = error.response as { data?: { message?: string } };
+          if (response.data?.message) {
+            message = response.data.message;
+          }
+        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+          message = (error as { message: string }).message;
+        }
+      }
+
       addToast({ title: message, color: "danger" });
     }
   };
 
   return (
     <div className="space-y-8">
-      {/* Cabecera */}
       <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
         Movimiento de Inventario
       </h1>
 
-      {/* Panel de información principal */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-        {/* Tipo */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Tipo de Movimiento
@@ -152,7 +166,23 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           </select>
         </div>
 
-        {/* Orden */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Localidad destino
+          </label>
+          <select
+            value={selectedLocality}
+            onChange={(e) => setSelectedLocality(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md shadow-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
+          >
+            {localities.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Número de Orden (Compra/Venta)
@@ -165,7 +195,6 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           />
         </div>
 
-        {/* Factura */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Número de Factura
@@ -178,8 +207,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           />
         </div>
 
-        {/* Notas */}
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Notas (opcional)
           </label>
@@ -192,8 +220,8 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           />
         </div>
       </div>
+
       <div className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-        {/* Tabla de productos (ocupa ambas columnas) */}
         <div className="md:col-span-2 overflow-auto">
           <ProductsTab
             products={products}
@@ -209,13 +237,12 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
               setSearchTerm(val);
               setCurrentPage(1);
             }}
-            localities={[]} // o tu lista real de localidades si aplica
+            localities={localities}
             mode="compra"
           />
         </div>
       </div>
 
-      {/* Lista de productos agregados */}
       {movementList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
           <div className="md:col-span-2 overflow-auto">
@@ -226,23 +253,24 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
               <table className="min-w-full text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900">
                 <thead className="bg-gray-100 dark:bg-gray-800">
                   <tr>
-                    <th className="px-4 py-2 text-left">Producto</th>
-                    <th className="px-4 py-2 text-left">Marca</th>
-                    <th className="px-4 py-2 text-left">Unidad</th>
-                    <th className="px-4 py-2 text-left">Cantidad</th>
-                    <th className="px-4 py-2 text-left">Acción</th>
+                    <th className="px-4 py-2">Producto</th>
+                    <th className="px-4 py-2">Marca</th>
+                    <th className="px-4 py-2">Unidad</th>
+                    <th className="px-4 py-2">Cantidad</th>
+                    <th className="px-4 py-2">Localidad</th>
+                    <th className="px-4 py-2">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movementList.map((m) => (
-                    <tr
-                      key={m.productId}
-                      className="border-t border-gray-200 dark:border-gray-700"
-                    >
+                    <tr key={m.productId}>
                       <td className="px-4 py-2">{m.productName}</td>
                       <td className="px-4 py-2">{m.brandName}</td>
                       <td className="px-4 py-2">{m.unitName}</td>
                       <td className="px-4 py-2">{m.quantity}</td>
+                      <td className="px-4 py-2">
+                        {localities.find((l) => l.id === m.localityId)?.name}
+                      </td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => handleRemove(m.productId)}
@@ -260,7 +288,6 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
       )}
 
-      {/* Botón guardar */}
       <div className="flex justify-end">
         <button
           onClick={handleSubmit}

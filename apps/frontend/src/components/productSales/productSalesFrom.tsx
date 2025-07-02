@@ -29,28 +29,7 @@ interface Props {
 
 // Función ficticia para llamar al backend y traer productos paginados con filtros.
 // Cambia esta función para que llame a tu API real.
-async function fetchProductsApi({
-  search,
-  page,
-  limit,
-  categoryId,
-}: {
-  search: string;
-  page: number;
-  limit: number;
-  categoryId?: string;
-}): Promise<{ data: ProductI[]; totalPages: number }> {
-  // Ejemplo: fetch a tu API
-  const query = new URLSearchParams();
-  if (search) query.append("search", search);
-  if (categoryId) query.append("categoryId", categoryId);
-  query.append("page", page.toString());
-  query.append("limit", limit.toString());
 
-  const res = await fetch(`/api/products?${query.toString()}`);
-  if (!res.ok) throw new Error("Error fetching products");
-  return res.json(); // { data: ProductI[], totalPages: number }
-}
 
 export default function SalesForm({
   customers,

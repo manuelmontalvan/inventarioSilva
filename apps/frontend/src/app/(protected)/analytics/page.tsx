@@ -29,7 +29,6 @@ interface PredictionPoint {
 
 export default function PredictiveAnalyticsPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
@@ -49,15 +48,13 @@ export default function PredictiveAnalyticsPage() {
   const [days, setDays] = useState(7);
 
   // Cargar productos
-  useEffect(() => {
-    setLoadingProducts(true);
-    getProducts({ limit: 1000 })
-      .then((res) => {
-        setProducts(res.data);
-        if (res.data.length > 0) setSelectedProductId(res.data[0].id);
-      })
-      .finally(() => setLoadingProducts(false));
-  }, []);
+useEffect(() => {
+  getProducts({ limit: 1000 })
+    .then((res) => {
+      setProducts(res.data);
+      if (res.data.length > 0) setSelectedProductId(res.data[0].id);
+    });
+}, []);
 
   // Buscar predictivamente en productSales por nombre
   useEffect(() => {

@@ -27,7 +27,6 @@ export default function AdminPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [visibleColumns, setVisibleColumns] = useState({
     name: true,
@@ -45,8 +44,18 @@ export default function AdminPage() {
     try {
       const data = await getUsers();
       setUsers(data);
-    } catch (err: any) {
-      setError(err.message || "Error al cargar usuarios");
+    } catch (err: unknown) {
+      let message = "Error al cargar usuarios";
+      if (
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof err.message === "string"
+      ) {
+        message = err.message;
+      }
+      // Puedes mostrar un toast o console.error
+      console.error(message);
     }
   };
 
@@ -94,7 +103,6 @@ export default function AdminPage() {
     }));
   };
 
-  
   return (
     <ProtectedRoute>
       <div className="p-6 min-h-screen dark:bg-gray-950 transition-colors duration-300">

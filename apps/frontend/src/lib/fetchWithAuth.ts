@@ -19,7 +19,7 @@ export const fetchWithAuth = async (url: string) => {
       } else {
         throw new Error('TOKEN_EXPIRED');
       }
-    } catch (e) {
+    } catch  {
       throw new Error('TOKEN_EXPIRED');
     }
   }

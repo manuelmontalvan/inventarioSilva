@@ -104,11 +104,12 @@ export default function EditUserModal({
   const onSubmit = async (values: FormValues): Promise<void> => {
     if (!user) return;
 
-    const payload: any = {
-      ...values,
-      roleId: values.roleId ?? user.role.id,
-      isActive: values.isActive ?? user.isActive,
-    };
+    const payload: Partial<FormValues> & { roleId: string; isActive: boolean } =
+      {
+        ...values,
+        roleId: values.roleId ?? user.role.id,
+        isActive: values.isActive ?? user.isActive,
+      };
 
     if (!payload.password || payload.password.trim() === "") {
       delete payload.password;
@@ -138,8 +139,10 @@ export default function EditUserModal({
 
       onUpdated();
       onClose();
-    } catch (error: any) {
-      console.error("Error inesperado:", error);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Error inesperado";
+      console.error("Error inesperado:", message);
     }
   };
 

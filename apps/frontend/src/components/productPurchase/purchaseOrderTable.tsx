@@ -13,6 +13,13 @@ interface Props {
   products: { id: string; name: string }[];
 }
 
+// Define interface para extender jsPDF y tipar lastAutoTable
+interface JsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
 export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
@@ -22,7 +29,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Filtrado simple por proveedor, factura o orden
   const filteredOrders = orders.filter((order) => {
     const supplierName = order.supplier?.name?.toLowerCase() || "";
     const invoice = order.invoice_number?.toLowerCase() || "";
@@ -42,14 +48,12 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     currentPage * itemsPerPage
   );
 
-  // Toggle selección individual
   const toggleSelectOrder = (id: string) => {
     setSelectedOrderIds((prev) =>
       prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
     );
   };
 
-  // Toggle seleccionar/deseleccionar todas visibles
   const toggleSelectAll = () => {
     if (selectedOrderIds.length === paginatedOrders.length) {
       setSelectedOrderIds([]);
@@ -58,9 +62,8 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     }
   };
 
-  // Exportar todas las órdenes - PDF
   function handleExportPdf() {
-    const doc = new jsPDF();
+    const doc: JsPDFWithAutoTable = new jsPDF();
     const title = "Reporte de órdenes de compra";
     const tableColumn = ["Orden", "Proveedor", "Fecha", "Total"];
     const tableRows: (string | number)[][] = [];
@@ -89,15 +92,12 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
       body: tableRows,
     });
 
-    doc.text(
-      `Total general: $${grandTotal.toFixed(2)}`,
-      14,
-      (doc as any).lastAutoTable.finalY + 10
-    );
+    const finalY = doc.lastAutoTable?.finalY ?? 40;
+    doc.text(`Total general: $${grandTotal.toFixed(2)}`, 14, finalY + 10);
 
     doc.save("ordenes_compra.pdf");
   }
-  // Exportar todas las órdenes - Excel
+
   function handleExportExcel() {
     const worksheetData = orders.map((order) => {
       const total = order.purchase_lines.reduce(
@@ -125,7 +125,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     });
     saveAs(blob, "ordenes_compra.xlsx");
   }
-  // Exportar todas las órdenes - CSV
+
   function handleExportCsv() {
     const worksheetData = orders.map((order) => {
       const total = order.purchase_lines.reduce(
@@ -145,10 +145,9 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     saveAs(blob, "ordenes_compra.csv");
   }
-  // Exportar orden seleccionada - PDF
-  // Exportar orden seleccionada - PDF
+
   function handleExportSingleOrderPdf(order: PurchaseOrder) {
-    const doc = new jsPDF();
+    const doc: JsPDFWithAutoTable = new jsPDF();
     const tableColumn = [
       "Producto",
       "Marca",
@@ -194,16 +193,12 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
       body: tableRows,
     });
 
-    doc.text(
-      `Total general: $${total.toFixed(2)}`,
-      14,
-      (doc as any).lastAutoTable.finalY + 10
-    );
+    const finalY = doc.lastAutoTable?.finalY ?? 40;
+    doc.text(`Total general: $${total.toFixed(2)}`, 14, finalY + 10);
 
     doc.save(`orden_${order.orderNumber}.pdf`);
   }
 
-  // Exportar orden seleccionada - Excel
   function handleExportSingleOrderExcel(order: PurchaseOrder) {
     const worksheetData = order.purchase_lines.map((item) => {
       const name =
@@ -233,7 +228,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
       Producto: "Total general",
       Marca: "",
       Unidad: "",
-      Cantidad: totalQuantity, // poner 0 para evitar error TS
+      Cantidad: totalQuantity,
       "Costo Unitario": "",
       Total: total.toFixed(2),
     });
@@ -243,7 +238,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     });
 
     // Vaciar celda de Cantidad en la fila total para que se vea vacío en Excel
-    const totalRowIndex = worksheetData.length + 1; // fila donde está total (1-based)
+    const totalRowIndex = worksheetData.length; // índice base 0, hoja 1-based
     const cantidadCol = XLSX.utils.decode_col("D"); // columna D es Cantidad
     const cellAddress = XLSX.utils.encode_cell({
       r: totalRowIndex,
@@ -271,7 +266,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     saveAs(blob, `orden_${order.orderNumber}.xlsx`);
   }
 
-  // Exportar orden seleccionada - CSV
   function handleExportSingleOrderCsv(order: PurchaseOrder) {
     const worksheetData = order.purchase_lines.map((item) => {
       const name =
@@ -289,7 +283,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
       };
     });
 
-    // Agregar fila total al final (en CSV, como texto simple)
     const total = order.purchase_lines.reduce(
       (acc, item) => acc + Number(item.total_cost),
       0
@@ -316,7 +309,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
   }
 
   function handleExportSelectedPdf() {
-    const doc = new jsPDF();
+    const doc: JsPDFWithAutoTable = new jsPDF();
     const title = "Reporte de órdenes seleccionadas";
     const tableColumn = ["Orden", "Proveedor", "Fecha", "Total"];
     const tableRows: (string | number)[][] = [];
@@ -348,11 +341,8 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
       body: tableRows,
     });
 
-    doc.text(
-      `Total general: $${grandTotal.toFixed(2)}`,
-      14,
-      (doc as any).lastAutoTable.finalY + 10
-    );
+    const finalY = doc.lastAutoTable?.finalY ?? 40;
+    doc.text(`Total general: $${grandTotal.toFixed(2)}`, 14, finalY + 10);
 
     doc.save("ordenes_seleccionadas.pdf");
   }
@@ -412,7 +402,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     saveAs(blob, "ordenes_seleccionadas.csv");
   }
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-2 mb-4 sticky top-0 bg-white dark:bg-gray-900 z-30 p-2 rounded shadow-sm items-center">

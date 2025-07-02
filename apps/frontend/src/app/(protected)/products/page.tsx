@@ -2,6 +2,8 @@
 import ProtectedRoute from "@/components/restricted/protectedRoute";
 import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
+import { useCallback } from "react";
+
 import {
   getProducts,
   deleteProduct,
@@ -56,20 +58,23 @@ export default function ProductAdminPage() {
   const [visibleColumns, setVisibleColumns] = useState<
     Record<keyof ProductI, boolean>
   >(() => {
-    const initial: Record<keyof ProductI, boolean> = {} as any;
-    productColumnOptions.forEach(({ key }) => {
-      initial[key] = [
-        "name",
-        "locality",
-        "category",
-        "current_quantity",
-        "brand",
-        "unit_of_measure",
-        "sale_price",
-        "purchase_price",
-        "isActive",
-      ].includes(key);
-    });
+    const initial = Object.fromEntries(
+      productColumnOptions.map(({ key }) => [
+        key,
+        [
+          "name",
+          "locality",
+          "category",
+          "current_quantity",
+          "brand",
+          "unit_of_measure",
+          "sale_price",
+          "purchase_price",
+          "isActive",
+        ].includes(key),
+      ])
+    ) as Record<keyof ProductI, boolean>;
+
     return initial;
   });
 
@@ -77,12 +82,12 @@ export default function ProductAdminPage() {
     try {
       const cats = await getCategories();
       setCategories(cats);
-    } catch (error) {
+    } catch {
       addToast({ title: "Error cargando categorías", color: "danger" });
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const response = await getProducts({
         page: currentPage,
@@ -93,11 +98,12 @@ export default function ProductAdminPage() {
       });
       setProducts(response.data);
       setTotalPages(response.totalPages);
-    } catch (err: any) {
-      addToast({ title: "Productos no se pudieron cargar", color: "danger" });
+    } catch (err: unknown) {
+      console.error("Error al cargar productos", err);
       setError("Error al cargar productos");
+      addToast({ title: "Productos no se pudieron cargar", color: "danger" });
     }
-  };
+  }, [currentPage, searchTerm, selectedCategories]);
 
   useEffect(() => {
     fetchCategories();
@@ -105,11 +111,10 @@ export default function ProductAdminPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [currentPage]);
+  }, [fetchProducts]);
 
   useEffect(() => {
     setCurrentPage(1);
-    fetchProducts();
   }, [searchTerm, selectedCategories]);
 
   const toggleCategory = (categoryId: string) => {
@@ -138,7 +143,7 @@ export default function ProductAdminPage() {
       }
       setSelectedProducts([]);
       fetchProducts();
-    } catch (error) {
+    } catch {
       addToast({ title: "Error al eliminar productos", color: "danger" });
     }
   };
@@ -156,196 +161,196 @@ export default function ProductAdminPage() {
 
   return (
     <ProtectedRoute>
-    <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
-      <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
-          <Box className="w-6 h-6 text-green-600" />
-          Gestión de Productos
-        </h1>
+      <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
+        <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
+            <Box className="w-6 h-6 text-green-600" />
+            Gestión de Productos
+          </h1>
 
-        <div className="flex items-center gap-4">
-          <FileUpload
-            uploadFunction={uploadProducts}
-            onSuccess={fetchProducts}
-          />
-
-          <Button
-            onPress={() => setShowCreateModal(true)}
-            className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" /> Crear Producto
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">
-        <div className="flex w-full sm:w-auto items-center gap-4 p-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-10 py-2 rounded"
+          <div className="flex items-center gap-4">
+            <FileUpload
+              uploadFunction={uploadProducts}
+              onSuccess={fetchProducts}
             />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
-                aria-label="Limpiar búsqueda"
-                type="button"
-              >
-                ✕
-              </button>
-            )}
-          </div>
 
-          <Button
-            onPress={() => {
-              setSelectedProduct(null);
-              setBulkDeleteMode(true);
-              setShowDeleteModal(true);
-              setAllDeleteMode(true);
-            }}
-            className="bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 border-red-600/30 flex items-center gap-2 whitespace-nowrap"
-          >
-            <Trash2 className="w-4 h-4" /> Eliminar Todos
-          </Button>
-        </div>
-
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700">
-                <Filter className="w-4 h-4 mr-2" /> Filtrar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 text-white border-gray-600">
-              <DropdownMenuLabel>Filtrar por categoría</DropdownMenuLabel>
-              {categories.map(({ id, name }) => (
-                <DropdownMenuCheckboxItem
-                  key={id}
-                  checked={selectedCategories.includes(id)}
-                  onCheckedChange={() => toggleCategory(id)}
-                >
-                  {name.charAt(0).toUpperCase() + name.slice(1)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700">
-                <Settings2 className="w-4 h-4 mr-2" /> Columnas
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-800 text-white border-gray-600 max-h-[300px] overflow-y-auto">
-              <DropdownMenuLabel>Columnas visibles</DropdownMenuLabel>
-              {productColumnOptions.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.key}
-                  checked={visibleColumns[column.key]}
-                  onCheckedChange={() => toggleColumn(column.key)}
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {selectedProducts.length > 0 && (
-          <div className="bg-gray-800 px-3 py-2 rounded text-white flex items-center gap-2">
-            <span className="text-sm">
-              {selectedProducts.length} seleccionado(s)
-            </span>
             <Button
-              variant="bordered"
-              color="danger"
-              onPress={() => {
-                setBulkDeleteMode(true);
-                setSelectedProduct(null);
-                setShowDeleteModal(true);
-              }}
+              onPress={() => setShowCreateModal(true)}
+              className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
             >
-              Eliminar
+              <PlusCircle className="w-4 h-4" /> Crear Producto
             </Button>
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="rounded-md border border-white overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
-        <ProductTable
-          products={products}
-          onView={(product) => {
-            setSelectedProduct(product);
-            setShowDetailsModal(true);
-          }}
-          onUpdated={(product) => {
-            setSelectedProduct(product);
-            setShowEditModal(true);
-          }}
-          onDelete={(product) => {
-            setSelectedProduct(product);
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-6xl mx-auto">
+          <div className="flex w-full sm:w-auto items-center gap-4 p-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 text-white placeholder:text-gray-400 pl-10 pr-10 py-2 rounded"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
+                  aria-label="Limpiar búsqueda"
+                  type="button"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <Button
+              onPress={() => {
+                setSelectedProduct(null);
+                setBulkDeleteMode(true);
+                setShowDeleteModal(true);
+                setAllDeleteMode(true);
+              }}
+              className="bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 border-red-600/30 flex items-center gap-2 whitespace-nowrap"
+            >
+              <Trash2 className="w-4 h-4" /> Eliminar Todos
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700">
+                  <Filter className="w-4 h-4 mr-2" /> Filtrar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-gray-800 text-white border-gray-600">
+                <DropdownMenuLabel>Filtrar por categoría</DropdownMenuLabel>
+                {categories.map(({ id, name }) => (
+                  <DropdownMenuCheckboxItem
+                    key={id}
+                    checked={selectedCategories.includes(id)}
+                    onCheckedChange={() => toggleCategory(id)}
+                  >
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-gradient-to-r from-green-600 to-teal-600 text-white border-none hover:from-green-700 hover:to-teal-700">
+                  <Settings2 className="w-4 h-4 mr-2" /> Columnas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-gray-800 text-white border-gray-600 max-h-[300px] overflow-y-auto">
+                <DropdownMenuLabel>Columnas visibles</DropdownMenuLabel>
+                {productColumnOptions.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={visibleColumns[column.key]}
+                    onCheckedChange={() => toggleColumn(column.key)}
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {selectedProducts.length > 0 && (
+            <div className="bg-gray-800 px-3 py-2 rounded text-white flex items-center gap-2">
+              <span className="text-sm">
+                {selectedProducts.length} seleccionado(s)
+              </span>
+              <Button
+                variant="bordered"
+                color="danger"
+                onPress={() => {
+                  setBulkDeleteMode(true);
+                  setSelectedProduct(null);
+                  setShowDeleteModal(true);
+                }}
+              >
+                Eliminar
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-md border border-white overflow-hidden bg-gray-900 shadow-lg text-white max-w-6xl mx-auto">
+          <ProductTable
+            products={products}
+            onView={(product) => {
+              setSelectedProduct(product);
+              setShowDetailsModal(true);
+            }}
+            onUpdated={(product) => {
+              setSelectedProduct(product);
+              setShowEditModal(true);
+            }}
+            onDelete={(product) => {
+              setSelectedProduct(product);
+              setBulkDeleteMode(false);
+              setShowDeleteModal(true);
+            }}
+            selectedProducts={selectedProducts}
+            setSelectedProducts={setSelectedProducts}
+            visibleColumns={visibleColumns}
+          />
+        </div>
+
+        <div className="flex justify-center gap-2 mt-4">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentPage(i + 1)}
+              disabled={currentPage === i + 1}
+              className={`px-3 py-1 rounded ${
+                currentPage === i + 1
+                  ? "bg-green-600 text-white"
+                  : "bg-gray-700 text-gray-300"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+
+        <ProductDetailsModal
+          product={selectedProduct}
+          open={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+        />
+        <CreateProductModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={fetchProducts}
+        />
+        <EditProductModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          product={selectedProduct}
+          onUpdated={fetchProducts}
+        />
+        <DeleteProductModal
+          open={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
             setBulkDeleteMode(false);
-            setShowDeleteModal(true);
+            setSelectedProduct(null);
+            setAllDeleteMode(false);
           }}
-          selectedProducts={selectedProducts}
-          setSelectedProducts={setSelectedProducts}
-          visibleColumns={visibleColumns}
+          product={selectedProduct}
+          multiple={bulkDeleteMode}
+          all={allDeleteMode}
+          onDelete={fetchProducts}
+          onConfirm={handleBulkDelete}
         />
       </div>
-
-      <div className="flex justify-center gap-2 mt-4">
-        {Array.from({ length: totalPages }, (_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i + 1)}
-            disabled={currentPage === i + 1}
-            className={`px-3 py-1 rounded ${
-              currentPage === i + 1
-                ? "bg-green-600 text-white"
-                : "bg-gray-700 text-gray-300"
-            }`}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
-
-      <ProductDetailsModal
-        product={selectedProduct}
-        open={showDetailsModal}
-        onClose={() => setShowDetailsModal(false)}
-      />
-      <CreateProductModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={fetchProducts}
-      />
-      <EditProductModal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        product={selectedProduct}
-        onUpdated={fetchProducts}
-      />
-      <DeleteProductModal
-        open={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setBulkDeleteMode(false);
-          setSelectedProduct(null);
-          setAllDeleteMode(false);
-        }}
-        product={selectedProduct}
-        multiple={bulkDeleteMode}
-        all={allDeleteMode}
-        onDelete={fetchProducts}
-        onConfirm={handleBulkDelete}
-      />
-    </div>
     </ProtectedRoute>
   );
 }

@@ -5,7 +5,7 @@ import { Button } from "@heroui/button";
 import { UploadCloud } from "lucide-react";
 
 type FileUploadProps = {
-  uploadFunction: (file: File) => Promise<any>;
+  uploadFunction: (file: File) => Promise<void>; // Cambiado a void
   onSuccess: () => void;
 };
 
@@ -17,7 +17,6 @@ export default function FileUpload({ uploadFunction, onSuccess }: FileUploadProp
 
   const inputFileRef = useRef<HTMLInputElement>(null);
 
-  // Limpiar mensajes después de 4 segundos, tanto éxito como error
   useEffect(() => {
     if (message) {
       const timeout = setTimeout(() => {
@@ -55,14 +54,28 @@ export default function FileUpload({ uploadFunction, onSuccess }: FileUploadProp
       await uploadFunction(file);
       setMessage("Archivo importado con éxito.");
       setMessageType("success");
-      setFile(null); // Limpia el archivo seleccionado para que el botón muestre "Seleccionar archivo"
+      setFile(null);
       onSuccess();
-    } catch (error: any) {
-      setMessage(
-        `Error: ${error.response?.data?.message || error.message || "Error inesperado"}`
-      );
+    } catch (error: unknown) {
+      let errorMessage = "Error inesperado";
+
+      if (
+        error &&
+        typeof error === "object"
+      ) {
+        // intenta leer response.data.message
+        if ("response" in error && error.response && typeof error.response === "object") {
+          const response = error.response as { data?: { message?: string } };
+          if (response.data?.message) {
+            errorMessage = response.data.message;
+          }
+        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+          errorMessage = (error as { message: string }).message;
+        }
+      }
+
+      setMessage(`Error: ${errorMessage}`);
       setMessageType("error");
-      // No limpies el archivo para que pueda volver a intentar o cambiarlo
     } finally {
       setLoading(false);
     }
