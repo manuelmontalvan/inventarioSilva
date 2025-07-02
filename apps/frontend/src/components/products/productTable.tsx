@@ -175,12 +175,9 @@ export default function ProductTable({
                 </tr>
               ) : (
                 paginatedProducts.map((p) => {
-                  const isQuantity = visibleColumns["current_quantity"];
                   const quantity = Number(p.current_quantity);
                   const minStock = Number(p.min_stock);
                   const maxStock = Number(p.max_stock);
-
-                
 
                   return (
                     <motion.tr
@@ -237,9 +234,7 @@ export default function ProductTable({
                           <td
                             key={key}
                             className={`p-2 border hover:bg-gray-100 hover:text-black ${
-                              key === "name"
-                                ? "font-medium cursor-pointer"
-                                : ""
+                              key === "name" ? "font-medium cursor-pointer" : ""
                             } ${tdColorClass}`}
                           >
                             {isQty

@@ -172,13 +172,11 @@ export default function PurchaseOrderForm({
         supplierId,
         invoice_number: invoiceNumber,
         notes,
-        items: items.map(({ name: _n, brand: _b, unit_of_measure: _u, ...rest }) => ({
-  ...rest,
-  invoice_number: invoiceNumber,
-  supplierId,
-}))
-
-
+        items: items.map(({ name, brand, unit_of_measure, ...rest }) => ({
+          ...rest,
+          invoice_number: invoiceNumber,
+          supplierId,
+        })),
       };
 
       await onCreate(newOrder);
