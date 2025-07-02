@@ -95,7 +95,7 @@ useEffect(() => {
         )
       )
       .finally(() => setLoadingPrediction(false));
-  }, [selectedProduct, selectedProductId, selectedBrand, selectedUnit, days]);
+  }, [selectedProduct, selectedProductId, selectedBrand, selectedUnit, days, products]);
 
   const chartData = predictions.map((p) => {
     const date = new Date(p.ds);

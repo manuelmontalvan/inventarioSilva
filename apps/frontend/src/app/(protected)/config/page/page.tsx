@@ -80,10 +80,10 @@ export default function PagesPage() {
       await deletePage(selId);
       setPages((p) => p.filter((x) => x.id !== selId));
       addToast({ title: "Página eliminada", color: "success" });
-    } catch (e: any) {
+    } catch  {
       addToast({
         title: "Error eliminando",
-        description: e.message,
+      
         color: "danger",
       });
     } finally {
