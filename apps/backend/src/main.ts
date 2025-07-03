@@ -9,24 +9,26 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // elimina propiedades no definidas en DTO
-      forbidNonWhitelisted: true, // lanza error si hay propiedades extra
-      transform: true, // transforma payload a instancias de DTO
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-      enableImplicitConversion: true,
-    },
+        enableImplicitConversion: true,
+      },
     }),
   );
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   app.enableCors({
-  origin: [
-    'http://localhost:3000',
-    'https://inventario-silva.vercel.app', 
-  ],
-  credentials: true,
-});
-   ;
+    origin: isProd
+      ? ['https://inventario-silva.vercel.app']
+      : ['http://localhost:3000'],
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api');
+
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();

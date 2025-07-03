@@ -2,14 +2,20 @@
 import React from "react";
 import LoginForm from "@/components/login/loginForm";
 import { useRouter } from "next/navigation";
+import { addToast } from "@heroui/toast";
 
 
 
 const LoginPage = () => {
   const router = useRouter();
 
-  const handleLogin = (email: string) => {
-    alert(`¡Bienvenido! Usuario autenticado con email: ${email}`);
+  const handleLogin = (email: string) => { 
+      addToast({
+    color: "success",
+    title: "Usuario Inició Sesión",    
+    description: `Bienvenido, ${email}`, // aquí pones el email
+  });
+    
     router.push("/dashboard");
   };
 
