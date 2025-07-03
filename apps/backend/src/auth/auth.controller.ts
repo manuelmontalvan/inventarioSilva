@@ -52,18 +52,19 @@ export class AuthController {
     if (!user) throw new UnauthorizedException('Credenciales inválidas');
 
     const tokens = await this.authService.login(user);
+    const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('token', tokens.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 2, // 15 minutos
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      maxAge: 1000 * 60 * 60 * 2, // 2 horas
     });
 
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
     });
 
@@ -93,16 +94,20 @@ export class AuthController {
 
       const payload = { sub: user.id, email: user.email, role: user.role.name };
       const access_token = this.jwtService.sign(payload, { expiresIn: '15m' });
+      const isProd = process.env.NODE_ENV === 'production';
 
       res.cookie('token', access_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 1000 * 60 * 15, // 15 min
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: 1000 * 60 * 60 * 2, // 2 horas
       });
 
       return { message: 'Token renovado' };
-    } catch {
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('El token ha expirado');
+      }
       throw new UnauthorizedException('Refresh token inválido');
     }
   }
@@ -136,20 +141,19 @@ export class AuthController {
         // ignorar error de token expirado
       }
     }
-
+    const isProd = process.env.NODE_ENV === 'production';
     res.clearCookie('token', {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
       path: '/',
     });
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
       path: '/',
     });
-
     return { message: 'Sesión cerrada' };
   }
   @Post('reset-password')
