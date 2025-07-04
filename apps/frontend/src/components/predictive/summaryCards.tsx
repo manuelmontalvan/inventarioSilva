@@ -48,7 +48,7 @@ export default function SummaryCards({
             <BarChart className="w-5 h-5 text-blue-500" />
           </div>
           <p className="text-2xl font-semibold text-gray-800 dark:text-white">
-            {loading ? "Cargando..." : `$${Math.round(totalSales)}`}
+            {loading ? "Cargando..." : `${Math.round(totalSales)}`}
           </p>
           <p className="text-sm text-green-500 flex items-center gap-1">
             <TrendingUp className="w-4 h-4" />

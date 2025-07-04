@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getPrediction } from "@/lib/api/prediction/prediction";
-import { getProducts } from "@/lib/api/products/products";
 import { PredictionResponse } from "@/types/prediction";
-
 import {
   searchPredictiveProducts,
   ProductSearchResult,
 } from "@/lib/api/sales/productSales";
-import { ProductI } from "@/types/product";
+
 import ProtectedRoute from "@/components/restricted/protectedRoute";
 
 import SearchBar from "@/components/predictive/searchBar";
@@ -19,12 +17,10 @@ import SummaryCards from "@/components/predictive/summaryCards";
 import SalesChart from "@/components/predictive/salesChart";
 
 export default function PredictiveAnalyticsPage() {
-  const [products, setProducts] = useState<ProductI[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductSearchResult | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
@@ -36,18 +32,25 @@ export default function PredictiveAnalyticsPage() {
 
   const [days, setDays] = useState(7);
 
-  // Load products
+  // Cargar productos iniciales para mostrar opciones desde product_sales
   useEffect(() => {
-    getProducts({ limit: 1000 }).then((res) => {
-      setProducts(res.data);
-      if (res.data.length > 0) setSelectedProductId(res.data[0].id);
-    });
-  }, []);
+  // Carga inicial con un query común para llenar el dropdown
+  searchPredictiveProducts("a")
+    .then((results) => {
+      setSearchResults(results);
+      // No seleccionamos producto por defecto aquí
+    })
+    .catch(() => setSearchResults([]));
+}, []);
 
-  // Search predictive products
+
+  // Buscar productos cuando cambia searchTerm
   useEffect(() => {
+    if (searchTerm.length < 2) {
+      setSearchResults([]);
+      return;
+    }
     const delay = setTimeout(() => {
-      if (searchTerm.length < 2) return;
       searchPredictiveProducts(searchTerm)
         .then(setSearchResults)
         .catch(() => setSearchResults([]));
@@ -55,44 +58,47 @@ export default function PredictiveAnalyticsPage() {
     return () => clearTimeout(delay);
   }, [searchTerm]);
 
-  // Update selected brand/unit when product changes
+  // Actualizar brand y unit cuando cambia selectedProduct
   useEffect(() => {
     if (selectedProduct) {
       setSelectedBrand(selectedProduct.brands[0] || "");
       setSelectedUnit(selectedProduct.units[0] || "");
+    } else {
+      setSelectedBrand("");
+      setSelectedUnit("");
     }
   }, [selectedProduct]);
 
-  // Fetch prediction when dependencies change
+  // Obtener predicción cuando cambian los datos
   useEffect(() => {
-    const productName =
-      selectedProduct?.product_name ||
-      products.find((p) => p.id === selectedProductId)?.name;
-
-    if (!productName || !selectedBrand || !selectedUnit) return;
+    if (
+      !selectedProduct ||
+      !selectedBrand ||
+      !selectedUnit
+    ) {
+      setPredictionData(null);
+      return;
+    }
 
     setLoadingPrediction(true);
     setErrorPrediction(null);
 
-    getPrediction(productName, selectedBrand, selectedUnit, days)
-      .then((data) => {
-        setPredictionData(data);
-      })
+    getPrediction(
+      selectedProduct.product_name,
+      selectedBrand,
+      selectedUnit,
+      days,
+    )
+      .then((data) => setPredictionData(data))
       .catch((e) =>
         setErrorPrediction(
-          e.response?.data?.error || "Error al obtener las predicciones"
-        )
+          e.response?.data?.error || "Error al obtener las predicciones",
+        ),
       )
       .finally(() => setLoadingPrediction(false));
-  }, [
-    selectedProduct,
-    selectedProductId,
-    selectedBrand,
-    selectedUnit,
-    days,
-    products,
-  ]);
+  }, [selectedProduct, selectedBrand, selectedUnit, days]);
 
+  // Formatear datos para el gráfico
   const chartData =
     predictionData?.forecast.map((p) => {
       const date = new Date(p.ds);
@@ -143,11 +149,7 @@ export default function PredictiveAnalyticsPage() {
         <SummaryCards
           loading={loadingPrediction}
           totalSales={chartData.reduce((acc, d) => acc + d.ventas, 0)}
-          productName={
-            selectedProduct?.product_name ||
-            products.find((p) => p.id === selectedProductId)?.name ||
-            ""
-          }
+          productName={selectedProduct?.product_name || ""}
           days={days}
           brand={selectedBrand}
           unit={selectedUnit}

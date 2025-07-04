@@ -28,7 +28,10 @@ app.add_middleware(APIKeyMiddleware)
 # 🔐 Middlewares
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://inventario-silva.vercel.app"],
+     allow_origins=[
+        "https://inventario-silva.vercel.app",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -6,3 +6,4 @@ fastapi
 python-dotenv
 psycopg2-binary
 apscheduler
+requests

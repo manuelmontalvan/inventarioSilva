@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from app.models.prophet_models import models
-from app.services.prediction_service import get_forecast
+from app.services.prediction_service import get_forecast, generar_prediccion  # ← se incluye generar_prediccion
 from app.services.export_service import create_forecast_excel
 from app.models.prophet_models import metrics
 from app.utils.logging_config import logger  # ← nuevo import
-
 
 router = APIRouter()
 
@@ -47,32 +46,18 @@ def predict(
     try:
         validate_input_params(product_name, brand, unit)
 
-        forecast, alert_restock = get_forecast(product_name, brand, unit, days)
+        # Ahora usamos la función completa que incluye guardado automático
+        prediction_data = generar_prediccion(product_name, brand, unit, days)
 
-        if forecast is None:
+        if prediction_data is None:
             logger.error(f"Modelo no encontrado: {product_name} - {brand} - {unit}")
             raise HTTPException(status_code=404, detail="No se encontró un modelo entrenado para este producto.")
-
-        if not isinstance(forecast, list) or len(forecast) == 0:
-            logger.error(f"Predicción inválida: {product_name} - {brand} - {unit}")
-            raise HTTPException(status_code=400, detail="La predicción generó resultados inválidos.")
-
-        tendency = get_tendency(forecast)
-        key = (product_name, brand, unit)
-        product_metrics = metrics.get(key)
 
         logger.info(f"Predicción exitosa para {product_name} - {brand} - {unit}")
 
         return {
             "success": True,
-            "product": product_name,
-            "brand": brand,
-            "unit": unit,
-            "days": days,
-            "tendency": tendency,
-            "alert_restock": alert_restock,
-            "forecast": forecast,
-            "metrics": product_metrics if product_metrics else {}
+            **prediction_data
         }
     
     except HTTPException as e:

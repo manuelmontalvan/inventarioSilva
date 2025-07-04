@@ -6,12 +6,7 @@ import { CreatePredictionDto } from './dto/create-prediction.dto';
 export class PredictionController {
   constructor(private readonly predictionService: PredictionService) {}
 
-  @Post()
-  async create(@Body() createPredictionDto: CreatePredictionDto) {
-    return this.predictionService.create(createPredictionDto);
-  }
-
-  @Get()
+   @Get()
   async findAll() {
     return this.predictionService.findAll();
   }
