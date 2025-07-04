@@ -91,6 +91,7 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors }
   } = useForm<SupplierForm>({
     resolver: zodResolver(SupplierSchema),
@@ -104,16 +105,29 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
     }
   });
 
-  useEffect(() => {
+   useEffect(() => {
     if (initialData) {
-      setValue("identification", initialData.identification);
-      setValue("name", initialData.name);
-      setValue("contact_person", initialData.contact_person ?? undefined);
-      setValue("phone", initialData.phone ?? undefined);
-      setValue("email", initialData.email ?? undefined);
-      setValue("address", initialData.address ?? undefined);
+      // Si hay datos, carga para edición
+      reset({
+        identification: initialData.identification,
+        name: initialData.name,
+        contact_person: initialData.contact_person ?? undefined,
+        phone: initialData.phone ?? undefined,
+        email: initialData.email ?? undefined,
+        address: initialData.address ?? undefined,
+      });
+    } else {
+      // Si no hay datos, resetea el formulario a vacío para crear nuevo
+      reset({
+        identification: "",
+        name: "",
+        contact_person: undefined,
+        phone: undefined,
+        email: undefined,
+        address: undefined,
+      });
     }
-  }, [initialData, setValue]);
+  }, [initialData, reset]);
 
   if (!isOpen) return null;
 

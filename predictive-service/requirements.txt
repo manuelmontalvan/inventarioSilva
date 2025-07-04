@@ -2,9 +2,7 @@ pandas
 prophet
 fastapi
 uvicorn
-
-correr 
-primero cargo el entorno 
-.venv\Scripts\actívate
-cargo el proyecto jsuto donde esta main.py
-uvicorn main:app --reload
+fastapi
+python-dotenv
+psycopg2-binary
+apscheduler

@@ -46,8 +46,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
       await login(email, password);
       onLogin(email); // ✅ Notifica al padre
-      router.push("/dashboard");
-      addToast({ color: "success", title: "Usuario Inició Sesión" });
+      router.push("/dashboard");      
     } catch (error: unknown) {
       let message = "Error al iniciar sesión. Inténtalo de nuevo.";
       if (

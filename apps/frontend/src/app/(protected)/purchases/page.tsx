@@ -1,10 +1,8 @@
 "use client";
-import ProtectedRoute from "@/components/restricted/protectedRoute";
+
 import React, { useEffect, useState } from "react";
-import {
-  getPurchaseOrders,
-  createPurchaseOrder,
-} from "@/lib/api/purchases/purchaseOrders";
+import ProtectedRoute from "@/components/restricted/protectedRoute";
+import { getPurchaseOrders, createPurchaseOrder } from "@/lib/api/purchases/purchaseOrders";
 import { getProducts } from "@/lib/api/products/products";
 import { getSuppliers } from "@/lib/api/purchases/suppliers";
 import { getCategories } from "@/lib/api/products/categories";
@@ -22,32 +20,39 @@ export default function PurchasesPage() {
   const [suppliers, setSuppliers] = useState<SupplierI[]>([]);
   const [products, setProducts] = useState<ProductI[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  useAuth(); // Preservado si se requiere la protección de ruta, aunque no se use `user`
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useAuth(); // Asegura autenticación si tu contexto lo requiere
 
   const fetchData = async () => {
-    const [ordersData, suppliersData, productsData, categoriesData] =
-      await Promise.all([
+    setLoading(true);
+    try {
+      const [ordersData, suppliersData, productsData, categoriesData] = await Promise.all([
         getPurchaseOrders(),
         getSuppliers(),
         getProducts(),
         getCategories(),
       ]);
 
-    setOrders(ordersData);
-    setSuppliers(suppliersData);
-    setProducts(productsData.data);
-    setCategories(categoriesData);
+      setOrders(ordersData);
+      setSuppliers(suppliersData);
+      setProducts(productsData.data); // .data si viene paginado
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleCreateOrder = async (payload: CreatePurchaseOrderDto) => {
     try {
       await createPurchaseOrder(payload);
-      fetchData();
+      await fetchData(); // recarga después de crear
     } catch (error: unknown) {
       const message =
         typeof error === "object" &&
@@ -55,7 +60,7 @@ export default function PurchasesPage() {
         "response" in error &&
         (error as any).response?.data?.message;
 
-      alert("Error creando orden: " + (message || "Error"));
+      alert("Error creando orden: " + (message || "Error desconocido"));
     }
   };
 
@@ -68,22 +73,26 @@ export default function PurchasesPage() {
           </h1>
         </div>
 
-        <div className="flex flex-col gap-10">
-          <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6">
-            <PurchaseOrderForm
-              suppliers={suppliers}
-              categories={categories}
-              onCreate={handleCreateOrder}
-            />
-          </section>
+        {loading ? (
+          <p className="text-gray-500 dark:text-gray-300">Cargando datos...</p>
+        ) : (
+          <div className="flex flex-col gap-10">
+            <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6">
+              <PurchaseOrderForm
+                suppliers={suppliers}
+                categories={categories}
+                onCreate={handleCreateOrder}
+              />
+            </section>
 
-          <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6 max-h-[70vh] overflow-auto">
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
-              Órdenes Registradas
-            </h2>
-            <PurchaseOrderTable orders={orders} products={products} />
-          </section>
-        </div>
+            <section className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-6 max-h-[70vh] overflow-auto">
+              <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-900 z-10">
+                Órdenes Registradas
+              </h2>
+              <PurchaseOrderTable orders={orders} products={products} />
+            </section>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );

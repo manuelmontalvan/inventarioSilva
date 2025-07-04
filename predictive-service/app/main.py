@@ -1,45 +1,45 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from train import train_models_from_db
+from app.routes.predict_route import router as predict_router
+from app.routes.compare_route import router as compare_router
+from app.models.prophet_models import train_models_from_db, models
+from app.scheduler import scheduler, retrain_models_job
+from contextlib import asynccontextmanager
+from app.middleware.api_key import APIKeyMiddleware
+from app.routes.predict_route import router as predict_router
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        train_models_from_db()
+        print("✅ Modelos Prophet entrenados correctamente")
+    except Exception as e:
+        print(f"❌ Error entrenando modelos Prophet: {e}")
 
-# Habilitar CORS para permitir peticiones desde el frontend (Next.js)
+    scheduler.start()
+    retrain_models_job()
+    yield
+    print("🛑 Apagando scheduler...")
+    scheduler.shutdown()
+
+app = FastAPI(lifespan=lifespan)
+app.add_middleware(APIKeyMiddleware)
+# 🔐 Middlewares
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ En producción cambia esto a ["https://tu-frontend.com"]
+    allow_origins=["https://inventario-silva.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(predict_router)
 
-# Entrenar modelos Prophet al iniciar la aplicación
-try:
-    models = train_models_from_db()
-    print("✅ Modelos Prophet entrenados correctamente")
-except Exception as e:
-    print(f"❌ Error entrenando modelos Prophet: {e}")
-    models = {}
+# 📦 Rutas
+app.include_router(predict_router)
+app.include_router(compare_router)
 
-# Ruta de predicción
-@app.get("/predict")
-def predict(
-    product_name: str,
-    brand: str = "Sin marca",
-    unit: str = "Sin unidad",
-    days: int = 7,
-):
-    key = (product_name, brand, unit)
-    model = models.get(key)
-
-    if not model:
-        return JSONResponse(
-            status_code=404,
-            content={"error": f"No model trained for: {key}"}
-        )
-
-    future = model.make_future_dataframe(periods=days)
-    forecast = model.predict(future)
-    result = forecast[["ds", "yhat"]].tail(days).to_dict(orient="records")
-    return result
+# 🏠 Ruta raíz
+@app.get("/")
+def root():
+    return {"message": "API de predicción funcionando"}

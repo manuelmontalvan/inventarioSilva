@@ -27,7 +27,9 @@ import { addToast } from "@heroui/react";
 import { ProductSchema } from "@/lib/schemas/productSchema";
 import { createProduct } from "@/lib/api/products/products";
 import { z } from "zod";
-
+import { getCategories } from "@/lib/api/products/categories";
+import { getBrands } from "@/lib/api/products/brands";
+import { getUnitsOfMeasure} from "@/lib/api/products/unitOfMeasures";
 type ProductFormValues = z.infer<typeof ProductSchema>;
 
 interface Category {
@@ -87,27 +89,17 @@ export const CreateProductModal = ({
 
     const fetchData = async () => {
       try {
-        const [catRes, brandRes, unitRes] = await Promise.all([
-          fetch("http://localhost:3001/api/categories", {
-            credentials: "include",
-          }),
-          fetch("http://localhost:3001/api/brands", {
-            credentials: "include",
-          }),
-          fetch("http://localhost:3001/api/units", {
-            credentials: "include",
-          }),
+        // Ejecutar las 3 llamadas paralelas usando las funciones Axios
+        const [catData, brandData, unitData] = await Promise.all([
+          getCategories(),
+          getBrands(),
+          getUnitsOfMeasure(),
         ]);
-        if (!catRes.ok || !brandRes.ok || !unitRes.ok) throw new Error();
-
-        const catData: Category[] = await catRes.json();
-        const brandData: Brand[] = await brandRes.json();
-        const unitData: Unit[] = await unitRes.json();
 
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
-      } catch {
+      } catch (error) {
         addToast({
           title: "Error",
           description: "No se pudieron cargar categorías, marcas o unidades",
@@ -116,7 +108,6 @@ export const CreateProductModal = ({
         });
       }
     };
-
     fetchData();
   }, [open, form]);
 
@@ -353,10 +344,7 @@ export const CreateProductModal = ({
                   <FormItem>
                     <FormLabel>¿Es perecedero?</FormLabel>
                     <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onChange={field.onChange}
-                      >
+                      <Switch checked={field.value} onChange={field.onChange}>
                         Sí
                       </Switch>
                     </FormControl>

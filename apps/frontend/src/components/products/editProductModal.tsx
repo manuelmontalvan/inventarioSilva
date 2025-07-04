@@ -34,6 +34,9 @@ import { addToast } from "@heroui/react";
 import { ProductI, Category, Brand, UnitOfMeasure } from "@/types/product";
 import { updateProduct } from "@/lib/api/products/products";
 import { ProductSchema, ProductFormValues } from "@/lib/schemas/productSchema";
+import { getCategories } from "@/lib/api/products/categories";
+import { getBrands } from "@/lib/api/products/brands";
+import { getUnitsOfMeasure } from "@/lib/api/products/unitOfMeasures";
 
 interface Props {
   product: ProductI | null;
@@ -52,7 +55,7 @@ export default function EditProductModal({
     resolver: zodResolver(ProductSchema),
     defaultValues: {
       name: "",
-      description:"",
+      description: "",
       internal_code: "",
       min_stock: 0,
       max_stock: 0,
@@ -86,35 +89,22 @@ export default function EditProductModal({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, brandRes, unitRes] = await Promise.all([
-          fetch("http://localhost:3001/api/categories", {
-            credentials: "include",
-          }),
-          fetch("http://localhost:3001/api/brands", {
-            credentials: "include",
-          }),
-          fetch("http://localhost:3001/api/units", {
-            credentials: "include",
-          }),
-        ]);
-
+        // Ejecutar las 3 llamadas paralelas usando las funciones Axios
         const [catData, brandData, unitData] = await Promise.all([
-          catRes.json(),
-          brandRes.json(),
-          unitRes.json(),
+          getCategories(),
+          getBrands(),
+          getUnitsOfMeasure(),
         ]);
 
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
-      } catch (err) {
-        console.error("Error al cargar datos relacionados:", err);
+      } catch (error) {
         addToast({
-          title: "Error de carga",
-          description:
-            "No se pudieron cargar categorías, marcas o unidades. Revisa tu sesión.",
-          color: "danger",
+          title: "Error",
+          description: "No se pudieron cargar categorías, marcas o unidades",
           variant: "bordered",
+          color: "danger",
         });
       }
     };
@@ -168,7 +158,7 @@ export default function EditProductModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 ["name", "Nombre del producto", "text"],
-                 ["description", "Descripcion del producto", "text"],
+                ["description", "Descripcion del producto", "text"],
                 ["internal_code", "Código interno", "text"],
                 ["min_stock", "Stock mínimo", "number"],
                 ["max_stock", "Stock máximo", "number"],
