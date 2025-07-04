@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPrediction } from "@/lib/api/prediction/prediction";
 import { getProducts } from "@/lib/api/products/products";
+import { PredictionResponse } from "@/types/prediction";
 
 import {
   searchPredictiveProducts,
@@ -17,11 +18,6 @@ import DaysSelector from "@/components/predictive/daysSelector";
 import SummaryCards from "@/components/predictive/summaryCards";
 import SalesChart from "@/components/predictive/salesChart";
 
-interface PredictionPoint {
-  ds: string;
-  yhat: number;
-}
-
 export default function PredictiveAnalyticsPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,7 +29,8 @@ export default function PredictiveAnalyticsPage() {
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
 
-  const [predictions, setPredictions] = useState<PredictionPoint[]>([]);
+  const [predictionData, setPredictionData] =
+    useState<PredictionResponse | null>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
   const [errorPrediction, setErrorPrediction] = useState<string | null>(null);
 
@@ -78,7 +75,9 @@ export default function PredictiveAnalyticsPage() {
     setErrorPrediction(null);
 
     getPrediction(productName, selectedBrand, selectedUnit, days)
-      .then(setPredictions)
+      .then((data) => {
+        setPredictionData(data);
+      })
       .catch((e) =>
         setErrorPrediction(
           e.response?.data?.error || "Error al obtener las predicciones"
@@ -94,14 +93,18 @@ export default function PredictiveAnalyticsPage() {
     products,
   ]);
 
-  const chartData = predictions.map((p) => {
-    const date = new Date(p.ds);
-    const monthName = date.toLocaleString("es-ES", { month: "short" });
-    return {
-      name: monthName.charAt(0).toUpperCase() + monthName.slice(1),
-      ventas: p.yhat,
-    };
-  });
+  const chartData =
+    predictionData?.forecast.map((p) => {
+      const date = new Date(p.ds);
+      const monthName = date.toLocaleString("es-ES", {
+        month: "short",
+        day: "2-digit",
+      });
+      return {
+        name: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        ventas: p.yhat,
+      };
+    }) || [];
 
   return (
     <ProtectedRoute>

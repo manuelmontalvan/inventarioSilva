@@ -99,7 +99,7 @@ export const CreateProductModal = ({
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
-      } catch (error) {
+      } catch  {
         addToast({
           title: "Error",
           description: "No se pudieron cargar categorías, marcas o unidades",

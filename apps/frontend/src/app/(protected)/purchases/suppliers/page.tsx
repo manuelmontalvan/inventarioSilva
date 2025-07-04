@@ -89,8 +89,7 @@ function SupplierDrawer({ isOpen, onClose, onSave, initialData }: {
 }) {
   const {
     register,
-    handleSubmit,
-    setValue,
+    handleSubmit,  
     reset,
     formState: { errors }
   } = useForm<SupplierForm>({

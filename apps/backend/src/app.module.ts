@@ -21,6 +21,7 @@ import{ProductStockModule} from './products/product-stock/product-stock.module'
 import { SalesModule } from './productSales/sales.module';
 import { ShelfModule } from './products/locality/shelves/shelf.module';
 import { PagesModule } from './page/page.module';
+import { PredictionModule } from './prediction/prediction.module';
 
 
 @Module({
@@ -64,7 +65,8 @@ import { PagesModule } from './page/page.module';
     ProductStockModule,
     SalesModule,
     ShelfModule,
-    PagesModule 
+    PagesModule,
+    PredictionModule  
   
   ],
   providers: [RolesSeed, UserSeed],
