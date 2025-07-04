@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  predictive-service:
+    build:
+      context: ./predictive-service
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
