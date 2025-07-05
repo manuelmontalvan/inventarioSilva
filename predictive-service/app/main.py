@@ -7,7 +7,7 @@ from app.models.prophet_models import train_models_from_db, models
 from app.scheduler import scheduler, retrain_models_job
 from contextlib import asynccontextmanager
 from app.middleware.api_key import APIKeyMiddleware
-from app.routes.predict_route import router as predict_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
