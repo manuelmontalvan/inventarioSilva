@@ -7,7 +7,6 @@ import { getProducts } from "@/lib/api/products/products";
 import { getSuppliers } from "@/lib/api/purchases/suppliers";
 import { getCategories } from "@/lib/api/products/categories";
 import { useAuth } from "@/context/authContext";
-
 import { PurchaseOrder, CreatePurchaseOrderDto } from "@/types/purchaseOrders";
 import { ProductI, Category } from "@/types/product";
 import { SupplierI } from "@/types/supplier";
@@ -38,6 +37,7 @@ export default function PurchasesPage() {
       setSuppliers(suppliersData);
       setProducts(productsData.data); // .data si viene paginado
       setCategories(categoriesData);
+      
     } catch (error) {
       console.error("Error al cargar datos:", error);
     } finally {

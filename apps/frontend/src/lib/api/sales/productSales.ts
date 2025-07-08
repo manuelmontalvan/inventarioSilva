@@ -1,58 +1,61 @@
-// api/sales.ts
-import axios from "axios";
+// lib/api/sales.ts
+import axios from "@/lib/axiosInstance"; // 🔄 Usa tu instancia configurada
 import { SaleI, CreateSaleDto } from "@/types/productSales";
+
 export interface ProductSearchResult {
   product_name: string;
   brands: string[];
   units: string[];
 }
-const api = axios.create({
-  baseURL: "http://localhost:3001/api", // Ajusta según tu configuración
-  withCredentials: true, // Para enviar cookies HttpOnly si usas autenticación por cookie
-});
 
+// 👉 Obtener todas las ventas
 export const getSales = async (): Promise<SaleI[]> => {
-  const { data } = await api.get("/sales");
+  const { data } = await axios.get("/sales");
   return data;
 };
 
+// 👉 Obtener una venta por ID
 export const getSaleById = async (id: string): Promise<SaleI> => {
-  const { data } = await api.get(`/sales/${id}`);
+  const { data } = await axios.get(`/sales/${id}`);
   return data;
 };
 
+// 👉 Crear una venta
 export const createSale = async (sale: CreateSaleDto): Promise<SaleI> => {
-  const { data } = await api.post("/sales", sale);
+  const { data } = await axios.post("/sales", sale);
   return data;
 };
 
+// 👉 Actualizar una venta
 export const updateSale = async (
   id: string,
   sale: Partial<Omit<CreateSaleDto, "productSales">>
 ): Promise<SaleI> => {
-  const { data } = await api.patch(`/sales/${id}`, sale);
+  const { data } = await axios.patch(`/sales/${id}`, sale);
   return data;
 };
 
+// 👉 Eliminar una venta
 export const deleteSale = async (id: string): Promise<void> => {
-  await api.delete(`/sales/${id}`);
+  await axios.delete(`/sales/${id}`);
 };
 
+// 👉 Búsqueda predictiva para productos
 export const searchPredictiveProducts = async (
   query: string
 ): Promise<ProductSearchResult[]> => {
-  const res = await api.get("/sales/search", {
-   
+  const { data } = await axios.get("/sales/search", {
     params: { query },
   });
-  return res.data;
+  return data;
 };
 
+// 👉 Importar ventas desde Excel
 export const importSalesFromExcel = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  const { data } = await api.post("/sales/import", formData, {
+  const { data } = await axios.post("/sales/import", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

@@ -1,11 +1,8 @@
-// api/purchaseOrders.ts
-import axios from "axios";
+import axios from "@/lib/axiosInstance";
 import { PurchaseOrder, CreatePurchaseOrderDto } from "@/types/purchaseOrders";
 
-
-
 export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-  const { data } = await axios.get("/purchase-orders");
+  const { data } = await axios.get("/purchase-orders"); // sin repetir /api
   return data;
 };
 
@@ -34,6 +31,7 @@ export const updatePurchaseOrder = async (
 export const deletePurchaseOrder = async (id: string): Promise<void> => {
   await axios.delete(`/purchase-orders/${id}`);
 };
+
 export const uploadPurchaseOrderFile = async (
   file: File
 ): Promise<{ message: string; order: PurchaseOrder }> => {
