@@ -248,14 +248,7 @@ export default function ProductStockPage() {
             placeholder="Selecciona una percha"
           />
 
-          <p>Cantidad</p>
-          <Input
-            type="number"
-            value={quantity}
-            onClick={() => clearIfZero(quantity, setQuantity)}
-            onChange={(e) => setQuantity(e.target.value)}
-            min={0}
-          />
+         
 
           <p>Stock mínimo</p>
           <Input
