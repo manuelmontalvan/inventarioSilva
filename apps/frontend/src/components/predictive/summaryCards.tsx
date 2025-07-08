@@ -6,6 +6,7 @@ import {
   BarChart,
   LineChart,
   TrendingUp,
+  TrendingDown,
   AlertTriangle,
   ClipboardList,
 } from "lucide-react";
@@ -23,6 +24,7 @@ interface SummaryCardsProps {
     MAE: number;
     RMSE: number;
   };
+  percentChange?: number | null;
 }
 
 export default function SummaryCards({
@@ -35,6 +37,7 @@ export default function SummaryCards({
   tendency,
   alertRestock,
   metrics,
+  percentChange,
 }: SummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -50,10 +53,28 @@ export default function SummaryCards({
           <p className="text-2xl font-semibold text-gray-800 dark:text-white">
             {loading ? "Cargando..." : `${Math.round(totalSales)}`}
           </p>
-          <p className="text-sm text-green-500 flex items-center gap-1">
-            <TrendingUp className="w-4 h-4" />
-            +15% respecto al mes anterior
-          </p>
+
+          {percentChange !== null && percentChange !== undefined && (
+            <p
+              className={`text-sm flex items-center gap-1 ${
+                percentChange > 0
+                  ? "text-green-600"
+                  : percentChange < 0
+                  ? "text-red-600"
+                  : "text-gray-500"
+              }`}
+            >
+              {percentChange > 0 ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : percentChange < 0 ? (
+                <TrendingDown className="w-4 h-4" />
+              ) : (
+                <TrendingUp className="w-4 h-4 rotate-90" />
+              )}
+              {percentChange > 0 ? "+" : ""}
+              {percentChange.toFixed(2)}% respecto al mes anterior
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -88,22 +109,8 @@ export default function SummaryCards({
           <p className="text-xs text-gray-400">Basado en ventas históricas</p>
         </CardContent>
       </Card>
-      <Card className="shadow-md">
-        <CardContent className="flex flex-col gap-2 py-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-600">
-              Productos valido para compra
-            </span>
-            <LineChart className="w-5 h-5 text-indigo-500" />
-          </div>
-          <p className="text-sm">
-            {brand} / {unit}
-          </p>
-          <p className="text-xs text-gray-400">Basado en ventas históricas</p>
-        </CardContent>
-      </Card>
 
-      {/* Tendencia, alerta, métricas */}
+      {/* Predicción Detalles */}
       {(tendency || alertRestock !== undefined || metrics) && (
         <Card className="shadow-md">
           <CardContent className="flex flex-col gap-2 py-4">
@@ -138,7 +145,9 @@ export default function SummaryCards({
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                {alertRestock ? "¡Reposición necesaria!" : "Stock suficiente"}
+                {alertRestock
+                  ? "¡Reposición necesaria!"
+                  : "Stock suficiente"}
               </p>
             )}
 

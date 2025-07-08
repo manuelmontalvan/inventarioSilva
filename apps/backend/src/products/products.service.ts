@@ -177,9 +177,11 @@ export class ProductsService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')    
+      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')
       .leftJoinAndSelect('product.createdBy', 'createdBy')
-      .leftJoinAndSelect('product.updatedBy', 'updatedBy');
+      .leftJoinAndSelect('product.updatedBy', 'updatedBy')
+      .leftJoinAndSelect('product.stocks', 'stocks')
+      .leftJoinAndSelect('stocks.locality', 'stockLocality');
 
     if (search) {
       queryBuilder.where(
@@ -209,14 +211,19 @@ export class ProductsService {
         'brand',
         'unit_of_measure',
         'createdBy',
-        'updatedBy',        
+        'updatedBy',
+        'stocks', // ✅ Añade esta línea
+        'stocks.locality', // ✅ Opcional: incluir también la localidad relacionada
       ],
     });
+
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+
     return product;
   }
+
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
@@ -362,9 +369,12 @@ export class ProductsService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')  
+      .leftJoinAndSelect('product.unit_of_measure', 'unit_of_measure')
       .leftJoinAndSelect('product.createdBy', 'createdBy')
-      .leftJoinAndSelect('product.updatedBy', 'updatedBy');
+      .leftJoinAndSelect('product.updatedBy', 'updatedBy')
+      .leftJoinAndSelect('product.stocks', 'stocks')
+      .leftJoinAndSelect('stocks.locality', 'stockLocality');
+
 
     if (search) {
       queryBuilder.andWhere(

@@ -207,17 +207,6 @@ const handleCompareLowStock = async () => {
           </div>
 
 
-          <label
-            className="flex items-center gap-2 text-gray-700 dark:text-white cursor-pointer"
-            title="Activa esta opción si deseas ver alertas cuando la predicción de ventas sea muy baja (por ejemplo, para reponer stock)."
-          >
-            <input
-              type="checkbox"
-              checked={alertRestock}
-              onChange={(e) => setAlertRestock(e.target.checked)}
-            />
-            Alerta por bajo stock
-          </label>
         </div>
 
         <button

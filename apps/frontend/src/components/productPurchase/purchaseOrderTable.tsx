@@ -576,7 +576,7 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
                         <td className="p-2 border dark:border-gray-700">
                           {products.find((p) => p.id === line.product?.id)
                             ?.name ||
-                            line.product?.id ||
+                            line.product?.name ||
                             "Producto no disponible"}
                         </td>
                         <td className="p-2 border dark:border-gray-700">

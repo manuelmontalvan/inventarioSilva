@@ -13,6 +13,7 @@ import { getProducts } from "@/lib/api/products/products";
 interface SaleItem {
   productId: string;
   name: string;
+  brand_name: string;
   quantity: number;
   unit_price: number;
   unit_name: string;
@@ -29,7 +30,6 @@ interface Props {
 
 // Función ficticia para llamar al backend y traer productos paginados con filtros.
 // Cambia esta función para que llame a tu API real.
-
 
 export default function SalesForm({
   customers,
@@ -94,12 +94,6 @@ export default function SalesForm({
       return false;
     }
 
-    const unit = units.find((u) => u.id === unitId);
-    if (!unit) {
-      addToast({ title: "Unidad no válida", color: "danger" });
-      return false;
-    }
-
     const exists = items.find((i) => i.productId === product.id);
     if (exists) {
       addToast({ title: "El producto ya fue agregado", color: "danger" });
@@ -122,8 +116,9 @@ export default function SalesForm({
         productId: product.id,
         name: product.name,
         quantity,
+        brand_name: product.brand?.name || "N/A",
         unit_price: product.sale_price,
-        unit_name: unit.abbreviation,
+        unit_name: product.unit_of_measure?.name || "N/A",
         stock: product.current_quantity,
         total,
       },
@@ -289,8 +284,11 @@ export default function SalesForm({
             <thead className="bg-gray-100 dark:bg-gray-800">
               <tr>
                 <th className="px-4 py-2 text-left">Producto</th>
-                <th className="px-4 py-2 text-left">Cantidad</th>
+                <th className="px-4 py-2 text-left">Marca</th>
                 <th className="px-4 py-2 text-left">Unidad</th>
+
+                <th className="px-4 py-2 text-left">Cantidad</th>
+
                 <th className="px-4 py-2 text-left">Precio Unitario</th>
                 <th className="px-4 py-2 text-left">Subtotal</th>
                 <th className="px-4 py-2 text-left">Acción</th>
@@ -300,8 +298,10 @@ export default function SalesForm({
               {items.map((item) => (
                 <tr key={item.productId}>
                   <td className="px-4 py-2">{item.name}</td>
-                  <td className="px-4 py-2">{item.quantity}</td>
+                  <td className="px-4 py-2">{item.brand_name}</td>
+
                   <td className="px-4 py-2">{item.unit_name}</td>
+                  <td className="px-4 py-2">{item.quantity}</td>
                   <td className="px-4 py-2">${item.unit_price.toFixed(2)}</td>
                   <td className="px-4 py-2">${item.total.toFixed(2)}</td>
                   <td className="px-4 py-2">

@@ -85,7 +85,7 @@ def calcular_metricas_reales(product_name, brand, unit, forecast):
         errors.append(error)
 
     if not errors:
-        return {"MAE": None, "RMSE": None}
+        return {"MAE": 0.0, "RMSE": 0.0}
 
     mae = sum(abs(e) for e in errors) / len(errors)
     rmse = sqrt(sum(e**2 for e in errors) / len(errors))
@@ -96,7 +96,6 @@ def calcular_metricas_reales(product_name, brand, unit, forecast):
 def generar_prediccion(product_name, brand, unit, days):
     # Obtener la predicción real
     result, alert_restock = get_forecast(product_name, brand, unit, days)
-
     if result is None:
         print("No hay modelo para el producto especificado.")
         return None
@@ -104,12 +103,24 @@ def generar_prediccion(product_name, brand, unit, days):
     # Calcular tendencia
     tendency = calcular_tendencia(result)
 
-    
-    # Calcular métricas (ajustar según tus datos)
+    # Calcular métricas
     metrics = calcular_metricas_reales(product_name, brand, unit, result)
 
-    last_month_sales = get_last_month_sales(product_name, brand, unit) 
+    # Ventas del mes pasado
+    last_month_sales = get_last_month_sales(product_name, brand, unit)
+    # Proyección total de ventas en los próximos días
+    projected_sales = sum(item["yhat"] for item in result)
+
+    # Calcular variación porcentual (manejar caso 0)
+    if last_month_sales > 0:
+        percent_change = round(((projected_sales - last_month_sales) / last_month_sales) * 100, 2)
+    else:
+        percent_change = None  # o podrías usar 100.0 si quieres asumir una subida total
+
     print(f"Ventas mes anterior: {last_month_sales}")
+    print(f"Proyección próxima: {projected_sales}")
+    print(f"Variación: {percent_change}%")
+
     prediction_data = {
         "product": product_name,
         "brand": brand,
@@ -118,7 +129,10 @@ def generar_prediccion(product_name, brand, unit, days):
         "tendency": tendency,
         "alert_restock": alert_restock,
         "forecast": result,
-        "metrics": metrics
+        "metrics": metrics,
+        "sales_last_month": last_month_sales,
+        "projected_sales": projected_sales,
+        "percent_change": percent_change,  # 👈 Aquí lo agregas al JSON
     }
 
     # Guardar la predicción en NestJS

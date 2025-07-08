@@ -384,7 +384,8 @@ export const SalesTable: React.FC<Props> = ({ sales, loading }) => {
                           className="border-t dark:border-gray-700"
                         >
                           <td className="p-2 border dark:border-gray-700">
-                            {item.product?.name || item.productId}
+                            {item.product?.name  || item.productId}
+
                           </td>
                           <td className="p-2 border dark:border-gray-700">
                             {item.product?.brand?.name || "N/A"}

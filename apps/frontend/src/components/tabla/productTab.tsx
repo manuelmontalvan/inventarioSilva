@@ -39,15 +39,21 @@ export function ProductsTab({
   localities,
   mode,
 }: ProductsTableProps) {
-  const [quantityMap, setQuantityMap] = useState<Record<string, number | string>>({});
-  const [purchasePriceMap, setPurchasePriceMap] = useState<Record<string, number | string>>({});
+  const [quantityMap, setQuantityMap] = useState<
+    Record<string, number | string>
+  >({});
+  const [purchasePriceMap, setPurchasePriceMap] = useState<
+    Record<string, number | string>
+  >({});
   const [localityMap, setLocalityMap] = useState<Record<string, string>>({});
 
-  const productDisplayList: ProductWithDisplayKey[] = products.map((product) => ({
-    ...product,
-    displayKey: `${product.id}-${product.unit_of_measure?.id}`,
-    displayUnitName: product.unit_of_measure?.name ?? "N/A",
-  }));
+  const productDisplayList: ProductWithDisplayKey[] = products.map(
+    (product) => ({
+      ...product,
+      displayKey: `${product.id}-${product.unit_of_measure?.id}`,
+      displayUnitName: product.unit_of_measure?.name ?? "N/A",
+    })
+  );
 
   const handleAdd = (product: ProductWithDisplayKey, displayKey: string) => {
     const quantity = Number(quantityMap[displayKey]);
@@ -56,7 +62,10 @@ export function ProductsTab({
     );
 
     if (!quantity || quantity <= 0) {
-      addToast({ title: "Ingresa un valor de cantidad válido", color: "danger" });
+      addToast({
+        title: "Ingresa un valor de cantidad válido",
+        color: "danger",
+      });
       return;
     }
 
@@ -74,17 +83,15 @@ export function ProductsTab({
         return;
       }
     } else {
-      localityId = product.stocks?.[0]?.locality?.id;
-      if (!localityId) {
-        addToast({
-          title: "No se encontró una localidad asignada",
-          color: "danger",
-        });
-        return;
-      }
+      // En otros modos puedes decidir si quieres usar la localidad si existe o no.
+      // Si quieres forzar que haya localidad, quita el comentario y valida
+      localityId = product.stocks?.[0]?.locality?.id ?? undefined;
+
+      // Si no quieres validar nada, simplemente no hagas nada aquí,
+      // y si onAdd necesita localidad, puede recibir undefined.
     }
 
-    const added = onAdd(product, localityId, quantity, purchasePrice);
+    const added = onAdd(product, localityId ?? "", quantity, purchasePrice);
 
     if (added) {
       setQuantityMap((prev) => ({ ...prev, [displayKey]: "" }));
@@ -118,13 +125,16 @@ export function ProductsTab({
               <th className="px-4 py-2 text-left">Producto</th>
               <th className="px-4 py-2 text-left">Marca</th>
               <th className="px-4 py-2 text-left">Unidad</th>
-              {mode === "entrada" && <th className="px-4 py-2 text-left">Localidad</th>}
-              <th className="px-4 py-2 text-left">Cantidad</th>
-              {showPurchasePrice && <th className="px-4 py-2 text-left">Valor de compra</th>}
-              {showSalePrice && <th className="px-4 py-2 text-left">Valor de venta</th>}
+              <th className="px-4 py-2 text-left">Localidad</th>
+              {(showPurchasePrice || showSalePrice) && (
+                <th className="px-4 py-2 text-left">Cantidad</th>
+              )}
+
+              <th className="px-4 py-2 text-left">Valor de producto</th>
               <th className="px-4 py-2 text-left">Acción</th>
             </tr>
           </thead>
+
           <tbody>
             {productDisplayList.map((product) => (
               <tr key={product.displayKey} className="border-b">
@@ -132,8 +142,8 @@ export function ProductsTab({
                 <td className="px-4 py-2">{product.brand?.name || "N/A"}</td>
                 <td className="px-4 py-2">{product.displayUnitName}</td>
 
-                {mode === "entrada" ? (
-                  <td className="px-4 py-2">
+                <td className="px-4 py-2">
+                  {mode === "entrada" ? (
                     <select
                       value={localityMap[product.displayKey] || ""}
                       onChange={(e) =>
@@ -151,34 +161,49 @@ export function ProductsTab({
                         </option>
                       ))}
                     </select>
-                  </td>
-                ) : (
-                  <td className="px-4 py-2">
-                    {product.stocks && product.stocks.length > 0
-                      ? product.stocks.map((stock) => stock.locality?.name ?? "N/A").join(", ")
-                      : "N/A"}
-                  </td>
-                )}
+                  ) : product.stocks && product.stocks.length > 0 ? (
+                    product.stocks
+                      .map((stock) => stock.locality?.name ?? "N/A")
+                      .join(", ")
+                  ) : (
+                    "N/A"
+                  )}
+                </td>
 
                 <td className="px-4 py-2">
                   <input
                     type="number"
-                    min={1}
-                    value={quantityMap[product.displayKey] ?? ""}
-                    onFocus={() => {
-                      if (quantityMap[product.displayKey] === 0) {
+                    min={0}
+                    value={
+                      quantityMap[product.displayKey] === undefined
+                        ? 0
+                        : quantityMap[product.displayKey]
+                    }
+                    onFocus={(e) => {
+                      if (
+                        quantityMap[product.displayKey] === 0 ||
+                        quantityMap[product.displayKey] === undefined
+                      ) {
+                        // Borrar el valor visualmente al hacer clic
+                        e.target.value = "";
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === "") {
+                        // Si quedó vacío, restaurar a 0 en el mapa
                         setQuantityMap((prev) => ({
                           ...prev,
-                          [product.displayKey]: "",
+                          [product.displayKey]: 0,
                         }));
                       }
                     }}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value;
                       setQuantityMap((prev) => ({
                         ...prev,
-                        [product.displayKey]: Number(e.target.value) || 0,
-                      }))
-                    }
+                        [product.displayKey]: value === "" ? "" : Number(value),
+                      }));
+                    }}
                     className="border rounded px-2 py-1 w-20"
                   />
                 </td>
@@ -194,18 +219,25 @@ export function ProductsTab({
                         Number(product.purchase_price) ??
                         ""
                       }
-                      onFocus={() => {
-                        if (purchasePriceMap[product.displayKey] === 0) {
+                      onFocus={(e) => {
+                        const currentValue =
+                          purchasePriceMap[product.displayKey] ??
+                          Number(product.purchase_price);
+
+                        if (currentValue === 0) {
                           setPurchasePriceMap((prev) => ({
                             ...prev,
                             [product.displayKey]: "",
                           }));
+                          // También puedes limpiar el input directamente si quieres feedback inmediato
+                          e.target.select(); // para seleccionar todo el texto al hacer focus
                         }
                       }}
                       onChange={(e) =>
                         setPurchasePriceMap((prev) => ({
                           ...prev,
-                          [product.displayKey]: Number(e.target.value) || 0,
+                          [product.displayKey]:
+                            e.target.value === "" ? "" : Number(e.target.value),
                         }))
                       }
                       className="border rounded px-2 py-1 w-28"

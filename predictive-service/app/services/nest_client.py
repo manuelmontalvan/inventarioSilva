@@ -7,7 +7,7 @@ logger = logging.getLogger("nest_client")
 def guardar_prediccion_en_nest(prediction_data, api_key=None):
     
     print("Intentando guardar predicción en NestJS...")
-    url = os.getenv("NEST_API_URL", "http://localhost:3001/api/predictions")
+    url = os.getenv("NEST_API_URL")
     print(f"URL destino: {url}")
     headers = {"Content-Type": "application/json"}
     if api_key:

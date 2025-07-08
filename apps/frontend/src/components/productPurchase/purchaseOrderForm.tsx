@@ -13,23 +13,17 @@ import { getProducts } from "@/lib/api/products/products";
 import { addToast } from "@heroui/toast";
 import { ProductsTab } from "@/components/tabla/productTab";
 
+// Extendemos el tipo para guardar información visual
+type PurchaseItemWithDisplay = CreateProductPurchaseDto & {
+  productName: string;
+  brandName?: string;
+  unitName?: string;
+};
+
 interface Props {
   suppliers: SupplierI[];
   categories: Category[];
   onCreate: (data: CreatePurchaseOrderDto) => Promise<void>;
-}
-
-interface PurchaseItem extends CreateProductPurchaseDto {
-  name: string;
-  unit_id: string;
-  brand?: {
-    id: string;
-    name: string;
-  };
-  unit_of_measure?: {
-    id: string;
-    name: string;
-  };
 }
 
 export default function PurchaseOrderForm({
@@ -39,7 +33,7 @@ export default function PurchaseOrderForm({
 }: Props) {
   const [supplierId, setSupplierId] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [items, setItems] = useState<PurchaseItem[]>([]);
+  const [items, setItems] = useState<PurchaseItemWithDisplay[]>([]);
   const [products, setProducts] = useState<ProductI[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [search, setSearch] = useState("");
@@ -50,8 +44,7 @@ export default function PurchaseOrderForm({
 
   const limit = 10;
 
-  // Definir fetchProducts con useCallback para evitar warning de deps
-  const fetchProducts = useCallback(async (): Promise<void> => {
+  const fetchProducts = useCallback(async () => {
     try {
       const res = await getProducts({
         search,
@@ -133,21 +126,17 @@ export default function PurchaseOrderForm({
         unit_cost,
         total_cost,
         notes: "",
-        name: product.name,
-        unit_id: unitId,
-        brand: product.brand
-          ? { id: product.brand.id, name: product.brand.name }
-          : undefined,
-        unit_of_measure: product.unit_of_measure
-          ? {
-              id: product.unit_of_measure.id,
-              name: product.unit_of_measure.name,
-            }
-          : undefined,
+        unitOfMeasureId: product.unit_of_measure?.id,
+        brandId: product.brand?.id,
+        unit_id: product.unit_of_measure?.id ?? "",
+        brand_id: product.brand?.id ?? "",
+        productName: product.name,
+        brandName: product.brand?.name,
+        unitName: product.unit_of_measure?.name,
       },
     ]);
 
-    return true; // agregado con éxito
+    return true;
   };
 
   const handleRemoveItem = (productId: string, unitId: string) => {
@@ -159,13 +148,15 @@ export default function PurchaseOrderForm({
   };
 
   const handleSubmit = async () => {
-    if (!supplierId)
-      return addToast({ title: "Selecciona un proveedor ", color: "danger" });
-    if (items.length === 0)
+    if (!supplierId) {
+      return addToast({ title: "Selecciona un proveedor", color: "danger" });
+    }
+    if (items.length === 0) {
       return addToast({
-        title: "Agrega al menos un producto ",
+        title: "Agrega al menos un producto",
         color: "danger",
       });
+    }
 
     try {
       const newOrder: CreatePurchaseOrderDto = {
@@ -173,15 +164,22 @@ export default function PurchaseOrderForm({
         invoice_number: invoiceNumber,
         notes,
         items: items.map((item) => ({
-          ...item,
-          invoice_number: invoiceNumber,
+          productId: item.productId,
           supplierId,
+          invoice_number: invoiceNumber,
+          quantity: item.quantity,
+          unit_cost: item.unit_cost,
+          total_cost: item.total_cost,
+          notes: item.notes,
+          unitOfMeasureId: item.unit_id,
+          brandId: item.brand_id,
         })),
       };
 
       await onCreate(newOrder);
       addToast({ color: "success", title: "Orden de compra creada" });
 
+      // Reset form
       setSupplierId("");
       setInvoiceNumber("");
       setNotes("");
@@ -189,7 +187,6 @@ export default function PurchaseOrderForm({
       setSelectedCategoryId("");
       setSearch("");
       setPage(1);
-      setProducts([]);
       await fetchProducts();
     } catch (error) {
       console.error(error);
@@ -238,8 +235,8 @@ export default function PurchaseOrderForm({
             setSearch(newSearch);
             setPage(1);
           }}
-          localities={[]} // o tu lista real de localidades si aplica
-          mode="compra"
+          localities={[]} // no se usa
+          mode="salida" // para que NO aparezca select de localidad
         />
       </div>
 
@@ -260,11 +257,9 @@ export default function PurchaseOrderForm({
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {items.map((item) => (
                 <tr key={`${item.productId}-${item.unit_id}`}>
-                  <td className="px-4 py-2">{item.name}</td>
-                  <td className="px-4 py-2">{item.brand?.name ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    {item.unit_of_measure?.name ?? "—"}
-                  </td>
+                  <td className="px-4 py-2">{item.productName}</td>
+                  <td className="px-4 py-2">{item.brandName ?? "—"}</td>
+                  <td className="px-4 py-2">{item.unitName ?? "—"}</td>
                   <td className="px-4 py-2">{item.quantity}</td>
                   <td className="px-4 py-2">${item.unit_cost.toFixed(2)}</td>
                   <td className="px-4 py-2">${item.total_cost.toFixed(2)}</td>
@@ -273,7 +268,7 @@ export default function PurchaseOrderForm({
                       variant="destructive"
                       size="sm"
                       onClick={() =>
-                        handleRemoveItem(item.productId, item.unit_id)
+                        handleRemoveItem(item.productId, item.unit_id ?? "")
                       }
                     >
                       Eliminar
@@ -282,7 +277,7 @@ export default function PurchaseOrderForm({
                 </tr>
               ))}
               <tr>
-                <td colSpan={5} className="text-right font-bold px-4 py-2">
+                <td colSpan={4} className="text-right font-bold px-4 py-2">
                   Total General
                 </td>
                 <td className="font-bold px-4 py-2">
