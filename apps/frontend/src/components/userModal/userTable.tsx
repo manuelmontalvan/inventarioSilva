@@ -18,8 +18,8 @@ interface Props {
   onView: (user: UserI) => void;
   onUpdated: (user: UserI) => void;
   onDelete: (user: UserI) => void;
-  selectedUsers: number[];
-  setSelectedUsers: (ids: number[]) => void;
+  selectedUsers: string[]; // ← string, no number
+  setSelectedUsers: (ids: string[]) => void;
   visibleColumns: {
     name: boolean;
     lastname: boolean;
@@ -30,6 +30,7 @@ interface Props {
     isActive: boolean;
   };
 }
+
 
 export default function UserTable({
   users,
@@ -59,21 +60,22 @@ export default function UserTable({
     setSortConfig({ key, direction });
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedUsers(users.map((u) => u.id));
-    } else {
-      setSelectedUsers([]);
-    }
-  };
+ const handleSelectAll = (checked: boolean) => {
+  if (checked) {
+    setSelectedUsers(users.map((u) => String(u.id)));
+  } else {
+    setSelectedUsers([]);
+  }
+};
 
-  const handleSelectUser = (userId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedUsers([...selectedUsers, userId]);
-    } else {
-      setSelectedUsers(selectedUsers.filter((id) => id !== userId));
-    }
-  };
+const handleSelectUser = (userId: string, checked: boolean) => {
+  if (checked) {
+    setSelectedUsers([...selectedUsers, userId]);
+  } else {
+    setSelectedUsers(selectedUsers.filter((id) => id !== userId));
+  }
+};
+
   const rowVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },

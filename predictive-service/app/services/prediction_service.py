@@ -5,6 +5,9 @@ from datetime import datetime
 import hashlib
 from .nest_client import guardar_prediccion_en_nest
 from .sales_service import get_last_month_sales
+from math import sqrt
+from .sales_service import get_sales_history
+
 
 # 1. Cache configurado con un TTL de 1 hora
 prediction_cache = TTLCache(maxsize=1000, ttl=3600)  # 1000 entradas, 1 hora de duración
@@ -38,6 +41,7 @@ def get_forecast(product_name: str, brand: str, unit: str, days: int):
 
     # ⚠️ Conversión de Timestamp → string (para evitar error de serialización)
     result_df = forecast[["ds", "yhat"]].tail(days)
+    result_df["yhat"] = result_df["yhat"].apply(lambda x: max(0, x))
     result_df["ds"] = result_df["ds"].dt.strftime("%Y-%m-%d")
     result = result_df.to_dict(orient="records")
 
@@ -68,11 +72,25 @@ def calcular_tendencia(result):
         return "estable"
 
 
-def calcular_metricas():
-    """
-    Aquí deberías calcular las métricas reales de error, por ahora ejemplo fijo.
-    """
-    return {"MAE": 10.0, "RMSE": 12.5}
+def calcular_metricas_reales(product_name, brand, unit, forecast):
+    sales_history = get_sales_history(product_name, brand, unit)
+    sales_dict = {item["ds"]: item["y"] for item in sales_history}
+
+    errors = []
+    for pred in forecast:
+        real = sales_dict.get(pred["ds"])
+        if real is None:
+            continue
+        error = real - pred["yhat"]
+        errors.append(error)
+
+    if not errors:
+        return {"MAE": None, "RMSE": None}
+
+    mae = sum(abs(e) for e in errors) / len(errors)
+    rmse = sqrt(sum(e**2 for e in errors) / len(errors))
+
+    return {"MAE": round(mae, 2), "RMSE": round(rmse, 2)}
 
 
 def generar_prediccion(product_name, brand, unit, days):
@@ -88,7 +106,8 @@ def generar_prediccion(product_name, brand, unit, days):
 
     
     # Calcular métricas (ajustar según tus datos)
-    metrics = calcular_metricas()
+    metrics = calcular_metricas_reales(product_name, brand, unit, result)
+
     last_month_sales = get_last_month_sales(product_name, brand, unit) 
     print(f"Ventas mes anterior: {last_month_sales}")
     prediction_data = {

@@ -33,3 +33,24 @@ def get_last_month_sales(product_name: str, brand: str, unit: str) -> float:
     conn.close()
 
     return result["total"]
+def get_sales_history(product_name: str, brand: str, unit: str) -> list[dict]:
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    query = """
+        SELECT sale_date::date AS ds, SUM(quantity) AS y
+        FROM product_sales
+        WHERE product_name = %s
+          AND COALESCE(brand_name, 'Sin marca') = %s
+          AND COALESCE(unit_of_measure_name, 'Sin unidad') = %s
+        GROUP BY sale_date::date
+        ORDER BY ds
+    """
+
+    cursor.execute(query, (product_name, brand, unit))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    # Formato compatible con cálculo de métricas
+    return [{"ds": row["ds"].strftime("%Y-%m-%d"), "y": row["y"]} for row in results]

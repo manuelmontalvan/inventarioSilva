@@ -1,6 +1,8 @@
 import { Button } from "@heroui/button";
 import { Input } from "../ui/input";
 import { getRoles } from "@/lib/api/users/role";
+import { createUser } from "@/lib/api/users/user";
+
 import { Role } from "@/types/role";
 import {
   Modal,
@@ -80,63 +82,42 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
   }, [open, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      const res = await fetch("http://localhost:3001/api/users", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+  try {
+    await createUser(data);
+
+    addToast({
+      title: "Usuario creado",
+      description: "El usuario se ha creado exitosamente.",
+      color: "success",
+    });
+
+    onCreated();
+    onClose();
+  } catch (error: any) {
+    // Manejo específico del error por email duplicado
+    if (error.message?.includes("correo ya está en uso") || error.message?.includes("email ya en uso")) {
+      form.setError("email", {
+        type: "manual",
+        message: "Este correo ya está en uso.",
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-
-        if (res.status === 409 && errorData.message === "email ya en uso") {
-          form.setError("email", {
-            type: "manual",
-            message: "Este correo ya está en uso.",
-          });
-
-          addToast({
-            title: "Error",
-            description: "Este correo ya está en uso.",
-            color: "danger",
-          });
-
-          return;
-        }
-
-        // Otro tipo de error
-        addToast({
-          title: "Error",
-          description: errorData.message || "Error al crear usuario",
-          color: "danger",
-        });
-
-        return;
-      }
-
-      addToast({
-        title: "Usuario creado",
-        description: "El usuario se ha creado exitosamente.",
-        color: "success",
-      });
-
-      onCreated();
-      onClose();
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Error al crear usuario";
 
       addToast({
         title: "Error",
-        description: errorMessage,
+        description: "Este correo ya está en uso.",
         color: "danger",
       });
+
+      return;
     }
-  };
+
+    // Error general
+    addToast({
+      title: "Error",
+      description: error.message || "Error al crear usuario",
+      color: "danger",
+    });
+  }
+};
 
   return (
     <Modal

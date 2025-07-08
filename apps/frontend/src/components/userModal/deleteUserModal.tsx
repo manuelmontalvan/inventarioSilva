@@ -8,14 +8,15 @@ import {
 } from "@heroui/modal";
 import { Button } from "@heroui/react";
 import { addToast } from "@heroui/react";
+import { deleteUser } from "@/lib/api/users/user";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   user: UserI | null;
   onDelete: () => void;
-  multiple?: boolean; // <- NUEVO
-  onConfirm: () => void;
+  multiple?: boolean; // ← para eliminación múltiple
+  onConfirm: () => void; // ← para ejecutar cuando multiple = true
 }
 
 export default function DeleteUserModal({
@@ -23,7 +24,7 @@ export default function DeleteUserModal({
   onClose,
   user,
   onDelete,
-  multiple = false, // <- NUEVO
+  multiple = false,
   onConfirm,
 }: Props) {
   const handleDelete = async () => {
@@ -36,23 +37,7 @@ export default function DeleteUserModal({
 
       if (!user) return;
 
-      const res = await fetch(`http://localhost:3001/api/users/${user.id}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        addToast({
-          title: "Error",
-          description: err.message || "Error al eliminar el usuario",
-          color: "danger",
-        });
-        return;
-      }
+      await deleteUser(user.id.toString());
 
       addToast({
         title: "Usuario eliminado",
@@ -62,9 +47,9 @@ export default function DeleteUserModal({
 
       onDelete();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       const message =
-        error instanceof Error ? error.message : "Ocurrió un error al eliminar";
+        error?.message || "Ocurrió un error al eliminar el usuario";
 
       addToast({
         title: "Error",

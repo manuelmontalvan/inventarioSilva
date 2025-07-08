@@ -82,11 +82,13 @@ export default function SummaryCards({
             </span>
             <LineChart className="w-5 h-5 text-indigo-500" />
           </div>
-          <p className="text-sm">{brand} / {unit}</p>
+          <p className="text-sm">
+            {brand} / {unit}
+          </p>
           <p className="text-xs text-gray-400">Basado en ventas históricas</p>
         </CardContent>
       </Card>
-       <Card className="shadow-md">
+      <Card className="shadow-md">
         <CardContent className="flex flex-col gap-2 py-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-600">
@@ -94,7 +96,9 @@ export default function SummaryCards({
             </span>
             <LineChart className="w-5 h-5 text-indigo-500" />
           </div>
-          <p className="text-sm">{brand} / {unit}</p>
+          <p className="text-sm">
+            {brand} / {unit}
+          </p>
           <p className="text-xs text-gray-400">Basado en ventas históricas</p>
         </CardContent>
       </Card>
@@ -138,12 +142,14 @@ export default function SummaryCards({
               </p>
             )}
 
-            {metrics && (
-              <div className="text-xs text-gray-600">
-                <p>MAE: {metrics.MAE.toFixed(2)}</p>
-                <p>RMSE: {metrics.RMSE.toFixed(2)}</p>
-              </div>
-            )}
+            {metrics &&
+              typeof metrics.MAE === "number" &&
+              typeof metrics.RMSE === "number" && (
+                <div className="text-xs text-gray-600">
+                  <p>MAE: {metrics.MAE.toFixed(2)}</p>
+                  <p>RMSE: {metrics.RMSE.toFixed(2)}</p>
+                </div>
+              )}
           </CardContent>
         </Card>
       )}

@@ -20,3 +20,23 @@ export interface PredictionResponse {
     RMSE: number;
   }
 }
+
+export interface ForecastItem {
+  ds: string;         // fecha
+  yhat: number;       // valor predicho
+  yhat_upper?: number;
+  yhat_lower?: number;
+}
+
+export interface ProductForecastComparison {
+  product: string;
+  brand: string;
+  unit: string;
+  total_forecast: number;
+  forecast: ForecastItem[];
+}
+
+export interface PredictionComparisonResponse {
+  success: boolean;
+  comparison: ProductForecastComparison[];
+}

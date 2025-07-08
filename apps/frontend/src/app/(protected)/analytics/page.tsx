@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getPrediction } from "@/lib/api/prediction/prediction";
-import { PredictionResponse } from "@/types/prediction";
+import {
+  PredictionResponse,
+  ProductForecastComparison,
+} from "@/types/prediction";
 import {
   searchPredictiveProducts,
   ProductSearchResult,
@@ -11,9 +14,11 @@ import {
 import ProtectedRoute from "@/components/restricted/protectedRoute";
 import SearchBar from "@/components/predictive/searchBar";
 import ProductSelectors from "@/components/predictive/productSelector";
-import DaysSelector from "@/components/predictive/daysSelector";
 import SummaryCards from "@/components/predictive/summaryCards";
 import SalesChart from "@/components/predictive/salesChart";
+import { compareForecasts } from "@/lib/api/prediction/compare";
+import SimpleModal from "@/components/predictive/Modal";
+import ProductRestockTable from "@/components/predictive/productRestockTable";
 
 export default function PredictiveAnalyticsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,15 +35,20 @@ export default function PredictiveAnalyticsPage() {
   const [errorPrediction, setErrorPrediction] = useState<string | null>(null);
 
   const [days, setDays] = useState(7);
-  const [tendency, setTendency] = useState<string>(""); // puedes setear por defecto "ascendente", "descendente", etc.
+  const [tendency] = useState<string>("");
   const [alertRestock, setAlertRestock] = useState<boolean>(false);
 
+  const [restockModalOpen, setRestockModalOpen] = useState(false);
+  const [restockProducts, setRestockProducts] = useState<
+    ProductForecastComparison[]
+  >([]);
+  const [loadingCompare, setLoadingCompare] = useState(false);
+  const [daysInput, setDaysInput] = useState(days.toString());
+
+  // Buscar productos para el dropdown
   useEffect(() => {
-    // Carga inicial con un query común para llenar el dropdown
     searchPredictiveProducts("a")
-      .then((results) => {
-        setSearchResults(results);
-      })
+      .then(setSearchResults)
       .catch(() => setSearchResults([]));
   }, []);
 
@@ -55,6 +65,7 @@ export default function PredictiveAnalyticsPage() {
     return () => clearTimeout(delay);
   }, [searchTerm]);
 
+  // Seleccionar primera marca/unidad al seleccionar producto
   useEffect(() => {
     if (selectedProduct) {
       setSelectedBrand(selectedProduct.brands[0] || "");
@@ -65,9 +76,15 @@ export default function PredictiveAnalyticsPage() {
     }
   }, [selectedProduct]);
 
+  // Obtener predicción al cambiar parámetros
   useEffect(() => {
     if (!selectedProduct || !selectedBrand || !selectedUnit) {
       setPredictionData(null);
+      return;
+    }
+
+    if (days < 7 || days > 60) {
+      setErrorPrediction("Ingresa un número de días entre 7 y 60");
       return;
     }
 
@@ -82,14 +99,21 @@ export default function PredictiveAnalyticsPage() {
       tendency,
       alertRestock
     )
-      .then((data) => setPredictionData(data))
+      .then(setPredictionData)
       .catch((e) =>
         setErrorPrediction(
           e.response?.data?.error || "Error al obtener las predicciones"
         )
       )
       .finally(() => setLoadingPrediction(false));
-  }, [selectedProduct, selectedBrand, selectedUnit, days, tendency, alertRestock]);
+  }, [
+    selectedProduct,
+    selectedBrand,
+    selectedUnit,
+    days,
+    tendency,
+    alertRestock,
+  ]);
 
   const chartData =
     predictionData?.forecast.map((p) => {
@@ -104,9 +128,25 @@ export default function PredictiveAnalyticsPage() {
       };
     }) || [];
 
+  // Obtener productos por renovar stock
+const handleCompareLowStock = async () => {
+  setLoadingCompare(true);
+  try {
+    const response = await compareForecasts("Sin marca", "Sin unidad", days); // ✅ ya no envíes productos
+    const low = response.comparison.filter((p) => p.total_forecast < 5); // Umbral ajustable
+    setRestockProducts(low);
+    setRestockModalOpen(true);
+  } catch (err) {
+    console.error("Error comparando productos:", err);
+  } finally {
+    setLoadingCompare(false);
+  }
+};
+
+
   return (
     <ProtectedRoute>
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
           Análisis Predictivo
         </h1>
@@ -136,21 +176,41 @@ export default function PredictiveAnalyticsPage() {
           />
         )}
 
-        <DaysSelector days={days} onChange={setDays} />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div>
+            <label className="block text-sm text-gray-700 dark:text-white">
+              Días de predicción (7 - 60)
+            </label>
+            <input
+              type="number"
+              value={daysInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDaysInput(val); // siempre actualiza como string
 
-        {/* Aquí puedes agregar select o toggle para tendencia y alertRestock */}
-        <div className="flex gap-4">
-          <select
-            value={tendency}
-            onChange={(e) => setTendency(e.target.value)}
-            className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-2 rounded"
+                const parsed = parseInt(val);
+                if (!isNaN(parsed)) {
+                  if (parsed >= 7 && parsed <= 60) {
+                    setDays(parsed);
+                  }
+                }
+              }}
+              onBlur={() => {
+                const parsed = parseInt(daysInput);
+                if (isNaN(parsed) || parsed < 7 || parsed > 60) {
+                  alert("Ingresa un número de días entre 7 y 60");
+                  setDaysInput(days.toString()); // restaurar valor anterior
+                }
+              }}
+              className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-2 rounded w-32"
+            />
+          </div>
+
+
+          <label
+            className="flex items-center gap-2 text-gray-700 dark:text-white cursor-pointer"
+            title="Activa esta opción si deseas ver alertas cuando la predicción de ventas sea muy baja (por ejemplo, para reponer stock)."
           >
-            <option value="">Tendencia automática</option>
-            <option value="ascendente">Ascendente</option>
-            <option value="descendente">Descendente</option>
-          </select>
-
-          <label className="flex items-center gap-2 text-gray-700 dark:text-white">
             <input
               type="checkbox"
               checked={alertRestock}
@@ -160,10 +220,21 @@ export default function PredictiveAnalyticsPage() {
           </label>
         </div>
 
+        <button
+          onClick={handleCompareLowStock}
+          disabled={loadingCompare}
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded shadow"
+        >
+          {loadingCompare ? "Cargando..." : "Ver productos por renovar stock"}
+        </button>
+
         {predictionData && (
           <SummaryCards
             loading={false}
-            totalSales={predictionData.forecast.reduce((acc, f) => acc + f.yhat, 0)}
+            totalSales={predictionData.forecast.reduce(
+              (acc, f) => acc + f.yhat,
+              0
+            )}
             productName={predictionData.product}
             brand={predictionData.brand}
             unit={predictionData.unit}
@@ -174,8 +245,6 @@ export default function PredictiveAnalyticsPage() {
           />
         )}
 
-      
-
         {loadingPrediction ? (
           <div>Cargando gráfico...</div>
         ) : errorPrediction ? (
@@ -183,6 +252,14 @@ export default function PredictiveAnalyticsPage() {
         ) : (
           <SalesChart data={chartData} />
         )}
+
+        <SimpleModal
+          isOpen={restockModalOpen}
+          onClose={() => setRestockModalOpen(false)}
+          title="Productos que necesitan renovación de stock"
+        >
+          <ProductRestockTable products={restockProducts} />
+        </SimpleModal>
       </div>
     </ProtectedRoute>
   );
