@@ -8,15 +8,23 @@ export const getPrediction = async (
   product_name: string,
   brand: string,
   unit: string,
-  days: number = 7
+  days: number = 7,
+  tendency?: string,
+  alert_restock?: boolean
 ): Promise<PredictionResponse> => {
   const response = await axios.get(`${PYTHON_API_BASE}/predict`, {
-    params: { product_name, brand, unit, days },
+    params: {
+      product_name,
+      brand,
+      unit,
+      days,
+      ...(tendency !== undefined && { tendency }),
+      ...(alert_restock !== undefined && { alert_restock }),
+    },
     headers: {
-      
-      "x-api-key": API_KEY,
-    
+      "x-api-key": API_KEY || "",
     },
   });
+
   return response.data;
 };

@@ -86,6 +86,18 @@ export default function SummaryCards({
           <p className="text-xs text-gray-400">Basado en ventas históricas</p>
         </CardContent>
       </Card>
+       <Card className="shadow-md">
+        <CardContent className="flex flex-col gap-2 py-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600">
+              Productos valido para compra
+            </span>
+            <LineChart className="w-5 h-5 text-indigo-500" />
+          </div>
+          <p className="text-sm">{brand} / {unit}</p>
+          <p className="text-xs text-gray-400">Basado en ventas históricas</p>
+        </CardContent>
+      </Card>
 
       {/* Tendencia, alerta, métricas */}
       {(tendency || alertRestock !== undefined || metrics) && (

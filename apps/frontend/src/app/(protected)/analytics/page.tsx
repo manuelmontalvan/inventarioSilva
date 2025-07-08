@@ -9,7 +9,6 @@ import {
 } from "@/lib/api/sales/productSales";
 
 import ProtectedRoute from "@/components/restricted/protectedRoute";
-
 import SearchBar from "@/components/predictive/searchBar";
 import ProductSelectors from "@/components/predictive/productSelector";
 import DaysSelector from "@/components/predictive/daysSelector";
@@ -31,20 +30,18 @@ export default function PredictiveAnalyticsPage() {
   const [errorPrediction, setErrorPrediction] = useState<string | null>(null);
 
   const [days, setDays] = useState(7);
+  const [tendency, setTendency] = useState<string>(""); // puedes setear por defecto "ascendente", "descendente", etc.
+  const [alertRestock, setAlertRestock] = useState<boolean>(false);
 
-  // Cargar productos iniciales para mostrar opciones desde product_sales
   useEffect(() => {
-  // Carga inicial con un query común para llenar el dropdown
-  searchPredictiveProducts("a")
-    .then((results) => {
-      setSearchResults(results);
-      // No seleccionamos producto por defecto aquí
-    })
-    .catch(() => setSearchResults([]));
-}, []);
+    // Carga inicial con un query común para llenar el dropdown
+    searchPredictiveProducts("a")
+      .then((results) => {
+        setSearchResults(results);
+      })
+      .catch(() => setSearchResults([]));
+  }, []);
 
-
-  // Buscar productos cuando cambia searchTerm
   useEffect(() => {
     if (searchTerm.length < 2) {
       setSearchResults([]);
@@ -58,7 +55,6 @@ export default function PredictiveAnalyticsPage() {
     return () => clearTimeout(delay);
   }, [searchTerm]);
 
-  // Actualizar brand y unit cuando cambia selectedProduct
   useEffect(() => {
     if (selectedProduct) {
       setSelectedBrand(selectedProduct.brands[0] || "");
@@ -69,13 +65,8 @@ export default function PredictiveAnalyticsPage() {
     }
   }, [selectedProduct]);
 
-  // Obtener predicción cuando cambian los datos
   useEffect(() => {
-    if (
-      !selectedProduct ||
-      !selectedBrand ||
-      !selectedUnit
-    ) {
+    if (!selectedProduct || !selectedBrand || !selectedUnit) {
       setPredictionData(null);
       return;
     }
@@ -88,17 +79,18 @@ export default function PredictiveAnalyticsPage() {
       selectedBrand,
       selectedUnit,
       days,
+      tendency,
+      alertRestock
     )
       .then((data) => setPredictionData(data))
       .catch((e) =>
         setErrorPrediction(
-          e.response?.data?.error || "Error al obtener las predicciones",
-        ),
+          e.response?.data?.error || "Error al obtener las predicciones"
+        )
       )
       .finally(() => setLoadingPrediction(false));
-  }, [selectedProduct, selectedBrand, selectedUnit, days]);
+  }, [selectedProduct, selectedBrand, selectedUnit, days, tendency, alertRestock]);
 
-  // Formatear datos para el gráfico
   const chartData =
     predictionData?.forecast.map((p) => {
       const date = new Date(p.ds);
@@ -146,14 +138,43 @@ export default function PredictiveAnalyticsPage() {
 
         <DaysSelector days={days} onChange={setDays} />
 
-        <SummaryCards
-          loading={loadingPrediction}
-          totalSales={chartData.reduce((acc, d) => acc + d.ventas, 0)}
-          productName={selectedProduct?.product_name || ""}
-          days={days}
-          brand={selectedBrand}
-          unit={selectedUnit}
-        />
+        {/* Aquí puedes agregar select o toggle para tendencia y alertRestock */}
+        <div className="flex gap-4">
+          <select
+            value={tendency}
+            onChange={(e) => setTendency(e.target.value)}
+            className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-2 rounded"
+          >
+            <option value="">Tendencia automática</option>
+            <option value="ascendente">Ascendente</option>
+            <option value="descendente">Descendente</option>
+          </select>
+
+          <label className="flex items-center gap-2 text-gray-700 dark:text-white">
+            <input
+              type="checkbox"
+              checked={alertRestock}
+              onChange={(e) => setAlertRestock(e.target.checked)}
+            />
+            Alerta por bajo stock
+          </label>
+        </div>
+
+        {predictionData && (
+          <SummaryCards
+            loading={false}
+            totalSales={predictionData.forecast.reduce((acc, f) => acc + f.yhat, 0)}
+            productName={predictionData.product}
+            brand={predictionData.brand}
+            unit={predictionData.unit}
+            days={predictionData.days}
+            tendency={predictionData.tendency}
+            alertRestock={predictionData.alert_restock}
+            metrics={predictionData.metrics}
+          />
+        )}
+
+      
 
         {loadingPrediction ? (
           <div>Cargando gráfico...</div>

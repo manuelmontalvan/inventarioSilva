@@ -44,6 +44,7 @@ export default function AdminPage() {
     try {
       const data = await getUsers();
       setUsers(data);
+      console.log("Usuarios cargados:", data);
     } catch (err: unknown) {
       let message = "Error al cargar usuarios";
       if (
