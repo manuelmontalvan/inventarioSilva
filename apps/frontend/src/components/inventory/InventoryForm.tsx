@@ -15,6 +15,8 @@ interface Movement {
   brandName: string;
   unitName: string;
   localityId: string;
+  shelfId?: string;
+  shelfName?: string;
 }
 
 interface InventoryFormProps {
@@ -37,29 +39,26 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [selectedLocality, setSelectedLocality] = useState<string>("");
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const res = await getProducts({
-          page: currentPage,
-          limit: 10,
-          search: searchTerm,
-        });
-        setProducts(res.data);
-        setTotalPages(res.totalPages);
-      } catch {
-        addToast({ title: "Error cargando productos", color: "danger" });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, [currentPage, searchTerm]);
+ useEffect(() => {
+  const fetch = async () => {
+    try {
+      const res = await getProducts({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      });
+      setProducts(res.data);
+      setTotalPages(res.totalPages);
+    } catch {
+      addToast({ title: "Error cargando productos", color: "danger" });
+    }
+  };
+  fetch();
+}, [currentPage, searchTerm]);
+
 
   useEffect(() => {
     const fetchLocalities = async () => {
@@ -74,14 +73,16 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
     fetchLocalities();
   }, []);
 
-  const handleAdd = (product: ProductI, unitId: string, quantity: number) => {
-    if (movementList.find((m) => m.productId === product.id)) {
-      addToast({ title: "Producto ya agregado", color: "warning" });
-      return false;
-    }
-
-    if (!selectedLocality) {
-      addToast({ title: "Selecciona una localidad", color: "warning" });
+  const handleAdd = (
+    product: ProductI,
+    localityId: string,
+    quantity: number,
+    _purchasePrice?: number,
+    shelfId?: string,
+    shelfName?: string
+  ) => {
+    if (!localityId) {
+      addToast({ title: "No se encontró localidad", color: "danger" });
       return false;
     }
 
@@ -92,16 +93,20 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         productName: product.name,
         brandName: product.brand?.name || "",
         unitName: product.unit_of_measure?.name || "",
-        unitId,
+        unitId: product.unit_of_measure?.id || "",
         quantity,
-        localityId: selectedLocality,
+        localityId,
+        shelfId,
+        shelfName,
       },
     ]);
     return true;
   };
 
-  const handleRemove = (productId: string) => {
-    setMovementList((prev) => prev.filter((p) => p.productId !== productId));
+  const handleRemove = (productId: string, shelfId?: string) => {
+    setMovementList((prev) =>
+      prev.filter((p) => p.productId !== productId || p.shelfId !== shelfId)
+    );
   };
 
   const handleSubmit = async () => {
@@ -109,11 +114,11 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       addToast({ title: "Agrega al menos un producto", color: "warning" });
       return;
     }
-
+    const movementsToSend = movementList.map(({ shelfName, ...rest }) => rest);
     try {
       await onSubmit({
         type,
-        movements: movementList,
+        movements: movementsToSend,
         invoice_number: invoiceNumber || undefined,
         orderNumber: orderNumber || undefined,
         notes: notes || undefined,
@@ -125,35 +130,41 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       setOrderNumber("");
       setNotes("");
     } catch (error: unknown) {
-      let message = "Error guardando movimiento";
+      const backendError = (
+        error as {
+          response?: { data?: { message?: string; details?: unknown } };
+          message?: string;
+        }
+      )?.response?.data;
+
+      const message =
+        backendError?.message ||
+        (error as Error)?.message ||
+        "Error guardando movimiento";
 
       if (
-        error &&
-        typeof error === "object"
+        backendError &&
+        Array.isArray(backendError.details) &&
+        backendError.details.every((msg) => typeof msg === "string")
       ) {
-        if ("response" in error && error.response && typeof error.response === "object") {
-          const response = error.response as { data?: { message?: string } };
-          if (response.data?.message) {
-            message = response.data.message;
-          }
-        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
-          message = (error as { message: string }).message;
-        }
+        backendError.details.forEach((msg) => {
+          addToast({ title: msg, color: "danger" });
+        });
+      } else {
+        addToast({ title: message, color: "danger" });
       }
-
-      addToast({ title: message, color: "danger" });
     }
   };
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+    <div className="max-w-7xl mx-auto space-y-8 px-4">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white">
         Movimiento de Inventario
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Tipo de Movimiento
           </label>
           <select
@@ -167,7 +178,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Localidad destino
           </label>
           <select
@@ -184,7 +195,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Número de Orden (Compra/Venta)
           </label>
           <input
@@ -196,7 +207,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Número de Factura
           </label>
           <input
@@ -208,7 +219,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Notas (opcional)
           </label>
           <textarea
@@ -221,78 +232,72 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-        <div className="md:col-span-2 overflow-auto">
-          <ProductsTab
-            products={products}
-            units={[]}
-            onAdd={handleAdd}
-            showPurchasePrice={false}
-            showSalePrice={false}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            searchTerm={searchTerm}
-            onSearchChange={(val) => {
-              setSearchTerm(val);
-              setCurrentPage(1);
-            }}
-            localities={localities}
-            mode="compra"
-          />
-        </div>
+      <div className="min-h-[500px]">
+        <ProductsTab
+          products={products}
+          units={[]}
+          onAdd={handleAdd}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          localities={localities}
+          selectedLocality={selectedLocality}
+        />
       </div>
 
       {movementList.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
-          <div className="md:col-span-2 overflow-auto">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">
-              Productos Agregados
-            </h3>
-            <div className="overflow-auto rounded-lg border dark:border-gray-700">
-              <table className="min-w-full text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900">
-                <thead className="bg-gray-100 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-4 py-2">Producto</th>
-                    <th className="px-4 py-2">Marca</th>
-                    <th className="px-4 py-2">Unidad</th>
-                    <th className="px-4 py-2">Cantidad</th>
-                    <th className="px-4 py-2">Localidad</th>
-                    <th className="px-4 py-2">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movementList.map((m) => (
-                    <tr key={m.productId}>
-                      <td className="px-4 py-2">{m.productName}</td>
-                      <td className="px-4 py-2">{m.brandName}</td>
-                      <td className="px-4 py-2">{m.unitName}</td>
-                      <td className="px-4 py-2">{m.quantity}</td>
-                      <td className="px-4 py-2">
-                        {localities.find((l) => l.id === m.localityId)?.name}
-                      </td>
-                      <td className="px-4 py-2">
-                        <button
-                          onClick={() => handleRemove(m.productId)}
-                          className="text-red-600 dark:text-red-400 hover:underline"
-                        >
-                          Quitar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="overflow-x-auto">
+          <h3 className="text-xl font-semibold text-gray-700 dark:text-white mb-4">
+            Productos agregados
+          </h3>
+          <table className="min-w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden shadow-md">
+            <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white">
+              <tr>
+                <th className="px-4 py-2 text-left border-r">Producto</th>
+                <th className="px-4 py-2 text-left border-r">Marca</th>
+                <th className="px-4 py-2 text-left border-r">Unidad</th>
+                <th className="px-4 py-2 text-left border-r">Cantidad</th>
+                <th className="px-4 py-2 text-left border-r">Localidad</th>
+                <th className="px-4 py-2 text-left border-r">Percha</th>
+                <th className="px-4 py-2 text-left">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+              {movementList.map((m) => (
+                <tr
+                  key={`${m.productId}-${m.shelfId ?? "default"}`}
+                  className="border-t"
+                >
+                  <td className="px-4 py-2 border-r">{m.productName}</td>
+                  <td className="px-4 py-2 border-r">{m.brandName}</td>
+                  <td className="px-4 py-2 border-r">{m.unitName}</td>
+                  <td className="px-4 py-2 border-r">{m.quantity}</td>
+                  <td className="px-4 py-2 border-r">
+                    {localities.find((l) => l.id === m.localityId)?.name ||
+                      "N/A"}
+                  </td>
+                  <td className="px-4 py-2 border-r">{m.shelfName ?? "-"}</td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => handleRemove(m.productId, m.shelfId)}
+                      className="text-red-600 hover:underline font-medium"
+                    >
+                      Quitar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
       <div className="flex justify-end">
         <button
           onClick={handleSubmit}
-          disabled={loading}
-          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg disabled:opacity-50 transition"
+          className="bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition"
         >
           Guardar movimiento
         </button>

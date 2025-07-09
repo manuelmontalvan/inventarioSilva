@@ -1,3 +1,4 @@
+// src/inventory/inventory-movement.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -6,160 +7,161 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InventoryMovement, MovementType } from './inventory-movement.entity';
-import { CreateInventoryMovementsDto } from './dto/create-inventory-movement.dto';
 import { Product } from '../products/entities/product.entity';
 import { Locality } from '../products/locality/entities/locality.entity';
 import { ProductStock } from '../products/product-stock/product-stock.entity';
-import { DeepPartial } from 'typeorm';
-import { PurchaseOrder } from '../productPurchase/entities/purchase-order.entity';
-import { Sale } from '../productSales/entities/sale.entity';
+import { Shelf } from '../products/locality/shelves/entities/shelf.entity';
+import { CreateInventoryMovementsDto } from './dto/create-inventory-movement.dto';
 
 @Injectable()
 export class InventoryService {
   constructor(
     @InjectRepository(InventoryMovement)
-    private movementRepo: Repository<InventoryMovement>,
+    private readonly movementRepo: Repository<InventoryMovement>,
 
     @InjectRepository(Product)
-    private productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>,
 
     @InjectRepository(Locality)
-    private localityRepo: Repository<Locality>,
+    private readonly localityRepo: Repository<Locality>,
+
+    @InjectRepository(Shelf)
+    private readonly shelfRepo: Repository<Shelf>,
 
     @InjectRepository(ProductStock)
-    private productStockRepo: Repository<ProductStock>,
-
-    @InjectRepository(PurchaseOrder)
-    private purchaseRepo: Repository<PurchaseOrder>,
-
-    @InjectRepository(Sale)
-    private saleRepo: Repository<Sale>,
+    private readonly stockRepo: Repository<ProductStock>,
   ) {}
-  async create(dto: CreateInventoryMovementsDto) {
-    const results: InventoryMovement[] = [];
 
-    for (const m of dto.movements) {
-      const product = await this.productRepo.findOne({
-        where: { id: m.productId },
-        relations: ['brand', 'unit_of_measure'],
-      });
-      if (!product)
-        throw new NotFoundException(`Producto ${m.productId} no encontrado`);
+  async create(
+    dto: CreateInventoryMovementsDto,
+  ): Promise<{ movements: InventoryMovement[]; warnings: string[] }> {
+    const savedMovements: InventoryMovement[] = [];
+    const warnings: string[] = [];
+    const errorMessages: string[] = [];
 
-      if (!m.localityId) {
-        throw new BadRequestException('Localidad es obligatoria');
+    for (const item of dto.movements) {
+      const { productId, localityId, shelfId, unitId, quantity } = item;
+
+      const [product, locality, shelf] = await Promise.all([
+        this.productRepo.findOne({
+          where: { id: productId },
+          relations: ['brand', 'unit_of_measure'],
+        }),
+        this.localityRepo.findOneBy({ id: localityId }),
+        this.shelfRepo.findOneBy({ id: shelfId }),
+      ]);
+
+      if (!product || !locality || !shelf) {
+        errorMessages.push(
+          `Producto, localidad o percha no encontrados para el producto "${item.productName}".`,
+        );
+        continue;
       }
-      const locality = await this.localityRepo.findOne({
-        where: { id: m.localityId },
-      });
-      if (!locality) throw new NotFoundException('Localidad no encontrada');
 
-      let stock = await this.productStockRepo.findOne({
-        where: { product: { id: product.id }, locality: { id: locality.id } },
-        relations: ['product', 'locality'],
+      let stock = await this.stockRepo.findOne({
+        where: {
+          product: { id: productId },
+          shelf: { id: shelfId },
+        },
       });
+
+      if (dto.type === MovementType.IN) {
+        const currentQuantity = stock?.quantity ?? 0;
+        const maxStock = Number(stock?.max_stock ?? 0);
+        const newQuantity = currentQuantity + quantity;
+
+        if (maxStock && newQuantity > maxStock) {
+          errorMessages.push(
+            `El producto "${product.name}" en la percha "${shelf.name}" supera el stock máximo (${newQuantity} > ${maxStock}).`,
+          );
+          continue;
+        }
+
+        if (!stock) {
+          stock = this.stockRepo.create({
+            product,
+            shelf,
+            locality,
+            shelfId,
+            quantity,
+            min_stock: 0,
+            max_stock: 0,
+          });
+        } else {
+          stock.quantity = newQuantity;
+        }
+      } else if (dto.type === MovementType.OUT) {
+        if (!stock) {
+          errorMessages.push(
+            `No existe stock en la percha "${shelf.name}" para el producto "${product.name}".`,
+          );
+          continue;
+        }
+
+        if (stock.quantity < quantity) {
+          errorMessages.push(
+            `Stock insuficiente para "${product.name}" en la percha "${shelf.name}". Disponible: ${stock.quantity}`,
+          );
+          continue;
+        }
+
+        const newQuantity = stock.quantity - quantity;
+        const minStock = Number(stock.min_stock ?? 0);
+
+        if (minStock && newQuantity < minStock) {
+          errorMessages.push(
+            `El producto "${product.name}" en la percha "${shelf.name}" quedaría por debajo del mínimo (${newQuantity} < ${minStock}).`,
+          );
+          continue;
+        }
+
+        stock.quantity = newQuantity;
+      }
 
       if (!stock) {
-        stock = this.productStockRepo.create({
-          product,
-          locality,
-          quantity: 0,
-          min_stock: 0,
-          max_stock: 0,
-        });
-      }
-
-      if (dto.type === MovementType.OUT && stock.quantity < m.quantity) {
-        throw new BadRequestException(
-          `Stock insuficiente en localidad para producto ${product.name}`,
+        errorMessages.push(
+          `Error inesperado con el stock de "${product.name}".`,
         );
+        continue;
       }
 
-      // --- ACTUALIZAR ORDEN DE COMPRA O VENTA SEGÚN TIPO Y FACTURA ---
+      await this.stockRepo.save(stock);
 
-      if (dto.invoice_number) {
-        if (
-          dto.type === MovementType.IN &&
-          dto.orderNumber &&
-          dto.invoice_number
-        ) {
-          const purchaseOrder = await this.purchaseRepo.findOne({
-            where: { orderNumber: dto.orderNumber },
-          });
-
-          if (purchaseOrder) {
-            purchaseOrder.invoice_number = dto.invoice_number;
-            await this.purchaseRepo.save(purchaseOrder);
-          }
-        }
-
-        if (
-          dto.type === MovementType.OUT &&
-          dto.orderNumber &&
-          dto.invoice_number
-        ) {
-          const saleOrder = await this.saleRepo.findOne({
-            where: { orderNumber: dto.orderNumber },
-          });
-
-          if (saleOrder) {
-            saleOrder.invoice_number = dto.invoice_number;
-            await this.saleRepo.save(saleOrder);
-          }
-        }
-      }
-
-      // Crear movimiento sin purchase ni sale porque no quieres guardar esas relaciones
       const movement = this.movementRepo.create({
         type: dto.type,
-        quantity: m.quantity,
-        notes: dto.notes,
+        quantity,
         product,
         locality,
+        localityId: locality.id,
+        brandName: product.brand?.name ?? '',
+        productName: product.name,
+        unitName: product.unit_of_measure?.name ?? '',
+        notes: dto.notes,
         invoice_number: dto.invoice_number,
         orderNumber: dto.orderNumber,
-        productName: product.name,
-        brandName: product.brand?.name ?? undefined,
-        unitName: product.unit_of_measure?.name ?? undefined,
+        shelfId: shelf.id,
+        shelfName: shelf.name,
       });
 
-      // Actualizar stock según tipo
-      if (dto.type === MovementType.IN) {
-        stock.quantity += m.quantity;
-      } else {
-        stock.quantity -= m.quantity;
-      }
-
-      await this.productStockRepo.save(stock);
-
-      // Actualizar cantidad total en producto
-      const currentQty = parseFloat(product.current_quantity as any) || 0;
-      product.current_quantity =
-        dto.type === MovementType.IN
-          ? currentQty + m.quantity
-          : currentQty - m.quantity;
-      await this.productRepo.save(product);
-
-      // Guardar movimiento
-      const savedMovement = await this.movementRepo.save(movement);
-      results.push(savedMovement);
-      if (dto.type === MovementType.OUT) {
-        product.last_sale_date = savedMovement.createdAt;
-        await this.productRepo.save(product);
-      }
-      if (dto.type === MovementType.IN) {
-        product.last_purchase_date = savedMovement.createdAt;
-        await this.productRepo.save(product);
-      }
+      const saved = await this.movementRepo.save(movement);
+      savedMovements.push(saved);
     }
 
-    return results;
+    if (errorMessages.length > 0) {
+      throw new BadRequestException({
+        message:
+          'Algunos productos no se pudieron registrar por errores de stock:',
+        details: errorMessages,
+      });
+    }
+
+    return { movements: savedMovements, warnings };
   }
 
-  async findAll() {
+  async findAll(): Promise<InventoryMovement[]> {
     return this.movementRepo.find({
-      relations: ['product', 'locality'],
       order: { createdAt: 'DESC' },
+      relations: ['product', 'locality'],
     });
   }
 }

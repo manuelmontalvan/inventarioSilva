@@ -235,8 +235,9 @@ export default function PurchaseOrderForm({
             setSearch(newSearch);
             setPage(1);
           }}
-          localities={[]} // no se usa
-          mode="salida" // para que NO aparezca select de localidad
+          localities={[]}
+          selectedLocality={""}
+          hideLocality={true}
         />
       </div>
 

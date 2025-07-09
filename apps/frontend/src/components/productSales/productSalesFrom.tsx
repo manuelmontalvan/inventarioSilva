@@ -275,7 +275,8 @@ export default function SalesForm({
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         localities={[]} // o tu lista real de localidades si aplica
-        mode="compra"
+        hideLocality={true}
+        selectedLocality={""}
       />
 
       {items.length > 0 && (

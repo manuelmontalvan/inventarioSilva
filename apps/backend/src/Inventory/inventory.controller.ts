@@ -7,10 +7,15 @@ import { CreateInventoryMovementsDto } from './dto/create-inventory-movement.dto
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
-  @Post()
-  create(@Body() dto: CreateInventoryMovementsDto) {
-    return this.inventoryService.create(dto);
-  }
+@Post()
+async create(@Body() dto: CreateInventoryMovementsDto) {
+  const result = await this.inventoryService.create(dto);
+  return {
+    message: 'Movimientos creados exitosamente',
+    ...result,
+  };
+}
+
 
   @Get()
   findAll() {

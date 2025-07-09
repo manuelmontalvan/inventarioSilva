@@ -36,7 +36,7 @@ export default function PredictiveAnalyticsPage() {
 
   const [days, setDays] = useState(7);
   const [tendency] = useState<string>("");
-  const [alertRestock, setAlertRestock] = useState<boolean>(false);
+  const [alertRestock] = useState<boolean>(false);
 
   const [restockModalOpen, setRestockModalOpen] = useState(false);
   const [restockProducts, setRestockProducts] = useState<

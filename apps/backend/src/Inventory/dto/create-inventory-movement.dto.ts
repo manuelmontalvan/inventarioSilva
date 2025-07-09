@@ -30,6 +30,9 @@ class MovementItemDto {
   @IsNotEmpty()
   localityId: string;
 
+  @IsUUID()
+  shelfId: string;
+
   @IsString()
   @IsOptional()
   productName?: string;
@@ -66,3 +69,4 @@ export class CreateInventoryMovementsDto {
   @IsOptional()
   notes?: string;
 }
+

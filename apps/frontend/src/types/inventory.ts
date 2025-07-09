@@ -1,4 +1,8 @@
+// types/inventory.ts
+
 export type MovementType = 'IN' | 'OUT';
+
+
 
 export interface InventoryMovement {
   id: string;
@@ -8,23 +12,48 @@ export interface InventoryMovement {
   invoice_number?: string;
   orderNumber?: string;
   createdAt: string;
-  product: {
+
+  // Nuevos campos directos de la entidad
+  productName?: string;
+  brandName?: string;
+  unitName?: string;
+  shelfId?: string;  
+
+  // Relaciones
+  product?: {
+    id: string;
+    name: string;
+    brand?: {
+      id: string;
+      name: string;
+    };
+    unit_of_measure?: {
+      id: string;
+      name: string;
+      abbreviation?: string;
+    };
+  };
+
+  locality?: {
     id: string;
     name: string;
   };
-  locality: {
+
+  shelf?: {
     id: string;
     name: string;
   };
 }
 
+
 export interface CreateInventoryMovementsDto {
-  type: 'IN' | 'OUT';
+  type: MovementType;
   movements: {
     productId: string;
     quantity: number;
     unitId: string;
-    localityId: string; // ← agregar esto por producto
+    localityId: string;
+    shelfId?: string;
     productName?: string;
     brandName?: string;
     unitName?: string;
@@ -33,14 +62,15 @@ export interface CreateInventoryMovementsDto {
   orderNumber?: string;
   notes?: string;
 }
-// types/inventory.ts
 
 export type InventoryFormInput = {
-  type: "IN" | "OUT";
+  type: MovementType;
   movements: {
     productId: string;
     quantity: number;
     unitId: string;
+    localityId: string;
+    shelfId?: string;
     productName: string;
     brandName: string;
     unitName: string;

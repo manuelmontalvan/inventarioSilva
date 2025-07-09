@@ -48,9 +48,15 @@ export class InventoryMovement {
   @Column({ nullable: true })
   invoice_number: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({  nullable: true })
   orderNumber: string;
 
   @CreateDateColumn()
   createdAt: Date;
+  
+  @Column({ nullable: true })
+  shelfId: string;
+
+  @Column({ nullable: true })
+  shelfName: string;
 }

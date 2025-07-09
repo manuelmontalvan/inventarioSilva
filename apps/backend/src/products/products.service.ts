@@ -181,7 +181,8 @@ export class ProductsService {
       .leftJoinAndSelect('product.createdBy', 'createdBy')
       .leftJoinAndSelect('product.updatedBy', 'updatedBy')
       .leftJoinAndSelect('product.stocks', 'stocks')
-      .leftJoinAndSelect('stocks.locality', 'stockLocality');
+      .leftJoinAndSelect('stocks.locality', 'stockLocality')
+      .leftJoinAndSelect('stocks.shelf', 'stockShelf'); // ⬅️ Esto es clave
 
     if (search) {
       queryBuilder.where(
@@ -212,8 +213,9 @@ export class ProductsService {
         'unit_of_measure',
         'createdBy',
         'updatedBy',
-        'stocks', // ✅ Añade esta línea
-        'stocks.locality', // ✅ Opcional: incluir también la localidad relacionada
+        'stocks',
+        'stocks.locality', 
+        'stocks.shelf',
       ],
     });
 
@@ -373,7 +375,8 @@ export class ProductsService {
       .leftJoinAndSelect('product.createdBy', 'createdBy')
       .leftJoinAndSelect('product.updatedBy', 'updatedBy')
       .leftJoinAndSelect('product.stocks', 'stocks')
-      .leftJoinAndSelect('stocks.locality', 'stockLocality');
+      .leftJoinAndSelect('stocks.locality', 'stockLocality')
+      .leftJoinAndSelect('stocks.shelf', 'stockShelf'); 
 
 
     if (search) {

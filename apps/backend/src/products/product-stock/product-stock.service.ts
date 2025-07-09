@@ -107,4 +107,25 @@ export class ProductStockService {
       throw new NotFoundException('Stock no encontrado');
     }
   }
+
+
+
+async searchStocks(search?: string): Promise<ProductStock[]> {
+  const query = this.stockRepo.createQueryBuilder('stock')
+    .leftJoinAndSelect('stock.product', 'product')
+    .leftJoinAndSelect('product.brand', 'brand')
+    .leftJoinAndSelect('product.unit_of_measure', 'unit')
+    .leftJoinAndSelect('stock.locality', 'locality')
+    .leftJoinAndSelect('stock.shelf', 'shelf');
+
+  if (search) {
+    query.where('product.name ILIKE :search', { search: `%${search}%` })
+      .orWhere('brand.name ILIKE :search', { search: `%${search}%` })
+      .orWhere('locality.name ILIKE :search', { search: `%${search}%` })
+      .orWhere('shelf.name ILIKE :search', { search: `%${search}%` });
+  }
+
+  return query.orderBy('product.name', 'ASC').getMany();
+}
+
 }

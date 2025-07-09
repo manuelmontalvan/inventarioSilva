@@ -27,3 +27,11 @@ export const deleteProductStock = async (id: string): Promise<null> => {
   const res = await axios.delete(`/product-stock/${id}`);
   return res.status === 204 ? null : res.data;
 };
+
+export const searchProductStocks = async (query: string): Promise<ProductStock[]> => {
+  const res = await axios.get('/product-stock/search', {
+    params: { q: query },
+    withCredentials: true,
+  });
+  return res.data;
+};

@@ -94,8 +94,7 @@ export default function SalesPage() {
 
       const createdSale = await createSale(backendData);
       setSales((prev) => [createdSale, ...prev]);
-
-      alert("Venta creada con éxito");
+   
     } catch (error: unknown) {
       let message = "Error desconocido";
       if (

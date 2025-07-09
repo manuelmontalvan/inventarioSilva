@@ -48,6 +48,8 @@ export default function InventoryPage() {
       productName?: string;
       brandName?: string;
       unitName?: string;
+      shelfId?: string;
+      shelfName?: string;
     }[];
     invoice_number?: string;
     orderNumber?: string;
@@ -82,7 +84,8 @@ export default function InventoryPage() {
           <CardHeader>
             <CardTitle>Historial de Movimientos</CardTitle>
             <CardDescription>
-              Visualiza todos los movimientos registrados, incluyendo entradas y salidas.
+              Visualiza todos los movimientos registrados, incluyendo entradas y
+              salidas.
             </CardDescription>
           </CardHeader>
           <CardContent>

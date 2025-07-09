@@ -12,6 +12,7 @@ import {
 import { ProductStockService } from './product-stock.service';
 import { CreateProductStockDto } from './dto/create-product-stock.dto';
 import { UpdateProductStockDto } from './dto/update-product-stock.dto';
+import { ProductStock } from './product-stock.entity';
 
 @Controller('product-stock')
 export class ProductStockController {
@@ -35,4 +36,11 @@ export class ProductStockController {
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
+  @Get('search')
+async search(
+  @Query('q') query: string,
+): Promise<ProductStock[]> {
+  return this.service.searchStocks(query);
+}
+
 }

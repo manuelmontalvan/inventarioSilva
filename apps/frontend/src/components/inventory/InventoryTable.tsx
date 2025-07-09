@@ -15,8 +15,11 @@ export default function InventoryTable({ movements }: Props) {
             <th className="px-4 py-2">Fecha</th>
             <th className="px-4 py-2">Tipo</th>
             <th className="px-4 py-2">Producto</th>
+            <th className="px-4 py-2">Marca</th>
+            <th className="px-4 py-2">Unidad</th>
             <th className="px-4 py-2">Cantidad</th>
             <th className="px-4 py-2">Localidad</th>
+            <th className="px-4 py-2">Percha</th>
             <th className="px-4 py-2">Orden</th>
             <th className="px-4 py-2">Factura</th>
             <th className="px-4 py-2">Notas</th>
@@ -46,9 +49,12 @@ export default function InventoryTable({ movements }: Props) {
                   {m.type === 'IN' ? 'Entrada' : 'Salida'}
                 </span>
               </td>
-              <td className="px-4 py-2">{m.product?.name || '-'}</td>
+              <td className="px-4 py-2">{m.productName || m.product?.name || '-'}</td>
+              <td className="px-4 py-2">{m.brandName || '-'}</td>
+              <td className="px-4 py-2">{m.unitName || '-'}</td>
               <td className="px-4 py-2">{m.quantity}</td>
               <td className="px-4 py-2">{m.locality?.name || '-'}</td>
+              <td className="px-4 py-2">{m.shelfName || m.shelfId || '-'}</td>
               <td className="px-4 py-2">{m.orderNumber || '-'}</td>
               <td className="px-4 py-2">{m.invoice_number || '-'}</td>
               <td className="px-4 py-2">{m.notes || '-'}</td>

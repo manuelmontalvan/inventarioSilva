@@ -9,10 +9,11 @@ import { ProductStock } from 'src/products/product-stock/product-stock.entity';
 import { ProductPurchase } from 'src/productPurchase/entities/product-purchase.entity';
 import { Sale } from 'src/productSales/entities/sale.entity';
 import {PurchaseOrder} from '../productPurchase/entities/purchase-order.entity'
+import { Shelf } from 'src/products/locality/shelves/entities/shelf.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InventoryMovement, Product,Locality , ProductStock,Sale,PurchaseOrder  ]),
+    TypeOrmModule.forFeature([InventoryMovement, Product,Locality , ProductStock,Sale,PurchaseOrder, Shelf  ]),
   ],
   controllers: [InventoryController],
   providers: [InventoryService,ProductPurchase],
