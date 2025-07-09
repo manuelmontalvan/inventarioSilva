@@ -100,11 +100,24 @@ export default function PredictiveAnalyticsPage() {
       alertRestock
     )
       .then(setPredictionData)
-      .catch((e) =>
-        setErrorPrediction(
-          e.response?.data?.error || "Error al obtener las predicciones"
-        )
-      )
+      .catch((e) => {
+        const detail = e.response?.data?.detail;
+
+        if (detail?.includes("no se encontró un modelo")) {
+          setErrorPrediction(
+            "Este producto no tiene suficientes datos para generar una predicción."
+          );
+        } else {
+          setErrorPrediction(
+            detail ||
+              e.response?.data?.error ||
+              e.response?.data?.message ||
+              e.message ||
+              "Error desconocido al obtener la predicción"
+          );
+        }
+      })
+
       .finally(() => setLoadingPrediction(false));
   }, [
     selectedProduct,
@@ -129,20 +142,19 @@ export default function PredictiveAnalyticsPage() {
     }) || [];
 
   // Obtener productos por renovar stock
-const handleCompareLowStock = async () => {
-  setLoadingCompare(true);
-  try {
-    const response = await compareForecasts("Sin marca", "Sin unidad", days); // ✅ ya no envíes productos
-    const low = response.comparison.filter((p) => p.total_forecast < 5); // Umbral ajustable
-    setRestockProducts(low);
-    setRestockModalOpen(true);
-  } catch (err) {
-    console.error("Error comparando productos:", err);
-  } finally {
-    setLoadingCompare(false);
-  }
-};
-
+  const handleCompareLowStock = async () => {
+    setLoadingCompare(true);
+    try {
+      const response = await compareForecasts("Sin marca", "Sin unidad", days); // ✅ ya no envíes productos
+      const low = response.comparison.filter((p) => p.total_forecast < 5); // Umbral ajustable
+      setRestockProducts(low);
+      setRestockModalOpen(true);
+    } catch (err) {
+      console.error("Error comparando productos:", err);
+    } finally {
+      setLoadingCompare(false);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -205,8 +217,6 @@ const handleCompareLowStock = async () => {
               className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-2 rounded w-32"
             />
           </div>
-
-
         </div>
 
         <button
