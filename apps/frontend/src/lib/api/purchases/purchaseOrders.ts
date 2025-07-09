@@ -2,7 +2,7 @@ import axios from "@/lib/axiosInstance";
 import { PurchaseOrder, CreatePurchaseOrderDto } from "@/types/purchaseOrders";
 
 export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> => {
-  const { data } = await axios.get("/purchase-orders"); // sin repetir /api
+  const { data } = await axios.get("/purchase-orders"); 
   return data;
 };
 

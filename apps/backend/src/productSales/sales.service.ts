@@ -142,7 +142,7 @@ export class SalesService {
       }
       savedSale.customer = customer;
     }
-
+    await this.saleRepository.save(savedSale);
     return this.saleRepository.save(savedSale);
   }
 

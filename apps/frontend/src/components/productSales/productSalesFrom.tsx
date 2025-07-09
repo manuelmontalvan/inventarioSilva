@@ -173,7 +173,7 @@ export default function SalesForm({
         })),
         notes: "",
       });
-
+      
       setSelectedCustomerId("");
       setSelectedCustomer(null);
       setPaymentMethod("");
