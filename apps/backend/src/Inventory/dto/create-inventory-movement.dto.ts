@@ -35,6 +35,10 @@ class MovementItemDto {
 
   @IsString()
   @IsOptional()
+  shelfName?: string;
+
+  @IsString()
+  @IsOptional()
   productName?: string;
 
   @IsString()
@@ -69,4 +73,3 @@ export class CreateInventoryMovementsDto {
   @IsOptional()
   notes?: string;
 }
-

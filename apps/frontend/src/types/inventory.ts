@@ -18,6 +18,7 @@ export interface InventoryMovement {
   brandName?: string;
   unitName?: string;
   shelfId?: string;  
+  shelfName?: string;
 
   // Relaciones
   product?: {

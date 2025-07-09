@@ -115,13 +115,12 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       return;
     }
 
-const movementsToSend = movementList.map(({ shelfName: _omit, ...rest }) => rest);
 
 
     try {
       await onSubmit({
         type,
-        movements: movementsToSend,
+        movements: movementList,
         invoice_number: invoiceNumber || undefined,
         orderNumber: orderNumber || undefined,
         notes: notes || undefined,
