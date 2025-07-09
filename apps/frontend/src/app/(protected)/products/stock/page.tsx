@@ -189,7 +189,7 @@ export default function ProductStockPage() {
     <ProtectedRoute>
       <div className="flex gap-6 p-6">
         <aside className="w-1/3 space-y-4 bg-gray-100 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Registrar Stock</h2>
+          <h2 className="text-xl font-bold mb-2">Ubicacion de Producto</h2>
 
           <div className="relative" ref={dropdownRef}>
             <Input
@@ -257,7 +257,7 @@ export default function ProductStockPage() {
         <main className="flex-1">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">
-              Stock por producto y ubicación
+              Lista de Ubicaciones de Productos
             </h1>
             {selectedIds.length > 0 && (
               <Button

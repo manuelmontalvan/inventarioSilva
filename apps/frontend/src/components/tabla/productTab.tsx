@@ -48,37 +48,50 @@ export function ProductsTab({
   }));
 
   const handleAdd = (product: ProductI, displayKey: string) => {
-    const quantity = Number(quantityMap[displayKey]);
-    const purchasePrice = Number(
-      purchasePriceMap[displayKey] ?? product.purchase_price ?? 0
-    );
-    const shelfId = shelfMap[displayKey] || undefined;
+  const quantity = Number(quantityMap[displayKey]);
+  const purchasePrice = Number(
+    purchasePriceMap[displayKey] ?? product.purchase_price ?? 0
+  );
+  const shelfId = shelfMap[displayKey] || undefined;
 
-    const filteredStocks = product.stocks?.filter(
-      (s) => s.locality?.id === selectedLocality
-    );
-    const shelves = filteredStocks?.map((s) => s.shelf).filter(Boolean);
-    const shelfName = shelves?.find((s) => s.id === shelfId)?.name;
+  let shelfName: string | undefined = undefined;
+  let localityId: string | undefined = undefined;
 
-    if (!quantity || quantity <= 0) {
-      addToast({ title: "Ingresa un valor de cantidad válido", color: "danger" });
-      return;
-    }
+  if (!quantity || quantity <= 0) {
+    addToast({ title: "Ingresa un valor de cantidad válido", color: "danger" });
+    return;
+  }
 
-    const localityId = selectedLocality;
+  if (!hideLocality) {
+    localityId = selectedLocality;
     if (!localityId) {
       addToast({ title: "Selecciona una localidad", color: "danger" });
       return;
     }
 
-    const added = onAdd(product, localityId, quantity, purchasePrice, shelfId, shelfName);
+    const filteredStocks = product.stocks?.filter(
+      (s) => s.locality?.id === localityId
+    );
+    const shelves = filteredStocks?.map((s) => s.shelf).filter(Boolean);
+    shelfName = shelves?.find((s) => s.id === shelfId)?.name;
+  }
 
-    if (added) {
-      setQuantityMap((prev) => ({ ...prev, [displayKey]: "" }));
-      setPurchasePriceMap((prev) => ({ ...prev, [displayKey]: "" }));
-      setShelfMap((prev) => ({ ...prev, [displayKey]: "" }));
-    }
-  };
+  const added = onAdd(
+    product,
+    localityId ?? "",
+    quantity,
+    purchasePrice,
+    shelfId,
+    shelfName
+  );
+
+  if (added) {
+    setQuantityMap((prev) => ({ ...prev, [displayKey]: "" }));
+    setPurchasePriceMap((prev) => ({ ...prev, [displayKey]: "" }));
+    setShelfMap((prev) => ({ ...prev, [displayKey]: "" }));
+  }
+};
+
 
   return (
     <div>
