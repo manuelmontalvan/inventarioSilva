@@ -70,7 +70,6 @@ export default function ProductAdminPage() {
           "unit_of_measure",
           "sale_price",
           "purchase_price",
-          "isActive",
         ].includes(key),
       ])
     ) as Record<keyof ProductI, boolean>;

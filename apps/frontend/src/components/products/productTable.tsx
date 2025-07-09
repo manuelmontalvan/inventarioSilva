@@ -43,7 +43,7 @@ export default function ProductTable({
       direction = "descending";
     }
     setSortConfig({ key, direction });
-    setCurrentPage(1); // Reset to page 1 on sort change
+    setCurrentPage(1);
   };
 
   const getValue = (product: ProductI, key: keyof ProductI) => {
@@ -56,16 +56,15 @@ export default function ProductTable({
     }
 
     if (key === "purchase_price" || key === "sale_price") {
-      return `USD $${val}`;
+      const numberVal = Number(val);
+      return `USD $${numberVal.toFixed(2)}`;
     }
 
     if (key === "profit_margin") {
       const numberVal = Number(val);
-      if (Number.isInteger(numberVal)) {
-        return `${numberVal}%`;
-      } else {
-        return `${numberVal.toFixed(2).replace(/\.?0+$/, "")}%`;
-      }
+      return Number.isInteger(numberVal)
+        ? `${numberVal}%`
+        : `${numberVal.toFixed(2).replace(/\.?0+$/, "")}%`;
     }
 
     if (
@@ -87,9 +86,7 @@ export default function ProductTable({
     if (!sortConfig) return 0;
     const valA = getValue(a, sortConfig.key);
     const valB = getValue(b, sortConfig.key);
-    if (valA < valB) return sortConfig.direction === "ascending" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "ascending" ? 1 : -1;
-    return 0;
+    return valA < valB ? -1 : valA > valB ? 1 : 0;
   });
 
   const paginatedProducts = sortedProducts.slice(
@@ -145,9 +142,8 @@ export default function ProductTable({
                 return (
                   <th
                     key={key}
-                    className="p-2 border cursor-pointer hover:bg-gray-200 hover:text-black select-none"
+                    className="p-2 border cursor-pointer hover:bg-gray-200 select-none"
                     onClick={() => requestSort(key as keyof ProductI)}
-                    scope="col"
                   >
                     {label}
                     {sortConfig?.key === key &&
@@ -155,9 +151,8 @@ export default function ProductTable({
                   </th>
                 );
               })}
-              <th className="p-2 border text-center hover:bg-gray-200 hover:text-black">
-                Acciones
-              </th>
+              <th className="p-2 border">Stock</th>
+              <th className="p-2 border text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -166,7 +161,7 @@ export default function ProductTable({
                 <tr>
                   <td
                     colSpan={
-                      Object.values(visibleColumns).filter(Boolean).length + 2
+                      Object.values(visibleColumns).filter(Boolean).length + 3
                     }
                     className="text-center py-8 text-gray-400"
                   >
@@ -175,9 +170,24 @@ export default function ProductTable({
                 </tr>
               ) : (
                 paginatedProducts.map((p) => {
-                  const quantity = Number(p.current_quantity);
+                  const quantity = Array.isArray(p.stocks)
+                    ? p.stocks.reduce(
+                        (sum, s) => sum + Number(s.quantity || 0),
+                        0
+                      )
+                    : Number(p.current_quantity || 0);
+
                   const minStock = Number(p.min_stock);
                   const maxStock = Number(p.max_stock);
+
+                  const stockDetail = (p.stocks || [])
+                    .map(
+                      (s) =>
+                        `${s.locality?.name || "Sin Localidad"} - ${
+                          s.shelf?.name || "Sin Percha"
+                        }: ${Number(s.quantity).toFixed(2)}`
+                    )
+                    .join("\n");
 
                   return (
                     <motion.tr
@@ -191,20 +201,17 @@ export default function ProductTable({
                           ? "bg-blue-50 text-black"
                           : ""
                       }`}
-                      onClick={() => {
-                        onView(p);
-                      }}
+                      onClick={() => onView(p)}
                     >
                       <td
                         onClick={(e) => e.stopPropagation()}
-                        className="p-2 border hover:bg-gray-100"
+                        className="p-2 border"
                       >
                         <Checkbox
                           checked={selectedProducts.includes(p.id)}
                           onCheckedChange={(checked) =>
                             handleSelect(p.id, Boolean(checked))
                           }
-                          aria-label={`Seleccionar producto ${p.name}`}
                         />
                       </td>
 
@@ -212,8 +219,7 @@ export default function ProductTable({
                         if (!visibleColumns[key]) return null;
 
                         const isQty = key === "current_quantity";
-
-                        let tdColorClass = "";
+                        let tdColor = "";
 
                         if (
                           isQty &&
@@ -221,21 +227,20 @@ export default function ProductTable({
                           !isNaN(minStock) &&
                           !isNaN(maxStock)
                         ) {
-                          if (quantity < minStock) {
-                            tdColorClass = "text-red-500 font-semibold";
-                          } else if (quantity > maxStock) {
-                            tdColorClass = "text-green-600 font-semibold";
-                          } else {
-                            tdColorClass = "text-blue-600 font-semibold";
-                          }
+                          tdColor =
+                            quantity < minStock
+                              ? "text-red-500 font-semibold"
+                              : quantity > maxStock
+                              ? "text-green-600 font-semibold"
+                              : "text-blue-600 font-semibold";
                         }
 
                         return (
                           <td
                             key={key}
-                            className={`p-2 border hover:bg-gray-100 hover:text-black ${
+                            className={`p-2 border ${
                               key === "name" ? "font-medium cursor-pointer" : ""
-                            } ${tdColorClass}`}
+                            } ${tdColor}`}
                           >
                             {isQty
                               ? quantity.toFixed(2)
@@ -243,6 +248,10 @@ export default function ProductTable({
                           </td>
                         );
                       })}
+
+                      <td className="p-2 border whitespace-pre-wrap text-white">
+                        {stockDetail || ""}
+                      </td>
 
                       <td
                         onClick={(e) => e.stopPropagation()}
@@ -252,7 +261,6 @@ export default function ProductTable({
                           color="success"
                           variant="bordered"
                           onPress={() => onUpdated(p)}
-                          aria-label={`Editar producto ${p.name}`}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -260,7 +268,6 @@ export default function ProductTable({
                           color="danger"
                           variant="bordered"
                           onPress={() => onDelete(p)}
-                          aria-label={`Eliminar producto ${p.name}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
