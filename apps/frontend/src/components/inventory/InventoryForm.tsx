@@ -114,7 +114,10 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       addToast({ title: "Agrega al menos un producto", color: "warning" });
       return;
     }
-  const movementsToSend = movementList.map(({ shelfName: _, ...rest }) => rest);
+   const movementsToSend = movementList.map((m) => {
+    const { shelfName, ...rest } = m;
+    return rest;
+  });
 
     try {
       await onSubmit({
