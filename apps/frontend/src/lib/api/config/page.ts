@@ -5,7 +5,7 @@ import { Page } from "@/types/page";
 
 // Obtener todas las páginas
 export const getPages = async (): Promise<Page[]> => {
-  const res = await axios.get("/pages", { withCredentials: true });
+  const res = await axios.get("/pages");
   return res.data;
 };
 
@@ -17,7 +17,7 @@ export const createPage = async (page: { name: string; path: string }): Promise<
 
 // Actualizar una página existente
 export const updatePage = async (id: string, page: { name: string; path: string }): Promise<Page> => {
-  const res = await axios.put(`/pages/${id}`, page, { withCredentials: true });
+  const res = await axios.patch(`/pages/${id}`, page, { withCredentials: true });
   return res.data;
 };
 

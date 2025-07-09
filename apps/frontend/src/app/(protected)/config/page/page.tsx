@@ -61,7 +61,7 @@ export default function PagesPage() {
       }
       close();
     } catch (e: unknown) {
-       const error = e instanceof Error ? e : new Error("Error desconocido");
+      const error = e instanceof Error ? e : new Error("Error desconocido");
       addToast({
         title: "Error guardando página",
         description: error.message,
@@ -80,10 +80,26 @@ export default function PagesPage() {
       await deletePage(selId);
       setPages((p) => p.filter((x) => x.id !== selId));
       addToast({ title: "Página eliminada", color: "success" });
-    } catch  {
+    } catch (error: unknown) {
+      let message = "Ocurrió un error inesperado";
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object" &&
+        (error as any).response !== null &&
+        "data" in (error as any).response &&
+        typeof (error as any).response.data === "object" &&
+        (error as any).response.data !== null &&
+        "message" in (error as any).response.data
+      ) {
+        message = (error as any).response.data.message;
+      }
+
       addToast({
         title: "Error eliminando",
-      
+        description: message,
         color: "danger",
       });
     } finally {
