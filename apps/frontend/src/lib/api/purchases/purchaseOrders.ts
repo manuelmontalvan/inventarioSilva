@@ -68,7 +68,7 @@ export const getPurchaseHistory = async (
   const filteredParams = params
     ? Object.fromEntries(
         Object.entries(params).filter(
-          ([_, value]) => value !== undefined && value !== ''
+          ([ value]) => value !== undefined && value !== ''
         )
       )
     : {};
