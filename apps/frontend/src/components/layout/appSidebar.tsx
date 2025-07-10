@@ -129,7 +129,7 @@ const items: SidebarItem[] = [
       },
       {
         title: "Historial de Compras",
-        url: "/purchases/suppliers",
+        url: "/purchases-history",
         icon: History,
       },
     ],

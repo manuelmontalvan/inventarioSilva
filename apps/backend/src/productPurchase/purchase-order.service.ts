@@ -22,7 +22,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { parse } from 'csv-parse/sync';
-
+import { groupBy } from 'lodash';
 @Injectable()
 export class PurchaseOrderService {
   constructor(
@@ -369,4 +369,99 @@ export class PurchaseOrderService {
       order: createdOrder,
     };
   }
+
+  async getPurchaseHistory(
+    productId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const query = this.purchaseRepo
+      .createQueryBuilder('purchase')
+      .leftJoinAndSelect('purchase.product', 'product')
+      .leftJoinAndSelect('purchase.supplier', 'supplier')
+      .leftJoinAndSelect('purchase.order', 'order')
+      .orderBy('purchase.purchase_date', 'DESC');
+
+    if (productId) {
+      query.andWhere('product.id = :productId', { productId });
+    }
+
+    if (startDate) {
+      query.andWhere('purchase.purchase_date >= :startDate', { startDate });
+    }
+
+    if (endDate) {
+      query.andWhere('purchase.purchase_date <= :endDate', { endDate });
+    }
+
+    const records = await query.getMany();
+
+    return records.map((p) => ({
+      productName: p.product.name,
+      supplierName: p.supplier?.name || 'Sin proveedor',
+      invoiceNumber: p.invoice_number,
+      quantity: p.quantity,
+      unitCost: p.unit_cost,
+      totalCost: p.total_cost,
+      purchaseDate: p.purchase_date,
+      notes: p.notes,
+      orderNumber: p.order?.orderNumber,
+    }));
+  }
+
+  async getPurchasePriceTrend(productId: string) {
+    const records = await this.purchaseRepo.find({
+      where: { product: { id: productId } },
+      relations: ['product'],
+      order: { purchase_date: 'ASC' },
+    });
+
+    const grouped: Record<string, ProductPurchase[]> = groupBy(records, (r) =>
+      new Date(r.purchase_date).toISOString().slice(0, 7),
+    );
+
+    const trend = Object.entries(grouped).map(([month, purchases]) => {
+      const avgCost =
+        purchases.reduce((sum, p) => sum + Number(p.unit_cost), 0) /
+        purchases.length;
+      return {
+        month,
+        unitCost: +avgCost.toFixed(2),
+      };
+    });
+
+    return trend;
+  }
+
+ async getPurchasedProducts() {
+  const products = await this.productRepo
+    .createQueryBuilder('product')
+    .leftJoin('product.brand', 'brand')
+    .leftJoin('product.unit_of_measure', 'unit')
+    .innerJoin('product.purchase_history', 'purchase') // solo productos comprados
+    .select([
+      'product.id',
+      'product.name',
+      'brand.name',
+      'unit.name',
+    ])
+    .groupBy('product.id')
+    .addGroupBy('brand.id')
+    .addGroupBy('unit.id')
+    .getRawMany();
+
+  // Como getRawMany devuelve filas planas con alias, mapeamos para armar objeto:
+  return products.map(p => ({
+    id: p.product_id,
+    name: p.product_name,
+    brand: {
+      name: p.brand_name,
+    },
+    unit_of_measure: {
+      name: p.unit_name,
+    },
+  }));
+}
+
+
 }

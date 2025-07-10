@@ -19,6 +19,8 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as csv from 'csv-parse/sync';
 import { Pagination } from 'src/common/types/pagination';
+import { Shelf } from './locality/shelves/entities/shelf.entity';
+import { ProductStock } from './product-stock/product-stock.entity';
 
 @Injectable()
 export class ProductsService {
@@ -37,6 +39,10 @@ export class ProductsService {
     private productCostHistoryRepository: Repository<ProductCostHistory>,
     @InjectRepository(Locality)
     private localityRepository: Repository<Locality>,
+    @InjectRepository(Shelf)
+    private shelfRepository: Repository<Shelf>,
+    @InjectRepository(ProductStock)
+    private productStockRepository: Repository<ProductStock>,
   ) {}
 
   /**
@@ -214,7 +220,7 @@ export class ProductsService {
         'createdBy',
         'updatedBy',
         'stocks',
-        'stocks.locality', 
+        'stocks.locality',
         'stocks.shelf',
       ],
     });
@@ -376,8 +382,7 @@ export class ProductsService {
       .leftJoinAndSelect('product.updatedBy', 'updatedBy')
       .leftJoinAndSelect('product.stocks', 'stocks')
       .leftJoinAndSelect('stocks.locality', 'stockLocality')
-      .leftJoinAndSelect('stocks.shelf', 'stockShelf'); 
-
+      .leftJoinAndSelect('stocks.shelf', 'stockShelf');
 
     if (search) {
       queryBuilder.andWhere(
@@ -520,8 +525,9 @@ export class ProductsService {
         expiration_date: row['expiration_date']
           ? new Date(row['expiration_date'])
           : undefined,
-        createdBy: { id: userId }, // ✅ Aquí sí colocas correctamente el userId
+        createdBy: { id: userId },
       });
+
       if (
         typeof product.purchase_price !== 'number' ||
         isNaN(product.purchase_price)
@@ -535,9 +541,64 @@ export class ProductsService {
 
       await this.productRepository.save(product);
       created.push(product.name);
+
+      // Opcional: agregar stock en shelf si viene en la fila
+      const localityName = row['locality']?.toString()?.trim();
+      const shelfName = row['shelf']?.toString()?.trim();
+      const quantityInShelfRaw = row['quantity_in_shelf'];
+      const quantityInShelf =
+        quantityInShelfRaw !== undefined && !isNaN(Number(quantityInShelfRaw))
+          ? Number(quantityInShelfRaw)
+          : null;
+
+      const shelfMinStock =
+        row['shelf_min_stock'] !== undefined
+          ? Number(row['shelf_min_stock'])
+          : 0;
+      const shelfMaxStock =
+        row['shelf_max_stock'] !== undefined
+          ? Number(row['shelf_max_stock'])
+          : 0;
+
+   if (localityName && shelfName && quantityInShelf !== null) {
+        const locality =
+          (await this.localityRepository.findOne({
+            where: { name: localityName },
+          })) ??
+          (await this.localityRepository.save(
+            this.localityRepository.create({ name: localityName }),
+          ));
+
+        const shelf =
+          (await this.shelfRepository.findOne({
+            where: {
+              name: shelfName,
+              locality: { id: locality.id },
+            },
+            relations: ['locality'],
+          })) ??
+          (await this.shelfRepository.save(
+            this.shelfRepository.create({
+              name: shelfName,
+              locality,
+              category: product.category,
+            }),
+          ));
+
+        const stock = this.productStockRepository.create({
+          product,
+          shelf,
+          quantity: quantityInShelf,
+          min_stock: shelfMinStock,
+          max_stock: shelfMaxStock,
+        });
+
+        await this.productStockRepository.save(stock);
+      }
     }
 
     fs.unlinkSync(filePath);
+
     return {
       productos: created,
     };

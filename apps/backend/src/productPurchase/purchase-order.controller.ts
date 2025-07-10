@@ -13,8 +13,10 @@ import {
   UseInterceptors,
   UploadedFile,
   UnauthorizedException,
-  Req
+  Req,
+  Query,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { PurchaseOrderService } from './purchase-order.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
@@ -27,21 +29,11 @@ import * as path from 'path';
 @Controller('purchase-orders')
 export class PurchaseOrderController {
   constructor(private readonly service: PurchaseOrderService) {}
-  
+
   @Post()
   async create(@Body() dto: CreatePurchaseOrderDto, @Request() req: any) {
     const user = req.user;
     return this.service.create(dto, user);
-  }
-
-  @Get()
-  async findAll() {
-    return this.service.findAll();
-  }
-
-  @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.findOne(id); // el service ya lanza NotFoundException si no se encuentra
   }
 
   @Patch(':id')
@@ -59,7 +51,6 @@ export class PurchaseOrderController {
     return this.service.remove(id);
   }
 
-  
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -77,10 +68,39 @@ export class PurchaseOrderController {
     const userId = req.user?.id;
     if (!userId) throw new UnauthorizedException('Usuario no encontrado');
 
-    return this.service.importPurchaseOrderFromFile(
-      file.path,
-      ext,
-      userId,
-    );
+    return this.service.importPurchaseOrderFromFile(file.path, ext, userId);
+  }
+
+  @Get('history')
+  getPurchaseHistory(
+    @Query('productId') productId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    if (productId && !isUUID(productId)) {
+      throw new BadRequestException('productId debe ser un UUID válido');
+    }
+
+    return this.service.getPurchaseHistory(productId, startDate, endDate);
+  }
+  @Get('price-trend/:productId')
+  getPurchasePriceTrend(
+    @Param('productId', new ParseUUIDPipe()) productId: string,
+  ) {
+    return this.service.getPurchasePriceTrend(productId);
+  }
+
+  @Get('purchased-products')
+  getPurchasedProducts() {
+    return this.service.getPurchasedProducts();
+  }
+  @Get()
+  async findAll() {
+    return this.service.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findOne(id); // el service ya lanza NotFoundException si no se encuentra
   }
 }

@@ -62,6 +62,7 @@ export default function EditProductModal({
       categoryId: "",
       brandId: "",
       unitOfMeasureId: "",
+      purchase_price: 0,
     },
   });
 
@@ -80,6 +81,7 @@ export default function EditProductModal({
         categoryId: String(product.category?.id || ""),
         brandId: String(product.brand?.id || ""),
         unitOfMeasureId: String(product.unit_of_measure?.id || ""),
+        purchase_price: Number(product.purchase_price || 0),
       });
     } else {
       form.reset();
@@ -99,7 +101,7 @@ export default function EditProductModal({
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
-      } catch  {
+      } catch {
         addToast({
           title: "Error",
           description: "No se pudieron cargar categorías, marcas o unidades",
@@ -195,6 +197,34 @@ export default function EditProductModal({
                   )}
                 />
               ))}
+              <FormField
+                control={form.control}
+                name="purchase_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio de compra</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Precio de compra"
+                        value={
+                          field.value !== undefined && field.value !== null
+                            ? String(field.value)
+                            : ""
+                        }
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? undefined
+                              : Number(e.target.value)
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

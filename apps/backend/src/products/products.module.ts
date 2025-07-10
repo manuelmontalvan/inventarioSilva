@@ -10,6 +10,7 @@ import { Locality } from './locality/entities/locality.entity';
 import {ProductCostHistory} from '../productPurchase/entities/product-cost-history.entity'
 import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
+import { Shelf } from './locality/shelves/entities/shelf.entity';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { ProductStock } from './product-stock/product-stock.entity';
       Locality, 
       ProductCostHistory, 
       ProductStock,
-      InventoryMovement
+      InventoryMovement,
+      Shelf
     ]),
   ],
   controllers: [ProductsController],
