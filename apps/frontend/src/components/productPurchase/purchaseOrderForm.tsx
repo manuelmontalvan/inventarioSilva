@@ -198,25 +198,26 @@ export default function PurchaseOrderForm({
     <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg">
       <h2 className="text-xl font-bold">Nueva Orden de Compra</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-between">
-        <div>
+      <div className="flex flex-wrap gap-4 justify-between">
+        <div className="flex-1 min-w-[250px] max-w-[400px]">
           <label className="block font-medium mb-1">Proveedor</label>
           <Combobox
             items={suppliers.map((s) => ({ label: s.name, value: s.id }))}
             value={supplierId}
             onChange={setSupplierId}
             placeholder="Seleccionar proveedor"
-            className="min-w-[250px]"
+            className="w-full"
           />
         </div>
 
-        <div>
+        <div className="flex-1 min-w-[250px] max-w-[400px]">
           <label className="block font-medium mb-1">Categoría</label>
           <Combobox
             items={categories.map((c) => ({ label: c.name, value: c.id }))}
             value={selectedCategoryId}
             onChange={setSelectedCategoryId}
             placeholder="Filtrar por categoría"
+            className="w-full"
           />
         </div>
       </div>
