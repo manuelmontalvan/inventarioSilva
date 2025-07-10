@@ -198,7 +198,7 @@ export default function PurchaseOrderForm({
     <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg">
       <h2 className="text-xl font-bold">Nueva Orden de Compra</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 justify-between">
         <div>
           <label className="block font-medium mb-1">Proveedor</label>
           <Combobox
@@ -206,6 +206,7 @@ export default function PurchaseOrderForm({
             value={supplierId}
             onChange={setSupplierId}
             placeholder="Seleccionar proveedor"
+            className="min-w-[250px]"
           />
         </div>
 

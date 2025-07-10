@@ -6,6 +6,7 @@ import {
   getProductStocks,
   createProductStock,
   deleteProductStock,
+  updateProductStock,
 } from "@/lib/api/products/productStocks";
 import { getProducts } from "@/lib/api/products/products";
 import {
@@ -23,6 +24,25 @@ export default function ProductStockPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFormPanel, setShowFormPanel] = useState(false);
+  const asideRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        asideRef.current &&
+        !asideRef.current.contains(event.target as Node)
+      ) {
+        setShowFormPanel(false);
+      }
+    };
+    if (showFormPanel) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showFormPanel]);
 
   const [products, setProducts] = useState<ProductI[]>([]);
   const [localities, setLocalities] = useState<Locality[]>([]);
@@ -32,12 +52,15 @@ export default function ProductStockPage() {
   const [productId, setProductId] = useState("");
   const [localityId, setLocalityId] = useState("");
   const [shelfId, setShelfId] = useState("");
-  const [quantity, setQuantity] = useState("0");
   const [minStock, setMinStock] = useState("0");
   const [maxStock, setMaxStock] = useState("0");
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     async function init() {
@@ -49,10 +72,7 @@ export default function ProductStockPage() {
         setStocks(stocksData);
         setLocalities(locs);
       } catch {
-        addToast({
-          title: "Error cargando datos",
-          color: "danger",
-        });
+        addToast({ title: "Error cargando datos", color: "danger" });
       } finally {
         setLoading(false);
       }
@@ -97,52 +117,57 @@ export default function ProductStockPage() {
     if (value === "0") setter("");
   };
 
-  const handleCreate = async () => {
-    const qty = Number(quantity);
+  const resetForm = () => {
+    setEditingStockId(null);
+    setProductId("");
+    setProductSearch("");
+    setLocalityId("");
+    setShelfId("");
+    setMinStock("0");
+    setMaxStock("0");
+    setShowFormPanel(false);
+  };
+
+  const handleSave = async () => {
     const min = Number(minStock);
     const max = Number(maxStock);
 
-    if (!productId)
-      return addToast({ title: "Selecciona un producto", color: "danger" });
-    if (!localityId)
-      return addToast({ title: "Selecciona una localidad", color: "danger" });
-    if (!shelfId)
-      return addToast({ title: "Selecciona una percha", color: "danger" });
+    if (!productId || !localityId || !shelfId)
+      return addToast({ title: "Completa todos los campos", color: "danger" });
 
-    if (isNaN(qty) || qty < 0)
-      return addToast({ title: "Cantidad inválida", color: "danger" });
-    if (isNaN(min) || min < 0)
-      return addToast({ title: "Stock mínimo inválido", color: "danger" });
-    if (isNaN(max) || max < 0)
-      return addToast({ title: "Stock máximo inválido", color: "danger" });
+    if (isNaN(min) || min < 0 || isNaN(max) || max < 0)
+      return addToast({ title: "Datos inválidos", color: "danger" });
 
     try {
-      await createProductStock({
-        productId,
-        localityId,
-        shelfId,
-        quantity: qty,
-        min_stock: min,
-        max_stock: max,
-      });
-
+      if (editingStockId) {
+        await updateProductStock(editingStockId, {
+          productId,
+          localityId,
+          shelfId,
+          min_stock: min,
+          max_stock: max,
+        });
+        addToast({ title: "Stock actualizado", color: "success" });
+      } else {
+        await createProductStock({
+          productId,
+          localityId,
+          shelfId,
+          quantity: 0,
+          min_stock: min,
+          max_stock: max,
+        });
+        addToast({ title: "Stock creado", color: "success" });
+      }
       const updated = await getProductStocks();
       setStocks(updated);
-
-      // Reset
-      setProductId("");
-      setProductSearch("");
-      setShelfId("");
-      setQuantity("0");
-      setMinStock("0");
-      setMaxStock("0");
-      addToast({ title: "Stock creado", color: "success" });
+      resetForm();
     } catch (err: unknown) {
       const res = (err as any)?.response;
       if (res?.status === 409) {
         addToast({ title: "Ya existe", color: "warning" });
       } else {
-        addToast({ title: "Error al crear", color: "danger" });
+        addToast({ title: "Error al guardar", color: "danger" });
       }
     }
   };
@@ -176,89 +201,26 @@ export default function ProductStockPage() {
   };
 
   const filteredStocks = stocks.filter((s) =>
-  s.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  s.locality.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  s.shelf.name.toLowerCase().includes(searchTerm.toLowerCase())
-);
+    s.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.locality.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.shelf.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-
-
-
+  const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
+  const paginatedStocks = filteredStocks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <ProtectedRoute>
-      <div className="flex gap-6 p-6">
-        <aside className="w-1/3 space-y-4 bg-gray-100 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Ubicacion de Producto</h2>
-
-          <div className="relative" ref={dropdownRef}>
-            <Input
-              placeholder="Buscar producto..."
-              value={productSearch}
-              onChange={(e) => {
-                setProductSearch(e.target.value);
-                setProductId("");
-              }}
-            />
-            {showDropdown && products.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border mt-1 max-h-60 overflow-y-auto rounded shadow">
-                {products.map((p) => (
-                  <li
-                    key={p.id}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => {
-                      setProductId(p.id);
-                      setProductSearch(p.name);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    {p.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <Combobox
-            items={localities.map((l) => ({ label: l.name, value: l.id }))}
-            value={localityId}
-            onChange={setLocalityId}
-            placeholder="Selecciona una localidad"
-          />
-
-          <Combobox
-            items={shelves.map((s) => ({ label: s.name, value: s.id }))}
-            value={shelfId}
-            onChange={setShelfId}
-            placeholder="Selecciona una percha"
-          />
-
-          <p>Stock mínimo</p>
-          <Input
-            type="number"
-            value={minStock}
-            onClick={() => clearIfZero(minStock, setMinStock)}
-            onChange={(e) => setMinStock(e.target.value)}
-          />
-
-          <p>Stock máximo</p>
-          <Input
-            type="number"
-            value={maxStock}
-            onClick={() => clearIfZero(maxStock, setMaxStock)}
-            onChange={(e) => setMaxStock(e.target.value)}
-          />
-
-          <Button onClick={handleCreate} className="w-full mt-2">
-            Crear stock
-          </Button>
-        </aside>
-
-        <main className="flex-1">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">
-              Lista de Ubicaciones de Productos
-            </h1>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Lista de Ubicaciones de Productos</h1>
+          <div className="flex gap-2">
+            <Button color="success" onPress={() => setShowFormPanel(true)}>
+              Crear Stock
+            </Button>
             {selectedIds.length > 0 && (
               <Button
                 variant="bordered"
@@ -269,80 +231,199 @@ export default function ProductStockPage() {
               </Button>
             )}
           </div>
-          <div className="flex items-center justify-between mb-2">
-            <Input
-              type="text"
-              placeholder="Buscar en tabla..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-1/3"
-            />
-          </div>
+        </div>
 
-          {loading ? (
-            <p>Cargando...</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto border border-gray-700">
-                <thead className="bg-gray-800 text-white">
-                  <tr>
-                    <th className="p-2">
+        <div className="flex items-center justify-between mb-2">
+          <Input
+            type="text"
+            placeholder="Buscar en tabla..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-1/3"
+          />
+        </div>
+
+        {loading ? (
+          <p>Cargando...</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto border border-gray-700">
+              <thead className="bg-gray-800 text-white">
+                <tr>
+                  <th className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === stocks.length}
+                      onChange={(e) =>
+                        setSelectedIds(
+                          e.target.checked ? stocks.map((s) => s.id) : []
+                        )
+                      }
+                    />
+                  </th>
+                  <th className="p-2">Producto</th>
+                  <th className="p-2">Localidad</th>
+                  <th className="p-2">Categoría</th>
+                  <th className="p-2">Percha</th>
+                  <th className="p-2">Cantidad</th>
+                  <th className="p-2">Mínimo</th>
+                  <th className="p-2">Máximo</th>
+                  <th className="p-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedStocks.map((stock) => (
+                  <tr key={stock.id} className="border-t border-gray-600">
+                    <td className="p-2">
                       <input
                         type="checkbox"
-                        checked={selectedIds.length === stocks.length}
-                        onChange={(e) =>
-                          setSelectedIds(
-                            e.target.checked ? stocks.map((s) => s.id) : []
-                          )
-                        }
+                        checked={selectedIds.includes(stock.id)}
+                        onChange={() => toggleSelect(stock.id)}
                       />
-                    </th>
-                    <th className="p-2">Producto</th>
-                    <th className="p-2">Localidad</th>
-                    <th className="p-2">Categoría</th>
-                    <th className="p-2">Percha</th>
-                    <th className="p-2">Cantidad</th>
-                    <th className="p-2">Mínimo</th>
-                    <th className="p-2">Máximo</th>
-                    <th className="p-2">Acción</th>
+                    </td>
+                    <td className="p-2">{stock.product.name}</td>
+                    <td className="p-2">{stock.locality.name}</td>
+                    <td className="p-2">{stock.shelf.category?.name ?? "N/A"}</td>
+                    <td className="p-2">{stock.shelf.name}</td>
+                    <td className="p-2">{stock.quantity}</td>
+                    <td className="p-2">{stock.min_stock}</td>
+                    <td className="p-2">{stock.max_stock}</td>
+                    <td className="p-2 space-x-2">
+                      <Button
+                        onPress={() => {
+                          setEditingStockId(stock.id);
+                          setProductId(stock.product.id);
+                          setProductSearch(stock.product.name);
+                          setLocalityId(stock.locality.id);
+                          setShelfId(stock.shelf.id);
+                          setMinStock(stock.min_stock.toString());
+                          setMaxStock(stock.max_stock.toString());
+                          setShowFormPanel(true);
+                        }}
+                        variant="bordered"
+                        color="success"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        onPress={() => handleDelete(stock.id)}
+                        color="danger"
+                        variant="bordered"
+                      >
+                        Eliminar
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredStocks.map((stock) => (
+                ))}
+              </tbody>
+            </table>
 
-                    <tr key={stock.id} className="border-t border-gray-600">
-                      <td className="p-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(stock.id)}
-                          onChange={() => toggleSelect(stock.id)}
-                        />
-                      </td>
-                      <td className="p-2">{stock.product.name}</td>
-                      <td className="p-2">{stock.locality.name}</td>
-                      <td className="p-2">
-                        {stock.shelf.category?.name ?? "N/A"}
-                      </td>
-                      <td className="p-2">{stock.shelf.name}</td>
-                      <td className="p-2">{stock.quantity}</td>
-                      <td className="p-2">{stock.min_stock}</td>
-                      <td className="p-2">{stock.max_stock}</td>
-                      <td className="p-2">
-                        <Button
-                          onPress={() => handleDelete(stock.id)}
-                          color="danger"
-                          variant="bordered"
-                        >
-                          Eliminar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="ghost"
+                disabled={currentPage === 1}
+                onPress={() => setCurrentPage((prev) => prev - 1)}
+              >
+                Anterior
+              </Button>
+              <span className="px-2 text-sm">
+                Página {currentPage} de {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                disabled={currentPage === totalPages}
+                onPress={() => setCurrentPage((prev) => prev + 1)}
+              >
+                Siguiente
+              </Button>
             </div>
-          )}
-        </main>
+          </div>
+        )}
+
+        {showFormPanel && (
+          <aside  ref={asideRef} className="fixed top-0 right-0 h-full w-[400px] bg-white shadow-lg p-6 border-l z-50 overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">
+              {editingStockId ? "Editar Stock" : "Crear Stock"}
+            </h2>
+            <div className="space-y-4">
+              <div className="relative" ref={dropdownRef}>
+                <Input
+                  placeholder="Buscar producto..."
+                  value={productSearch}
+                  onChange={(e) => {
+                    setProductSearch(e.target.value);
+                    setProductId("");
+                  }}
+                />
+                {showDropdown && products.length > 0 && (
+                  <ul className="absolute z-10 w-full bg-white border mt-1 max-h-60 overflow-y-auto rounded shadow">
+                    {products.map((p) => (
+                      <li
+                        key={p.id}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setProductId(p.id);
+                          setProductSearch(p.name);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        {p.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <Combobox
+                items={localities.map((l) => ({ label: l.name, value: l.id }))}
+                value={localityId}
+                onChange={setLocalityId}
+                placeholder="Selecciona una localidad"
+              />
+
+              <Combobox
+                items={shelves.map((s) => ({ label: s.name, value: s.id }))}
+                value={shelfId}
+                onChange={setShelfId}
+                placeholder="Selecciona una percha"
+              />
+
+              <div>
+                <p>Stock mínimo</p>
+                <Input
+                  type="number"
+                  value={minStock}
+                  onClick={() => clearIfZero(minStock, setMinStock)}
+                  onChange={(e) => setMinStock(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <p>Stock máximo</p>
+                <Input
+                  type="number"
+                  value={maxStock}
+                  onClick={() => clearIfZero(maxStock, setMaxStock)}
+                  onChange={(e) => setMaxStock(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <Button onPress={handleSave} className="flex-1" variant="bordered" color="success">
+                  {editingStockId ? "Actualizar" : "Guardar"}
+                </Button>
+                <Button
+                  onPress={resetForm}
+                  variant="bordered"
+                  color="danger"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
     </ProtectedRoute>
   );

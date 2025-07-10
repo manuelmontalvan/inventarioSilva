@@ -38,8 +38,9 @@ export interface CreateProductPurchaseDto {
   total_cost: number;
   notes?: string;
   supplierId: string;
-  unit_id?: string; // <--- si quieres enviar el id de unidad (relación FK)
-  brand_id?: string; // <--- si necesitas enviar el id de marca (relación FK)
+  unit_id?: string; 
+  brand_id?: string; 
+  product_name?: string;
 }
 
 export interface ProductPurchaseI {

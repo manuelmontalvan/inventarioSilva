@@ -164,8 +164,8 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     );
 
     order.purchase_lines.forEach((item) => {
-      const name =
-        products.find((p) => p.id === item.product.id)?.name || item.product.id;
+
+      const name = item.product.name || "Producto sin nombre";
       const brandName = item.product.brand?.name || "N/A";
       const unitName = item.product.unit_of_measure?.name || "N/A";
 
