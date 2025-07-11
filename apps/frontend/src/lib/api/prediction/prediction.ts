@@ -1,7 +1,7 @@
 import axios from "axios";
 import { PredictionResponse } from "@/types/prediction";
 
-const PYTHON_API_BASE = process.env.NEXT_PUBLIC_PYTHON_API || "http://localhost:3002";
+const PYTHON_API_BASE = process.env.NEXT_PUBLIC_PYTHON_API ;
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
 export const getPrediction = async (
@@ -12,7 +12,7 @@ export const getPrediction = async (
   tendency?: string,
   alert_restock?: boolean
 ): Promise<PredictionResponse> => {
-  const response = await axios.get(`${PYTHON_API_BASE}/predict`, {
+  const response = await axios.get(`/predict`, {
     params: {
       product_name,
       brand,
@@ -28,3 +28,6 @@ export const getPrediction = async (
 
   return response.data;
 };
+
+
+/*${PYTHON_API_BASE}*/
