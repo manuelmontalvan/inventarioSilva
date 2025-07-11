@@ -40,6 +40,11 @@ export const deleteSale = async (id: string): Promise<void> => {
   await axios.delete(`/sales/${id}`);
 };
 
+// ✅ Eliminar TODAS las ventas
+export const deleteAllSales = async (): Promise<void> => {
+  await axios.delete("/sales");
+};
+
 // 👉 Búsqueda predictiva para productos
 export const searchPredictiveProducts = async (
   query: string

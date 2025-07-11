@@ -11,6 +11,7 @@ import {
   UploadedFile,
   BadRequestException,
   Query,
+  Delete
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -73,5 +74,16 @@ export class SalesController {
     } catch (error) {
       throw error;
     }
+  }
+
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.salesService.remove(id);
+  }
+
+  @Delete()
+  removeAll() {
+    return this.salesService.removeAll();
   }
 }

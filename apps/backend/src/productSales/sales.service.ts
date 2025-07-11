@@ -326,4 +326,33 @@ export class SalesService {
       units: Array.from(item.units),
     }));
   }
+  async remove(id: string): Promise<void> {
+    const sale = await this.saleRepository.findOne({
+      where: { id },
+      relations: ['productSales'],
+    });
+
+    if (!sale) {
+      throw new NotFoundException(`Sale with ID ${id} not found`);
+    }
+
+    // Eliminar productSales primero (por relaciones)
+    await this.productSaleRepository.remove(sale.productSales);
+
+    // Luego eliminar la venta
+    await this.saleRepository.remove(sale);
+  }
+
+  async removeAll(): Promise<void> {
+    const sales = await this.saleRepository.find({
+      relations: ['productSales'],
+    });
+
+    // Eliminar todas las productSales primero
+    const allProductSales = sales.flatMap((s) => s.productSales);
+    await this.productSaleRepository.remove(allProductSales);
+
+    // Luego eliminar todas las ventas
+    await this.saleRepository.remove(sales);
+  }
 }
