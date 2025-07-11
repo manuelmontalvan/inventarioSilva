@@ -1,7 +1,11 @@
 import axios from "axios";
 import { PredictionResponse } from "@/types/prediction";
 
-const PYTHON_API_BASE = process.env.NEXT_PUBLIC_PYTHON_API ;
+const PYTHON_API_BASE =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:3002"
+    : "https://inventariosilva-production.up.railway.app";
+
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
 export const getPrediction = async (
@@ -28,7 +32,7 @@ export const getPrediction = async (
     
     
   });
-  
+
 console.log("👉 URL:", `${PYTHON_API_BASE}/predict`);
 
   return response.data;
