@@ -317,7 +317,7 @@ async getSoldProducts() {
     .createQueryBuilder('product')
     .leftJoin('product.brand', 'brand')
     .leftJoin('product.unit_of_measure', 'unit')
-    .innerJoin('product.sales', 'ps') // productos que han sido vendidos
+    .innerJoin("product.productSales", "productSale") // productos que han sido vendidos
     .select([
       'product.id AS product_id',
       'product.name AS product_name',

@@ -122,11 +122,13 @@ export const SalesTable: React.FC<Props> = ({
       addToast({
         title: "Éxito",
         description: `Se eliminaron ${idsToDelete.length} ventas correctamente.`,
+        color: "success",
       });
     } catch {
       addToast({
         title: "Error",
         description: "No se pudieron eliminar las ventas seleccionadas.",
+        color: "danger",
       });
 
       setConfirmOpen(false);

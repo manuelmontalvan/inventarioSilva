@@ -71,7 +71,6 @@ def calcular_tendencia(result):
     else:
         return "estable"
 
-
 def calcular_metricas_reales(product_name, brand, unit, forecast):
     sales_history = get_sales_history(product_name, brand, unit)
     sales_dict = {item["ds"]: item["y"] for item in sales_history}
@@ -81,7 +80,8 @@ def calcular_metricas_reales(product_name, brand, unit, forecast):
         real = sales_dict.get(pred["ds"])
         if real is None:
             continue
-        error = real - pred["yhat"]
+        # Convertimos 'real' de Decimal a float para evitar error al restar con float
+        error = float(real) - pred["yhat"]
         errors.append(error)
 
     if not errors:
@@ -91,7 +91,6 @@ def calcular_metricas_reales(product_name, brand, unit, forecast):
     rmse = sqrt(sum(e**2 for e in errors) / len(errors))
 
     return {"MAE": round(mae, 2), "RMSE": round(rmse, 2)}
-
 
 def generar_prediccion(product_name, brand, unit, days):
     # Obtener la predicción real
