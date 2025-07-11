@@ -6,8 +6,9 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import ConfirmModal  from "@/components/confirmModal";
+import ConfirmModal from "@/components/confirmModal";
 import { Button } from "@heroui/button";
+import { addToast } from "@heroui/toast";
 interface Props {
   sales: SaleI[];
   loading?: boolean;
@@ -20,9 +21,11 @@ interface JsPDFWithAutoTable extends jsPDF {
   };
 }
 
-
-
-export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDeleteSales }) => {
+export const SalesTable: React.FC<Props> = ({
+  sales: salesProp,
+  loading,
+  onDeleteSales,
+}) => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<SaleI | null>(null);
@@ -96,6 +99,8 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
 
   // Al confirmar eliminar
   const confirmDelete = async () => {
+      if (selectedIds.size === 0) return; // ← ✅ Aquí va
+
     try {
       const idsToDelete = Array.from(selectedIds);
       if (onDeleteSales) {
@@ -106,8 +111,17 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
       setSelectedIds(new Set());
       setConfirmOpen(false);
       setCurrentPage(1);
-    } catch (error) {
-      alert("Error al eliminar las ventas.");
+
+      addToast({
+        title: "Éxito",
+        description: `Se eliminaron ${idsToDelete.length} ventas correctamente.`,
+      });
+    } catch {
+      addToast({
+        title: "Error",
+        description: "No se pudieron eliminar las ventas seleccionadas.",
+      });
+
       setConfirmOpen(false);
     }
   };
@@ -252,7 +266,10 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
           type="checkbox"
           className="w-4 h-4"
           onChange={(e) => toggleSelectAllCurrentPage(e.target.checked)}
-          checked={paginatedSales.length > 0 && paginatedSales.every((s) => selectedIds.has(s.id))}
+          checked={
+            paginatedSales.length > 0 &&
+            paginatedSales.every((s) => selectedIds.has(s.id))
+          }
         />
         <label className="select-none text-sm dark:text-white mr-2">
           Seleccionar todo página
@@ -278,7 +295,8 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
         {selectedIds.size > 0 && (
           <Button
             onPress={() => setConfirmOpen(true)}
-           color="danger" variant="bordered"
+            color="danger"
+            variant="bordered"
           >
             Eliminar seleccionadas ({selectedIds.size})
           </Button>
@@ -321,10 +339,12 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm dark:text-white">
                 <p>
-                  <strong>Total:</strong> ${Number(sale.total_amount).toFixed(2)}
+                  <strong>Total:</strong> $
+                  {Number(sale.total_amount).toFixed(2)}
                 </p>
                 <p>
-                  <strong>Estado:</strong> {statusMap[sale.status] || sale.status}
+                  <strong>Estado:</strong>{" "}
+                  {statusMap[sale.status] || sale.status}
                 </p>
                 <p>
                   <strong>Vendedor:</strong> {sale.soldBy?.name || "N/A"}{" "}
@@ -395,13 +415,17 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
               {/* ... Igual que tu código original ... */}
               <div>
                 <p>
-                  <strong>Cliente:</strong> {selectedSale.customer?.name || "N/A"}
+                  <strong>Cliente:</strong>{" "}
+                  {selectedSale.customer?.name || "N/A"}
                 </p>
                 <p>
                   <strong>Fecha:</strong>{" "}
-                  {new Date(selectedSale.sale_date).toLocaleDateString("es-EC", {
-                    timeZone: "UTC",
-                  })}
+                  {new Date(selectedSale.sale_date).toLocaleDateString(
+                    "es-EC",
+                    {
+                      timeZone: "UTC",
+                    }
+                  )}
                 </p>
                 <p>
                   <strong>Estado:</strong>{" "}
@@ -422,7 +446,8 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
                   <strong>Notas:</strong> {selectedSale.notes || "N/A"}
                 </p>
                 <p>
-                  <strong>Total:</strong> ${Number(selectedSale.total_amount).toFixed(2)}
+                  <strong>Total:</strong> $
+                  {Number(selectedSale.total_amount).toFixed(2)}
                 </p>
               </div>
 
@@ -431,12 +456,24 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
                 <table className="w-full border border-gray-300 dark:border-gray-700 text-sm">
                   <thead className="bg-gray-100 dark:bg-gray-800">
                     <tr>
-                      <th className="p-2 border dark:border-gray-700 text-left">Producto</th>
-                      <th className="p-2 border dark:border-gray-700 text-left">Marca</th>
-                      <th className="p-2 border dark:border-gray-700 text-left">Unidad</th>
-                      <th className="p-2 border dark:border-gray-700 text-right">Cantidad</th>
-                      <th className="p-2 border dark:border-gray-700 text-right">Precio Unitario</th>
-                      <th className="p-2 border dark:border-gray-700 text-right">Total</th>
+                      <th className="p-2 border dark:border-gray-700 text-left">
+                        Producto
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-left">
+                        Marca
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-left">
+                        Unidad
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-right">
+                        Cantidad
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-right">
+                        Precio Unitario
+                      </th>
+                      <th className="p-2 border dark:border-gray-700 text-right">
+                        Total
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -447,17 +484,35 @@ export const SalesTable: React.FC<Props> = ({ sales: salesProp, loading, onDelet
                         return nameA.localeCompare(nameB);
                       })
                       .map((item) => (
-                        <tr key={item.id} className="border-t dark:border-gray-700">
-                          <td className="p-2 border dark:border-gray-700">{item.product?.name || item.productId}</td>
-                          <td className="p-2 border dark:border-gray-700">{item.product?.brand?.name || "N/A"}</td>
-                          <td className="p-2 border dark:border-gray-700">{item.product?.unit_of_measure.name || "N/A"}</td>
-                          <td className="p-2 border dark:border-gray-700 text-right">{Number(item.quantity).toFixed(2)}</td>
-                          <td className="p-2 border dark:border-gray-700 text-right">${Number(item.unit_price).toFixed(2)}</td>
-                          <td className="p-2 border dark:border-gray-700 text-right font-semibold">${Number(item.total_price).toFixed(2)}</td>
+                        <tr
+                          key={item.id}
+                          className="border-t dark:border-gray-700"
+                        >
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.name || item.productId}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.brand?.name || "N/A"}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700">
+                            {item.product?.unit_of_measure.name || "N/A"}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right">
+                            {Number(item.quantity).toFixed(2)}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right">
+                            ${Number(item.unit_price).toFixed(2)}
+                          </td>
+                          <td className="p-2 border dark:border-gray-700 text-right font-semibold">
+                            ${Number(item.total_price).toFixed(2)}
+                          </td>
                         </tr>
                       ))}
                     <tr className="font-bold bg-gray-100 dark:bg-gray-800">
-                      <td colSpan={5} className="p-2 text-right border dark:border-gray-700">
+                      <td
+                        colSpan={5}
+                        className="p-2 text-right border dark:border-gray-700"
+                      >
                         Total general
                       </td>
                       <td className="p-2 text-right border dark:border-gray-700">

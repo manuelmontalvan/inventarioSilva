@@ -247,6 +247,99 @@ export class SalesService {
     const correlativoStr = counter.lastNumber.toString().padStart(4, '0');
     return `ORD-V-${dateStr}-${correlativoStr}`;
   }
+  async getSalesHistory(
+  productId?: string,
+  startDate?: string,
+  endDate?: string,
+) {
+  const query = this.productSaleRepository
+    .createQueryBuilder('sale')
+    .leftJoinAndSelect('sale.sale', 'parentSale')
+    .leftJoinAndSelect('parentSale.customer', 'customer')
+    .leftJoinAndSelect('sale.product', 'product')
+    .orderBy('sale.sale_date', 'DESC');
+
+  if (productId) {
+    query.andWhere('sale.productId = :productId', { productId });
+  }
+
+  if (startDate) {
+    query.andWhere('sale.sale_date >= :startDate', { startDate });
+  }
+
+  if (endDate) {
+    query.andWhere('sale.sale_date <= :endDate', { endDate });
+  }
+
+  const records = await query.getMany();
+
+  return records.map((s) => ({
+    productName: s.product?.name ?? s.product_name,
+    brandName: s.brand_name ?? '-',
+    unitName: s.unit_of_measure_name ?? '-',
+    quantity: s.quantity,
+    unitPrice: s.unit_price,
+    totalPrice: s.total_price,
+    saleDate: s.sale_date,
+    customerName: s.sale?.customer?.name ?? 'Sin cliente',
+    orderNumber: s.sale?.orderNumber,
+    invoiceNumber: s.invoice_number ?? '-',
+    notes: s.notes ?? '-',
+  }));
+}
+async getSalePriceTrend(productId: string) {
+  const records = await this.productSaleRepository.find({
+    where: { productId },
+    order: { sale_date: 'ASC' },
+  });
+
+  const grouped: Record<string, ProductSale[]> = records.reduce((acc, r) => {
+    if (!r.sale_date) return acc; // prevención contra undefined
+
+    const month = new Date(r.sale_date).toISOString().slice(0, 7);
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(r);
+    return acc;
+  }, {} as Record<string, ProductSale[]>);
+
+  return Object.entries(grouped).map(([month, sales]) => {
+    const avgPrice =
+      sales.reduce((sum, s) => sum + Number(s.unit_price), 0) / sales.length;
+    return {
+      month,
+      unitPrice: +avgPrice.toFixed(2),
+    };
+  });
+}
+
+async getSoldProducts() {
+  const products = await this.productRepository
+    .createQueryBuilder('product')
+    .leftJoin('product.brand', 'brand')
+    .leftJoin('product.unit_of_measure', 'unit')
+    .innerJoin('product.sales', 'ps') // productos que han sido vendidos
+    .select([
+      'product.id AS product_id',
+      'product.name AS product_name',
+      'brand.name AS brand_name',
+      'unit.name AS unit_name',
+    ])
+    .groupBy('product.id, brand.name, unit.name')
+    .getRawMany();
+
+  return products.map((p) => ({
+    id: p.product_id,
+    name: p.product_name,
+    brand: {
+      name: p.brand_name,
+    },
+    unit_of_measure: {
+      name: p.unit_name,
+    },
+  }));
+}
+
+
 
   async findAll() {
     return this.saleRepository.find({
