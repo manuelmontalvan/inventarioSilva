@@ -9,11 +9,11 @@ import autoTable from "jspdf-autotable";
 import ConfirmModal from "@/components/confirmModal";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
-
+import { ProductI } from "@/types/product";
 interface Props {
   sales: SaleI[];
   loading?: boolean;
-
+  products: ProductI[];
   // Agrega función para eliminar ventas si tienes backend
   onDeleteSales?: (ids: string[]) => Promise<void>;
 }
@@ -27,7 +27,7 @@ export const SalesTable: React.FC<Props> = ({
   sales: salesProp,
   loading,
   onDeleteSales,
- 
+  products,
 }) => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -490,32 +490,44 @@ export const SalesTable: React.FC<Props> = ({
                         const nameB = b.product?.name || "";
                         return nameA.localeCompare(nameB);
                       })
-                      .map((item) => (
-                         
-                         <tr
-                          key={item.id}
-                          className="border-t dark:border-gray-700"
-                        >
-                          <td className="p-2 border dark:border-gray-700">
-                            {item.product?.name || item.productId}
-                          </td>
-                          <td className="p-2 border dark:border-gray-700">
-                            {item.product?.brand?.name || "N/A"}
-                          </td>
-                          <td className="p-2 border dark:border-gray-700">
-                            {item.product?.unit_of_measure.name || "N/A"}
-                          </td>
-                          <td className="p-2 border dark:border-gray-700 text-right">
-                            {Number(item.quantity).toFixed(2)}
-                          </td>
-                          <td className="p-2 border dark:border-gray-700 text-right">
-                            ${Number(item.unit_price).toFixed(2)}
-                          </td>
-                          <td className="p-2 border dark:border-gray-700 text-right font-semibold">
-                            ${Number(item.total_price).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
+                      .map((item) => {
+                        const fallbackProduct = products.find(
+                          (p) => p.id === item.productId
+                        ); // ← usamos el prop products
+
+                        return (
+                          <tr
+                            key={item.id}
+                            className="border-t dark:border-gray-700"
+                          >
+                            <td className="p-2 border dark:border-gray-700">
+                              {item.product?.name ||
+                                fallbackProduct?.name ||
+                                item.productId}
+                            </td>
+                            <td className="p-2 border dark:border-gray-700">
+                              {item.product?.brand?.name ||
+                                fallbackProduct?.brand?.name ||
+                                "N/A"}
+                            </td>
+                            <td className="p-2 border dark:border-gray-700">
+                              {item.product?.unit_of_measure?.name ||
+                                fallbackProduct?.unit_of_measure?.name ||
+                                "N/A"}
+                            </td>
+                            <td className="p-2 border dark:border-gray-700 text-right">
+                              {Number(item.quantity).toFixed(2)}
+                            </td>
+                            <td className="p-2 border dark:border-gray-700 text-right">
+                              ${Number(item.unit_price).toFixed(2)}
+                            </td>
+                            <td className="p-2 border dark:border-gray-700 text-right font-semibold">
+                              ${Number(item.total_price).toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
                     <tr className="font-bold bg-gray-100 dark:bg-gray-800">
                       <td
                         colSpan={5}
