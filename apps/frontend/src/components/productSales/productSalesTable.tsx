@@ -9,9 +9,11 @@ import autoTable from "jspdf-autotable";
 import ConfirmModal from "@/components/confirmModal";
 import { Button } from "@heroui/button";
 import { addToast } from "@heroui/toast";
+
 interface Props {
   sales: SaleI[];
   loading?: boolean;
+
   // Agrega función para eliminar ventas si tienes backend
   onDeleteSales?: (ids: string[]) => Promise<void>;
 }
@@ -25,6 +27,7 @@ export const SalesTable: React.FC<Props> = ({
   sales: salesProp,
   loading,
   onDeleteSales,
+ 
 }) => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -488,7 +491,8 @@ export const SalesTable: React.FC<Props> = ({
                         return nameA.localeCompare(nameB);
                       })
                       .map((item) => (
-                        <tr
+                         
+                         <tr
                           key={item.id}
                           className="border-t dark:border-gray-700"
                         >

@@ -37,18 +37,7 @@ export class SalesController {
     return this.salesService.searchProducts(query);
   }
 
-  // Obtener una venta por ID
-  @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const sale = await this.salesService.findOne(id);
-    if (!sale) {
-      throw new NotFoundException(`Sale with ID ${id} not found`);
-    }
-    return sale;
-  }
-
-  // Obtener todas las ventas
+   // Obtener todas las ventas
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAll() {
@@ -120,5 +109,16 @@ export class SalesController {
   @Get('products')
   async getSoldProducts() {
     return this.salesService.getSoldProducts();
+  }
+
+// Obtener una venta por ID
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const sale = await this.salesService.findOne(id);
+    if (!sale) {
+      throw new NotFoundException(`Sale with ID ${id} not found`);
+    }
+    return sale;
   }
 }

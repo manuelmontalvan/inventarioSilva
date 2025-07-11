@@ -19,7 +19,7 @@ import { getCustomers } from "@/lib/api/sales/customers";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<SaleI[]>([]);
-  const [products, setProducts] = useState<ProductI[]>([]);
+ 
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -42,8 +42,7 @@ export default function SalesPage() {
           getUnitsOfMeasure(),
           getCustomers(),
         ]);
-        setSales(salesData);
-        setProducts(productsResponse.data);
+        setSales(salesData);       
         setCategories(categoriesResponse);
         setUnits(unitsResponse);
         setCustomers(customersResponse);
@@ -136,7 +135,7 @@ export default function SalesPage() {
         />
 
         <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
-          <SalesTable sales={sales} loading={loading} />
+          <SalesTable sales={sales}  loading={loading} />
         </div>
       </div>
     </ProtectedRoute>
