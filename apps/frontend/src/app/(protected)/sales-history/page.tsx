@@ -6,7 +6,6 @@ import {
   getSaleHistory,
   getSalePriceTrend,
 } from "@/lib/api/sales/productSales";
-import { ProductI } from "@/types/product";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ResponsiveContainer,
