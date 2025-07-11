@@ -200,10 +200,11 @@ export default function ProductStockPage() {
     }
   };
 
-  const filteredStocks = stocks.filter((s) =>
-    s.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.locality.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.shelf.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStocks = stocks.filter(
+    (s) =>
+      s.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.locality.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.shelf.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
@@ -216,7 +217,9 @@ export default function ProductStockPage() {
     <ProtectedRoute>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Lista de Ubicaciones de Productos</h1>
+          <h1 className="text-2xl font-bold">
+            Lista de Ubicaciones de Productos
+          </h1>
           <div className="flex gap-2">
             <Button color="success" onPress={() => setShowFormPanel(true)}>
               Crear Stock
@@ -283,7 +286,9 @@ export default function ProductStockPage() {
                     </td>
                     <td className="p-2">{stock.product.name}</td>
                     <td className="p-2">{stock.locality.name}</td>
-                    <td className="p-2">{stock.shelf.category?.name ?? "N/A"}</td>
+                    <td className="p-2">
+                      {stock.shelf.category?.name ?? "N/A"}
+                    </td>
                     <td className="p-2">{stock.shelf.name}</td>
                     <td className="p-2">{stock.quantity}</td>
                     <td className="p-2">{stock.min_stock}</td>
@@ -341,7 +346,10 @@ export default function ProductStockPage() {
         )}
 
         {showFormPanel && (
-          <aside  ref={asideRef} className="fixed top-0 right-0 h-full w-[400px] bg-white shadow-lg p-6 border-l z-50 overflow-y-auto">
+          <aside
+            ref={asideRef}
+            className="fixed top-0 right-0 h-full w-[400px] bg-white shadow-lg p-6 border-l z-50 overflow-y-auto"
+          >
             <h2 className="text-xl font-bold mb-4">
               {editingStockId ? "Editar Stock" : "Crear Stock"}
             </h2>
@@ -373,20 +381,26 @@ export default function ProductStockPage() {
                   </ul>
                 )}
               </div>
+              <div onMouseDown={(e) => e.stopPropagation()}>
+                <Combobox
+                  items={localities.map((l) => ({
+                    label: l.name,
+                    value: l.id,
+                  }))}
+                  value={localityId}
+                  onChange={setLocalityId}
+                  placeholder="Selecciona una localidad"
+                />
+              </div>
 
-              <Combobox
-                items={localities.map((l) => ({ label: l.name, value: l.id }))}
-                value={localityId}
-                onChange={setLocalityId}
-                placeholder="Selecciona una localidad"
-              />
-
-              <Combobox
-                items={shelves.map((s) => ({ label: s.name, value: s.id }))}
-                value={shelfId}
-                onChange={setShelfId}
-                placeholder="Selecciona una percha"
-              />
+              <div onMouseDown={(e) => e.stopPropagation()}>
+                <Combobox
+                  items={shelves.map((s) => ({ label: s.name, value: s.id }))}
+                  value={shelfId}
+                  onChange={setShelfId}
+                  placeholder="Selecciona una percha"
+                />
+              </div>
 
               <div>
                 <p>Stock mínimo</p>
@@ -409,7 +423,12 @@ export default function ProductStockPage() {
               </div>
 
               <div className="flex gap-2 mt-4">
-                <Button onPress={handleSave} className="flex-1" variant="bordered" color="success">
+                <Button
+                  onPress={handleSave}
+                  className="flex-1"
+                  variant="bordered"
+                  color="success"
+                >
                   {editingStockId ? "Actualizar" : "Guardar"}
                 </Button>
                 <Button
