@@ -1,7 +1,5 @@
 import axios from "@/lib/axiosInstance";
-import { SaleI, CreateSaleDto } from "@/types/productSales";
-import { ProductI } from "@/types/product";
-
+import { SaleI, CreateSaleDto,SoldProduct } from "@/types/productSales";
 export interface ProductSearchResult {
   product_name: string;
   brands: string[];
@@ -109,7 +107,7 @@ export const getSalePriceTrend = async (
 };
 
 
-export const getSoldProducts = async (): Promise<ProductI[]> => {
+export const getSoldProducts = async (): Promise<SoldProduct[]> => {
   const { data } = await axios.get("/sales/products");
   return data;
 };

@@ -58,3 +58,15 @@ export interface CreateSaleDto {
   notes?: string;
   invoice_number?: string;
 }
+
+// types/sales.ts
+export interface SoldProduct {
+  id: string;
+  name: string;
+  brand: {
+    name: string;
+  };
+  unit_of_measure: {
+    name: string;
+  };
+}

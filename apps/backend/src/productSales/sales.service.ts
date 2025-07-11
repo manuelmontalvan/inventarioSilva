@@ -313,32 +313,23 @@ async getSalePriceTrend(productId: string) {
 }
 
 async getSoldProducts() {
-  const products = await this.productRepository
-    .createQueryBuilder('product')
-    .leftJoin('product.brand', 'brand')
-    .leftJoin('product.unit_of_measure', 'unit')
-    .innerJoin("product.productSales", "productSale") // productos que han sido vendidos
+  const result = await this.productSaleRepository
+    .createQueryBuilder('ps')
     .select([
-      'product.id AS product_id',
-      'product.name AS product_name',
-      'brand.name AS brand_name',
-      'unit.name AS unit_name',
+      'DISTINCT ps.productId AS product_id',
+      'ps.product_name AS product_name',
+      'ps.brand_name AS brand_name',
+      'ps.unit_of_measure_name AS unit_name',
     ])
-    .groupBy('product.id, brand.name, unit.name')
     .getRawMany();
 
-  return products.map((p) => ({
+  return result.map((p) => ({
     id: p.product_id,
     name: p.product_name,
-    brand: {
-      name: p.brand_name,
-    },
-    unit_of_measure: {
-      name: p.unit_name,
-    },
+    brand: { name: p.brand_name },
+    unit_of_measure: { name: p.unit_name },
   }));
 }
-
 
 
   async findAll() {

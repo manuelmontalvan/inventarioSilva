@@ -17,12 +17,12 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-
+import { SoldProduct } from "@/types/productSales";
 function ProductAutocomplete({
   products,
   onSelect,
 }: {
-  products: ProductI[];
+  products: SoldProduct[];
   onSelect: (id: string) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,7 +39,7 @@ function ProductAutocomplete({
     );
   });
 
-  const handleSelect = (p: ProductI) => {
+  const handleSelect = (p: SoldProduct) => {
     setSearchTerm(p.name);
     setShowDropdown(false);
     onSelect(p.id);
@@ -84,7 +84,7 @@ function ProductAutocomplete({
 
 export default function ProductSalesHistory() {
   const [productId, setProductId] = useState("");
-  const [products, setProducts] = useState<ProductI[]>([]);
+  const [products, setProducts] = useState<SoldProduct[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [trend, setTrend] = useState<any[]>([]);
 
