@@ -81,7 +81,11 @@ export const SalesTable: React.FC<Props> = ({
   const toggleSelectSale = (id: string) => {
     setSelectedIds((prev) => {
       const updated = new Set(prev);
-      updated.has(id) ? updated.delete(id) : updated.add(id);
+      if (updated.has(id)) {
+        updated.delete(id);
+      } else {
+        updated.add(id);
+      }
       return updated;
     });
   };
@@ -99,7 +103,7 @@ export const SalesTable: React.FC<Props> = ({
 
   // Al confirmar eliminar
   const confirmDelete = async () => {
-      if (selectedIds.size === 0) return; // ← ✅ Aquí va
+    if (selectedIds.size === 0) return; // ← ✅ Aquí va
 
     try {
       const idsToDelete = Array.from(selectedIds);

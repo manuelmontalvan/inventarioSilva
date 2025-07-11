@@ -1,6 +1,6 @@
-// lib/api/sales.ts
-import axios from "@/lib/axiosInstance"; // 🔄 Usa tu instancia configurada
+import axios from "@/lib/axiosInstance";
 import { SaleI, CreateSaleDto } from "@/types/productSales";
+import { ProductI } from "@/types/product";
 
 export interface ProductSearchResult {
   product_name: string;
@@ -8,25 +8,44 @@ export interface ProductSearchResult {
   units: string[];
 }
 
-// 👉 Obtener todas las ventas
+export interface SaleHistoryItem {
+  productName: string;
+  customerName: string;
+  invoiceNumber: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  saleDate: string;
+  notes: string;
+  orderNumber: string;
+}
+
+export interface SaleTrendItem {
+  month: string; // "2025-07"
+  unitPrice: number;
+}
+
+
+
+
 export const getSales = async (): Promise<SaleI[]> => {
   const { data } = await axios.get("/sales");
   return data;
 };
 
-// 👉 Obtener una venta por ID
+
 export const getSaleById = async (id: string): Promise<SaleI> => {
   const { data } = await axios.get(`/sales/${id}`);
   return data;
 };
 
-// 👉 Crear una venta
+
 export const createSale = async (sale: CreateSaleDto): Promise<SaleI> => {
   const { data } = await axios.post("/sales", sale);
   return data;
 };
 
-// 👉 Actualizar una venta
+
 export const updateSale = async (
   id: string,
   sale: Partial<Omit<CreateSaleDto, "productSales">>
@@ -35,17 +54,17 @@ export const updateSale = async (
   return data;
 };
 
-// 👉 Eliminar una venta
+
 export const deleteSale = async (id: string): Promise<void> => {
   await axios.delete(`/sales/${id}`);
 };
 
-// ✅ Eliminar TODAS las ventas
+
 export const deleteAllSales = async (): Promise<void> => {
   await axios.delete("/sales");
 };
 
-// 👉 Búsqueda predictiva para productos
+
 export const searchPredictiveProducts = async (
   query: string
 ): Promise<ProductSearchResult[]> => {
@@ -55,7 +74,7 @@ export const searchPredictiveProducts = async (
   return data;
 };
 
-// 👉 Importar ventas desde Excel
+
 export const importSalesFromExcel = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
@@ -66,5 +85,31 @@ export const importSalesFromExcel = async (file: File) => {
     },
   });
 
-  return data; // { message: string, sale: SaleI }
+  return data; 
+}
+
+
+export const getSaleHistory = async (
+  productId?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<SaleHistoryItem[]> => {
+  const { data } = await axios.get("/sales/history/by-product", {
+    params: { productId, startDate, endDate },
+  });
+  return data;
+};
+
+
+export const getSalePriceTrend = async (
+  productId: string
+): Promise<SaleTrendItem[]> => {
+  const { data } = await axios.get(`/sales/trend/${productId}`);
+  return data;
+};
+
+
+export const getSoldProducts = async (): Promise<ProductI[]> => {
+  const { data } = await axios.get("/sales/products");
+  return data;
 };

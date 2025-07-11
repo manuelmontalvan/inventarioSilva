@@ -147,7 +147,7 @@ const items: SidebarItem[] = [
       },
       {
         title: "Historial de ventas",
-        url: "/purchases/suppliers",
+        url: "/sales-history",
         icon: History,
       },
        {
