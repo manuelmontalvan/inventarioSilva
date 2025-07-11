@@ -136,7 +136,7 @@ export default function SalesPage() {
         />
 
         <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
-          <SalesTable sales={sales} products={products} loading={loading} />
+          <SalesTable sales={sales} loading={loading} />
         </div>
       </div>
     </ProtectedRoute>
