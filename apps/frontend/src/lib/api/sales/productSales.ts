@@ -59,7 +59,7 @@ export const deleteSale = async (id: string): Promise<void> => {
 
 
 export const deleteAllSales = async (): Promise<void> => {
-  await axios.delete("/sales");
+  await axios.delete("/sales/all");
 };
 
 

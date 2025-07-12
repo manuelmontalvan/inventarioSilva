@@ -11,6 +11,8 @@ import {
   getSales,
   createSale,
   importSalesFromExcel,
+  deleteAllSales,
+  deleteSale,
 } from "@/lib/api/sales/productSales";
 import { getProducts } from "@/lib/api/products/products";
 import { getCategories } from "@/lib/api/products/categories";
@@ -76,6 +78,11 @@ export default function SalesPage() {
     }
     reloadSales();
   };
+  const handleDeleteSales = async (ids: string[]) => {
+    for (const id of ids) {
+      await deleteSale(id);
+    }
+  };
 
   // Maneja creación de venta desde formulario
   const handleSaleCreated = async (data: CreateSaleDto) => {
@@ -94,7 +101,6 @@ export default function SalesPage() {
 
       const createdSale = await createSale(backendData);
       setSales((prev) => [createdSale, ...prev]);
-   
     } catch (error: unknown) {
       let message = "Error desconocido";
       if (
@@ -124,7 +130,10 @@ export default function SalesPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Gestión de Ventas</h1>
           <div className="w-72">
-            <FileUpload uploadFunction={handleUploadSales} onSuccess={onUploadSuccess} />
+            <FileUpload
+              uploadFunction={handleUploadSales}
+              onSuccess={onUploadSuccess}
+            />
           </div>
         </div>
 
@@ -136,7 +145,13 @@ export default function SalesPage() {
         />
 
         <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
-          <SalesTable sales={sales} products={products} loading={loading} />
+          <SalesTable
+            sales={sales}
+            products={products}
+            loading={loading}
+            onDeleteSales={handleDeleteSales}
+            onDeleteAllSales={deleteAllSales}
+          />
         </div>
       </div>
     </ProtectedRoute>

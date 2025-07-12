@@ -142,8 +142,26 @@ export default function ProductAdminPage() {
       }
       setSelectedProducts([]);
       fetchProducts();
-    } catch {
-      addToast({ title: "Error al eliminar productos", color: "danger" });
+    } catch (error: unknown) {
+      let message = "Error al eliminar productos. Algunos pueden estar en uso.";
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response === "object" &&
+        "data" in (error as any).response &&
+        typeof (error as any).response.data === "object" &&
+        "message" in (error as any).response.data
+      ) {
+        message = (error as any).response.data.message;
+      }
+
+      addToast({
+        title: "Error",
+        description: message,
+        color: "danger",
+      });
     }
   };
 

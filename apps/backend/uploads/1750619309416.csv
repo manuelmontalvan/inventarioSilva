@@ -1,4 +1,0 @@
-name,description,category,brand,unit,internal_code,min_stock,max_stock,purchase_price,sale_price,isPerishable,expiration_date,notes
-Martillo,Martillo de acero,Herramientas,Stanley,Unidad,MRT123,10,100,5.0,8.5,False,,Para construcción
-Taladro Eléctrico,Taladro inalámbrico,Herramientas,Bosch,Unidad,TDL456,5,50,35.0,50.0,False,,Herramienta eléctrica
-Pintura Blanca,Pintura para interiores,Pinturas,Sherwin-Williams,Litros,PTB789,20,200,10.0,15.0,False,,Para pintura de paredes

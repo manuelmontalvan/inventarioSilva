@@ -6,7 +6,7 @@ import {
   getPurchasePriceTrend,
   getPurchasedProducts,
 } from "@/lib/api/purchases/purchaseOrders";
-
+import { Button } from "@heroui/button";
 import { ProductI } from "@/types/product";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -89,7 +89,8 @@ export default function PurchaseHistoryPage() {
   const [products, setProducts] = useState<ProductI[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [trend, setTrend] = useState<any[]>([]);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   useEffect(() => {
     const fetchProducts = async () => {
       const products = await getPurchasedProducts();
@@ -108,10 +109,16 @@ export default function PurchaseHistoryPage() {
       ]);
       setHistory(historyData);
       setTrend(trendData);
+      setCurrentPage(1);
     };
     fetchData();
   }, [productId]);
 
+  const totalPages = Math.ceil(history.length / itemsPerPage);
+  const paginatedHistory = history.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Historial de Compras por Producto</h1>
@@ -122,7 +129,9 @@ export default function PurchaseHistoryPage() {
         <>
           <Card>
             <CardContent className="p-4">
-              <h2 className="text-lg font-semibold mb-4">Historial Detallado</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Historial Detallado
+              </h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full border border-gray-300 text-sm">
                   <thead>
@@ -146,7 +155,7 @@ export default function PurchaseHistoryPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((item, i) => (
+                    {paginatedHistory.map((item, i) => (
                       <tr key={i} className="border-b border-gray-300">
                         <td className="p-2 text-left">
                           {item.purchaseDate?.slice(0, 10)}
@@ -171,12 +180,30 @@ export default function PurchaseHistoryPage() {
                   </tbody>
                 </table>
               </div>
+              {/* Paginación */}
+              <div className="flex justify-center gap-2 mt-4">
+                {Array.from({ length: totalPages }, (_, index) => (
+                  <Button
+                    key={index + 1}
+                    onPress={() => setCurrentPage(index + 1)}
+                    className={`px-3 py-1 border rounded ${
+                      currentPage === index + 1
+                        ? "bg-indigo-500 text-white"
+                        : "bg-white text-black dark:bg-gray-800 dark:text-white"
+                    }`}
+                  >
+                    {index + 1}
+                  </Button>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4">
-              <h2 className="text-lg font-semibold mb-4">Tendencia de Precio</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Tendencia de Precio
+              </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={trend}>
                   <CartesianGrid stroke="#ccc" />
@@ -192,7 +219,7 @@ export default function PurchaseHistoryPage() {
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
-          </Card>
+          </Card>          
         </>
       )}
     </div>

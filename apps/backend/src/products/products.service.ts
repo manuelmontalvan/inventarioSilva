@@ -21,7 +21,7 @@ import * as csv from 'csv-parse/sync';
 import { Pagination } from 'src/common/types/pagination';
 import { Shelf } from './locality/shelves/entities/shelf.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
-
+import { QueryFailedError } from 'typeorm';
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -188,7 +188,8 @@ export class ProductsService {
       .leftJoinAndSelect('product.updatedBy', 'updatedBy')
       .leftJoinAndSelect('product.stocks', 'stocks')
       .leftJoinAndSelect('stocks.locality', 'stockLocality')
-      .leftJoinAndSelect('stocks.shelf', 'stockShelf'); // ⬅️ Esto es clave
+      .leftJoinAndSelect('stocks.shelf', 'stockShelf')
+      .leftJoinAndSelect('stockShelf.locality', 'stockLocality') // ⬅️ Esto es clave
 
     if (search) {
       queryBuilder.where(
@@ -328,16 +329,40 @@ export class ProductsService {
     }
   }
 
-  async remove(id: string): Promise<void> {
+async remove(id: string): Promise<void> {
+  try {
     const result = await this.productRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
+  } catch (error) {
+    if (
+      error instanceof QueryFailedError &&
+      (error as any).code === '23503'
+    ) {
+      throw new BadRequestException(
+        'No se puede eliminar este producto porque está siendo utilizado en stock, ventas u otras entidades relacionadas.',
+      );
+    }
+    throw error;
   }
-  async removeAll(): Promise<void> {
-    await this.productRepository.createQueryBuilder().delete().execute();
-  }
+}
 
+async removeAll(): Promise<void> {
+  try {
+    await this.productRepository.createQueryBuilder().delete().execute();
+  } catch (error) {
+    if (
+      error instanceof QueryFailedError &&
+      (error as any).code === '23503'
+    ) {
+      throw new BadRequestException(
+        'No se pueden eliminar todos los productos porque algunos están siendo utilizados en stock, ventas u otras entidades relacionadas.',
+      );
+    }
+    throw error;
+  }
+}
   // Métodos internos para que otros servicios actualicen la cantidad, fechas, etc.
   async updateProductQuantity(
     productId: string,

@@ -86,7 +86,8 @@ export default function ProductSalesHistory() {
   const [products, setProducts] = useState<SoldProduct[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [trend, setTrend] = useState<any[]>([]);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   useEffect(() => {
     getSoldProducts().then(setProducts);
   }, []);
@@ -97,9 +98,16 @@ export default function ProductSalesHistory() {
       ([h, t]) => {
         setHistory(h);
         setTrend(t);
+        setCurrentPage(1);
       }
     );
   }, [productId]);
+
+  const totalPages = Math.ceil(history.length / itemsPerPage);
+  const paginatedHistory = history.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -127,7 +135,7 @@ export default function ProductSalesHistory() {
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((item, i) => (
+                    {paginatedHistory.map((item, i) => (
                       <tr key={i} className="border-b">
                         <td className="p-2">{item.saleDate?.slice(0, 10)}</td>
                         <td className="p-2">{item.customerName || "-"}</td>
@@ -143,6 +151,22 @@ export default function ProductSalesHistory() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              {/* Paginación */}
+              <div className="flex justify-center gap-2 mt-4">
+                {Array.from({ length: totalPages }, (_, index) => (
+                  <button
+                    key={index + 1}
+                    onClick={() => setCurrentPage(index + 1)}
+                    className={`px-3 py-1 border rounded ${
+                      currentPage === index + 1
+                        ? "bg-indigo-500 text-white"
+                        : "bg-white text-black dark:bg-gray-800 dark:text-white"
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
               </div>
             </CardContent>
           </Card>

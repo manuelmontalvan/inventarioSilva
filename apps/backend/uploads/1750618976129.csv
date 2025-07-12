@@ -1,4 +1,0 @@
-name,description,categoryId,brandId,unitOfMeasureId,localityId,internal_code,min_stock,max_stock,purchase_price,sale_price,isPerishable,expiration_date,notes
-Martillo,Martillo de acero,9f499555-77ad-47d2-8b70-d867bacf86ca,b7f93cfa-2d4b-42e1-8e88-54f52ac55bc9,f3c6e39b-d6bc-4bc3-8b16-d91bdb2076ea,1f4d5274-85e2-4c58-a8df-6d5cae50b7e1,MRT123,10,100,5.0,8.5,false,,Para construcción
-Taladro eléctrico,Taladro inalámbrico,f18a4d87-8e72-4b3f-8bde-3c12bdf96f34,c3a1b3f7-5d12-4936-8f87-2b8d5f8a4f44,e7b01f7e-36c5-4ae4-8f4d-9b0c1d16dfb5,1f4d5274-85e2-4c58-a8df-6d5cae50b7e1,TDL456,5,50,35.0,50.0,false,,Herramienta eléctrica
-Pintura Blanca,Pintura para interiores,c4d33a0f-98d9-40c7-92e9-85a74e2d5d52,d51e2234-1a89-497c-bb9e-43c5c3e5e90d,bde42ca9-8d4e-49d7-8f52-99e33c347f44,2d9f5274-84e2-4c57-a8df-6d5cae50b7a2,PTB789,20,200,10.0,15.0,false,,Para pintura de paredes

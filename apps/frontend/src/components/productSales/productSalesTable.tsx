@@ -14,9 +14,11 @@ interface Props {
   sales: SaleI[];
   loading?: boolean;
   products: ProductI[];
-  // Agrega función para eliminar ventas si tienes backend
   onDeleteSales?: (ids: string[]) => Promise<void>;
+  onDeleteAllSales?: () => Promise<void>;
 }
+type DeleteMode = "selected" | "all";
+
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: {
     finalY: number;
@@ -27,6 +29,7 @@ export const SalesTable: React.FC<Props> = ({
   sales: salesProp,
   loading,
   onDeleteSales,
+  onDeleteAllSales,
   products,
 }) => {
   const [search, setSearch] = useState("");
@@ -34,9 +37,9 @@ export const SalesTable: React.FC<Props> = ({
   const [selectedSale, setSelectedSale] = useState<SaleI | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
-
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>("selected");
   const itemsPerPage = 5;
-
+  const [sales, setSales] = useState<SaleI[]>(salesProp);
   const statusMap: Record<string, string> = {
     paid: "Pagado",
     pending: "Pendiente",
@@ -50,7 +53,7 @@ export const SalesTable: React.FC<Props> = ({
   };
 
   // Estado local para manejar ventas y actualizar tras eliminar
-  const [sales, setSales] = useState<SaleI[]>(salesProp);
+
 
   React.useEffect(() => {
     setSales(salesProp);
@@ -106,35 +109,52 @@ export const SalesTable: React.FC<Props> = ({
 
   // Al confirmar eliminar
   const confirmDelete = async () => {
-    if (selectedIds.size === 0) return; // ← ✅ Aquí va
-
     try {
-      const idsToDelete = Array.from(selectedIds);
-      if (onDeleteSales) {
-        await onDeleteSales(idsToDelete);
+      if (deleteMode === "selected") {
+        if (onDeleteSales) {
+          const idsToDelete = Array.from(selectedIds);
+          await onDeleteSales(idsToDelete);
+          setSales((prev) => prev.filter((sale) => !selectedIds.has(sale.id)));
+          setSelectedIds(new Set());
+          addToast({
+            title: "Éxito",
+            description: `Se eliminaron ${idsToDelete.length} ventas.`,
+            color: "success",
+          });
+        }
+      } else if (deleteMode === "all") {
+        if (onDeleteAllSales) {
+          await onDeleteAllSales();
+          setSales([]);
+          setSelectedIds(new Set());
+          addToast({
+            title: "Éxito",
+            description: `Historial de ventas vaciado correctamente.`,
+            color: "success",
+          });
+        }
       }
-      // Actualiza lista local eliminando las ventas seleccionadas
-      setSales((prev) => prev.filter((sale) => !selectedIds.has(sale.id)));
-      setSelectedIds(new Set());
       setConfirmOpen(false);
       setCurrentPage(1);
-
-      addToast({
-        title: "Éxito",
-        description: `Se eliminaron ${idsToDelete.length} ventas correctamente.`,
-        color: "success",
-      });
     } catch {
       addToast({
         title: "Error",
-        description: "No se pudieron eliminar las ventas seleccionadas.",
+        description: "No se pudo completar la operación.",
         color: "danger",
       });
-
       setConfirmOpen(false);
     }
   };
 
+  const handleDeleteSelected = () => {
+    setDeleteMode("selected");
+    setConfirmOpen(true);
+  };
+
+  const handleDeleteAll = () => {
+    setDeleteMode("all");
+    setConfirmOpen(true);
+  };
   // Export PDF (igual que antes)
   function handleExportPdf() {
     const doc: JsPDFWithAutoTable = new jsPDF();
@@ -303,11 +323,20 @@ export const SalesTable: React.FC<Props> = ({
 
         {selectedIds.size > 0 && (
           <Button
-            onPress={() => setConfirmOpen(true)}
+            onPress={handleDeleteSelected}
             color="danger"
             variant="bordered"
           >
             Eliminar seleccionadas ({selectedIds.size})
+          </Button>
+        )}
+        {sales.length > 0 && (
+          <Button
+            onPress={handleDeleteAll}
+            color="danger"
+            variant="solid"
+          >
+            Vaciar historial
           </Button>
         )}
       </div>
@@ -550,10 +579,18 @@ export const SalesTable: React.FC<Props> = ({
       )}
 
       {/* Modal Confirmación para eliminar */}
-      <ConfirmModal
+       <ConfirmModal
         isOpen={confirmOpen}
-        title="Confirmar eliminación"
-        message={`¿Seguro que deseas eliminar las ${selectedIds.size} ventas seleccionadas?`}
+        title={
+          deleteMode === "all"
+            ? "Vaciar historial"
+            : "Eliminar ventas seleccionadas"
+        }
+        message={
+          deleteMode === "all"
+            ? "¿Seguro que deseas eliminar todas las ventas?"
+            : `¿Seguro que deseas eliminar las ${selectedIds.size} ventas seleccionadas?`
+        }
         onConfirm={confirmDelete}
         onCancel={() => setConfirmOpen(false)}
       />

@@ -37,12 +37,7 @@ export class SalesController {
     return this.salesService.searchProducts(query);
   }
 
-   // Obtener todas las ventas
-  @UseGuards(JwtAuthGuard)
-  @Get()
-  async findAll() {
-    return this.salesService.findAll();
-  }
+  // Obtener todas las ventas
 
   // Importar ventas desde Excel
   @UseGuards(JwtAuthGuard)
@@ -71,19 +66,18 @@ export class SalesController {
       throw error;
     }
   }
-
+  // Eliminar todas las ventas
+  @UseGuards(JwtAuthGuard)
+  @Delete('all')
+  async removeAll() {
+    await this.salesService.removeAll();
+    return { message: 'Todas las ventas fueron eliminadas exitosamente' };
+  }
   // Eliminar una venta
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.salesService.remove(id);
-  }
-
-  // Eliminar todas las ventas
-  @UseGuards(JwtAuthGuard)
-  @Delete()
-  removeAll() {
-    return this.salesService.removeAll();
   }
 
   // NUEVO: Obtener historial de ventas por producto y fechas
@@ -111,7 +105,7 @@ export class SalesController {
     return this.salesService.getSoldProducts();
   }
 
-// Obtener una venta por ID
+  // Obtener una venta por ID
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -120,5 +114,10 @@ export class SalesController {
       throw new NotFoundException(`Sale with ID ${id} not found`);
     }
     return sale;
+  }
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async findAll() {
+    return this.salesService.findAll();
   }
 }
