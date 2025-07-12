@@ -145,9 +145,7 @@ export default function SummaryCards({
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                {alertRestock
-                  ? "¡Reposición necesaria!"
-                  : "Stock suficiente"}
+                {alertRestock ? "¡Reposición necesaria!" : "Stock suficiente"}
               </p>
             )}
 
@@ -157,6 +155,22 @@ export default function SummaryCards({
                 <div className="text-xs text-gray-600">
                   <p>MAE: {metrics.MAE.toFixed(2)}</p>
                   <p>RMSE: {metrics.RMSE.toFixed(2)}</p>
+                  {/* Evaluación del modelo */}
+                  <p
+                    className={
+                      metrics.MAE < 100
+                        ? "text-green-600 font-semibold mt-1"
+                        : metrics.MAE < 300
+                        ? "text-yellow-600 font-semibold mt-1"
+                        : "text-red-600 font-semibold mt-1"
+                    }
+                  >
+                    {metrics.MAE < 100
+                      ? "✅ Modelo confiable"
+                      : metrics.MAE < 300
+                      ? "⚠️ Modelo aceptable"
+                      : "🚨 Modelo poco confiable"}
+                  </p>
                 </div>
               )}
           </CardContent>

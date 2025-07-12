@@ -4,8 +4,8 @@ from collections import defaultdict
 from app.db.connection import get_connection
 import numpy as np
 
-models = {}  # Global para almacenar modelos entrenados
-metrics = {}  # Global para almacenar métricas
+models = {}    # Almacena modelos entrenados
+metrics = {}   # Almacena métricas MAE y RMSE por modelo
 
 def train_models_from_db():
     conn = get_connection()
@@ -36,28 +36,45 @@ def train_models_from_db():
     for key, records in grouped.items():
         df = pd.DataFrame(records).groupby("ds").sum().reset_index()
 
-        if df.shape[0] < 2:  # mínimo para hacer split válido
+        if df.shape[0] < 2:
             print(f"⏭️ Skip {key} por pocos datos ({df.shape[0]})")
             continue
 
-        # División 80% train, 20% test
+        # 🔍 Eliminar outliers extremos usando IQR
+        q1 = df['y'].quantile(0.25)
+        q3 = df['y'].quantile(0.75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        df = df[(df['y'] >= lower_bound) & (df['y'] <= upper_bound)]
+
+        if df.shape[0] < 2:
+            print(f"⚠️ Skip {key} después de limpieza por pocos datos")
+            continue
+
+        # 📊 División en train/test 80/20
         train_size = int(len(df) * 0.8)
         train_df = df.iloc[:train_size]
         test_df = df.iloc[train_size:]
 
-        model = Prophet(yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False)
+        # 🧠 Entrenar Prophet con crecimiento plano
+        model = Prophet(
+            growth="flat",  # ❗ importante: evita crecimiento exagerado
+            yearly_seasonality=True,
+            weekly_seasonality=True,
+            daily_seasonality=False
+        )
         model.fit(train_df)
 
+        # 📅 Generar predicciones para el test set
         future = model.make_future_dataframe(periods=len(test_df), freq='D')
         forecast = model.predict(future)
-
-        # Predicciones correspondientes al set test
         pred = forecast[['ds', 'yhat']].tail(len(test_df)).reset_index(drop=True)
         true = test_df[['ds', 'y']].reset_index(drop=True)
 
-        # Cálculo métricas
+        # 📈 Calcular métricas
         mae = np.mean(np.abs(true['y'] - pred['yhat']))
-        rmse = np.sqrt(np.mean((true['y'] - pred['yhat'])**2))
+        rmse = np.sqrt(np.mean((true['y'] - pred['yhat']) ** 2))
 
         metrics[key] = {'MAE': mae, 'RMSE': rmse}
         models[key] = model
