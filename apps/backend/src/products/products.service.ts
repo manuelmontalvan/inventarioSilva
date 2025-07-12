@@ -552,7 +552,7 @@ async removeAll(): Promise<void> {
           : undefined,
         createdBy: { id: userId },
       });
-
+       // Validar precios
       if (
         typeof product.purchase_price !== 'number' ||
         isNaN(product.purchase_price)
@@ -613,6 +613,7 @@ async removeAll(): Promise<void> {
         const stock = this.productStockRepository.create({
           product,
           shelf,
+          locality,  
           quantity: quantityInShelf,
           min_stock: shelfMinStock,
           max_stock: shelfMaxStock,
