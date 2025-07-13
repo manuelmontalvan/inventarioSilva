@@ -17,21 +17,37 @@ export class PredictionService {
   }
   
   async savePredictionFromRaw(rawPrediction: any): Promise<Prediction> {
-    // Aquí haces validaciones o mapeos si quieres
+  const {
+    product,
+    brand,
+    unit,
+    days,
+    tendency,
+    alert_restock,
+    forecast,
+    metrics,
+    sales_last_month,
+    projected_sales,
+    percent_change,
+  } = rawPrediction;
 
-    const createPredictionDto: CreatePredictionDto = {
-      product: rawPrediction.product,
-      brand: rawPrediction.brand,
-      unit: rawPrediction.unit,
-      days: rawPrediction.days,
-      tendency: rawPrediction.tendency,
-      alert_restock: rawPrediction.alert_restock,
-      forecast: rawPrediction.forecast,
-      metrics: rawPrediction.metrics,
-    };
+  const createPredictionDto: CreatePredictionDto = {
+    product,
+    brand,
+    unit,
+    days,
+    tendency,
+    alert_restock,
+    forecast,
+    metrics,
+    sales_last_month,
+    projected_sales,
+    percent_change,
+  };
 
-    return this.create(createPredictionDto);
-  }
+  return this.create(createPredictionDto);
+}
+
 
   async findAll(): Promise<Prediction[]> {
     return this.predictionRepository.find({

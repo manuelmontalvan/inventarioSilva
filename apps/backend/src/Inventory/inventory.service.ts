@@ -12,6 +12,7 @@ import { Locality } from '../products/locality/entities/locality.entity';
 import { ProductStock } from '../products/product-stock/product-stock.entity';
 import { Shelf } from '../products/locality/shelves/entities/shelf.entity';
 import { CreateInventoryMovementsDto } from './dto/create-inventory-movement.dto';
+import { ProductStockService } from '../products/product-stock/product-stock.service';
 
 @Injectable()
 export class InventoryService {
@@ -30,6 +31,7 @@ export class InventoryService {
 
     @InjectRepository(ProductStock)
     private readonly stockRepo: Repository<ProductStock>,
+     private readonly productStockService: ProductStockService,
   ) {}
 
   async create(
@@ -126,7 +128,7 @@ export class InventoryService {
       }
 
       await this.stockRepo.save(stock);
-
+      await this.productStockService.updateProductTotalStock(product.id);
       const movement = this.movementRepo.create({
         type: dto.type,
         quantity,

@@ -45,4 +45,16 @@ export class CreatePredictionDto {
   @ValidateNested()
   @Type(() => Metrics)
   metrics?: Metrics;
+  @IsOptional()
+@IsNumber()
+sales_last_month?: number;
+
+@IsOptional()
+@IsNumber()
+projected_sales?: number;
+
+@IsOptional()
+@IsNumber()
+percent_change?: number;
+
 }

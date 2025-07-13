@@ -33,9 +33,19 @@ def get_forecast(product_name: str, brand: str, unit: str, days: int):
 
     if not model:
         return None, None
+    # Intentar recuperar cap del historial del modelo (si fue entrenado con logistic)
+    if hasattr(model, "history") and "cap" in model.history:
+        cap_value = model.history["cap"].max()
+    else:
+        cap_value = 100  # fallback si no existe 'cap'
+        print(f"⚠️ Cap no encontrado para {key}, usando fallback = {cap_value}")
 
     # 4. Predecir y construir respuesta
     future = model.make_future_dataframe(periods=days)
+    future["cap"] = cap_value
+    future["floor"] = 0
+
+
     forecast = model.predict(future)
     result = forecast[["ds", "yhat"]].tail(days).to_dict(orient="records")
 
@@ -107,12 +117,20 @@ def generar_prediccion(product_name, brand, unit, days):
 
     # Ventas del mes pasado
     last_month_sales = get_last_month_sales(product_name, brand, unit)
+    try:
+        last_month_sales_float = float(last_month_sales)
+    except (TypeError, ValueError):
+        last_month_sales_float = 0.0
+    
     # Proyección total de ventas en los próximos días
-    projected_sales = sum(item["yhat"] for item in result)
+    projected_sales = sum(item["yhat"] for item in result)   
+   
+
 
     # Calcular variación porcentual (manejar caso 0)
     if last_month_sales > 0:
-        percent_change = round(((projected_sales - last_month_sales) / last_month_sales) * 100, 2)
+        
+          percent_change = round(((projected_sales - last_month_sales_float) / last_month_sales_float) * 100, 2)
     else:
         percent_change = None  # o podrías usar 100.0 si quieres asumir una subida total
 
@@ -131,7 +149,7 @@ def generar_prediccion(product_name, brand, unit, days):
         "metrics": metrics,
         "sales_last_month": last_month_sales,
         "projected_sales": projected_sales,
-        "percent_change": percent_change,  # 👈 Aquí lo agregas al JSON
+        "percent_change": percent_change, 
     }
 
     # Guardar la predicción en NestJS

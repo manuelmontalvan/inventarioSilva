@@ -33,4 +33,13 @@ export class Prediction {
 
   @CreateDateColumn()
   createdAt: Date;
+  @Column({ type: 'float', nullable: true })
+sales_last_month?: number;
+
+@Column({ type: 'float', nullable: true })
+projected_sales?: number;
+
+@Column({ type: 'float', nullable: true })
+percent_change?: number;
+
 }

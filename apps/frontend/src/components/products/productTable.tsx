@@ -170,12 +170,7 @@ export default function ProductTable({
                 </tr>
               ) : (
                 paginatedProducts.map((p) => {
-                  const quantity = Array.isArray(p.stocks)
-                    ? p.stocks.reduce(
-                        (sum, s) => sum + Number(s.quantity || 0),
-                        0
-                      )
-                    : Number(p.current_quantity || 0);
+                  const quantity = Number(p.current_quantity || 0);
 
                   const minStock = Number(p.min_stock);
                   const maxStock = Number(p.max_stock);

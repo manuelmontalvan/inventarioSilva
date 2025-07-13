@@ -37,7 +37,9 @@ export class ProductStockService {
     ]);
 
     if (!product || !locality || !shelf) {
-      throw new NotFoundException('Producto, localidad o percha no encontrados');
+      throw new NotFoundException(
+        'Producto, localidad o percha no encontrados',
+      );
     }
 
     const existing = await this.stockRepo.findOneBy({
@@ -47,14 +49,19 @@ export class ProductStockService {
     });
 
     if (existing) {
-      throw new ConflictException('Ya existe un stock para ese producto, localidad y percha');
+      throw new ConflictException(
+        'Ya existe un stock para ese producto, localidad y percha',
+      );
     }
 
     const stock = this.stockRepo.create({
       ...dto,
       product,
+      productId: product.id,
       locality,
+      localityId: locality.id,
       shelf,
+      shelfId: shelf.id,
     });
 
     return this.stockRepo.save(stock);
@@ -83,10 +90,13 @@ export class ProductStockService {
       const product = await this.productRepo.findOneBy({ id: dto.productId });
       if (!product) throw new NotFoundException('Producto no encontrado');
       stock.product = product;
+      stock.productId = product.id;
     }
 
     if (dto.localityId) {
-      const locality = await this.localityRepo.findOneBy({ id: dto.localityId });
+      const locality = await this.localityRepo.findOneBy({
+        id: dto.localityId,
+      });
       if (!locality) throw new NotFoundException('Localidad no encontrada');
       stock.locality = locality;
     }
@@ -96,10 +106,34 @@ export class ProductStockService {
       if (!shelf) throw new NotFoundException('Percha no encontrada');
       stock.shelf = shelf;
     }
+    
 
     Object.assign(stock, dto);
-    return this.stockRepo.save(stock);
+      // Guardar cambios en stock
+  const updatedStock = await this.stockRepo.save(stock);
+
+  // Actualizar cantidad total en producto sumando todas sus stocks
+  await this.updateProductTotalStock(updatedStock.productId);
+
+    return updatedStock;
   }
+
+
+  
+   async updateProductTotalStock(productId: string) {
+  const result = await this.stockRepo
+    .createQueryBuilder('stock')
+    .select('SUM(stock.quantity)', 'total')
+    .where('stock.productId = :productId', { productId })
+    .getRawOne();
+
+  const total = parseFloat(result?.total ?? '0');
+
+  await this.productRepo.update(productId, {
+    current_quantity: total,
+  });
+}
+
 
   async remove(id: string): Promise<void> {
     const result = await this.stockRepo.delete(id);
@@ -108,24 +142,23 @@ export class ProductStockService {
     }
   }
 
+  async searchStocks(search?: string): Promise<ProductStock[]> {
+    const query = this.stockRepo
+      .createQueryBuilder('stock')
+      .leftJoinAndSelect('stock.product', 'product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.unit_of_measure', 'unit')
+      .leftJoinAndSelect('stock.locality', 'locality')
+      .leftJoinAndSelect('stock.shelf', 'shelf');
 
+    if (search) {
+      query
+        .where('product.name ILIKE :search', { search: `%${search}%` })
+        .orWhere('brand.name ILIKE :search', { search: `%${search}%` })
+        .orWhere('locality.name ILIKE :search', { search: `%${search}%` })
+        .orWhere('shelf.name ILIKE :search', { search: `%${search}%` });
+    }
 
-async searchStocks(search?: string): Promise<ProductStock[]> {
-  const query = this.stockRepo.createQueryBuilder('stock')
-    .leftJoinAndSelect('stock.product', 'product')
-    .leftJoinAndSelect('product.brand', 'brand')
-    .leftJoinAndSelect('product.unit_of_measure', 'unit')
-    .leftJoinAndSelect('stock.locality', 'locality')
-    .leftJoinAndSelect('stock.shelf', 'shelf');
-
-  if (search) {
-    query.where('product.name ILIKE :search', { search: `%${search}%` })
-      .orWhere('brand.name ILIKE :search', { search: `%${search}%` })
-      .orWhere('locality.name ILIKE :search', { search: `%${search}%` })
-      .orWhere('shelf.name ILIKE :search', { search: `%${search}%` });
+    return query.orderBy('product.name', 'ASC').getMany();
   }
-
-  return query.orderBy('product.name', 'ASC').getMany();
-}
-
 }

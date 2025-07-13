@@ -22,6 +22,8 @@ import { Pagination } from 'src/common/types/pagination';
 import { Shelf } from './locality/shelves/entities/shelf.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
 import { QueryFailedError } from 'typeorm';
+import { ProductStockService } from './product-stock/product-stock.service';
+
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -43,6 +45,8 @@ export class ProductsService {
     private shelfRepository: Repository<Shelf>,
     @InjectRepository(ProductStock)
     private productStockRepository: Repository<ProductStock>,
+
+    private readonly productStockService: ProductStockService,
   ) {}
 
   /**
@@ -189,7 +193,7 @@ export class ProductsService {
       .leftJoinAndSelect('product.stocks', 'stocks')
       .leftJoinAndSelect('stocks.locality', 'stockLocality')
       .leftJoinAndSelect('stocks.shelf', 'stockShelf')
-      .leftJoinAndSelect('stockShelf.locality', 'stockLocality') // ⬅️ Esto es clave
+      .leftJoinAndSelect('stockShelf.locality', 'stockLocality'); // ⬅️ Esto es clave
 
     if (search) {
       queryBuilder.where(
@@ -329,40 +333,40 @@ export class ProductsService {
     }
   }
 
-async remove(id: string): Promise<void> {
-  try {
-    const result = await this.productRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
+  async remove(id: string): Promise<void> {
+    try {
+      const result = await this.productRepository.delete(id);
+      if (result.affected === 0) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23503'
+      ) {
+        throw new BadRequestException(
+          'No se puede eliminar este producto porque está siendo utilizado en stock, ventas u otras entidades relacionadas.',
+        );
+      }
+      throw error;
     }
-  } catch (error) {
-    if (
-      error instanceof QueryFailedError &&
-      (error as any).code === '23503'
-    ) {
-      throw new BadRequestException(
-        'No se puede eliminar este producto porque está siendo utilizado en stock, ventas u otras entidades relacionadas.',
-      );
-    }
-    throw error;
   }
-}
 
-async removeAll(): Promise<void> {
-  try {
-    await this.productRepository.createQueryBuilder().delete().execute();
-  } catch (error) {
-    if (
-      error instanceof QueryFailedError &&
-      (error as any).code === '23503'
-    ) {
-      throw new BadRequestException(
-        'No se pueden eliminar todos los productos porque algunos están siendo utilizados en stock, ventas u otras entidades relacionadas.',
-      );
+  async removeAll(): Promise<void> {
+    try {
+      await this.productRepository.createQueryBuilder().delete().execute();
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23503'
+      ) {
+        throw new BadRequestException(
+          'No se pueden eliminar todos los productos porque algunos están siendo utilizados en stock, ventas u otras entidades relacionadas.',
+        );
+      }
+      throw error;
     }
-    throw error;
   }
-}
   // Métodos internos para que otros servicios actualicen la cantidad, fechas, etc.
   async updateProductQuantity(
     productId: string,
@@ -552,7 +556,7 @@ async removeAll(): Promise<void> {
           : undefined,
         createdBy: { id: userId },
       });
-       // Validar precios
+      // Validar precios
       if (
         typeof product.purchase_price !== 'number' ||
         isNaN(product.purchase_price)
@@ -565,6 +569,7 @@ async removeAll(): Promise<void> {
       }
 
       await this.productRepository.save(product);
+ 
       created.push(product.name);
 
       // Opcional: agregar stock en shelf si viene en la fila
@@ -585,7 +590,7 @@ async removeAll(): Promise<void> {
           ? Number(row['shelf_max_stock'])
           : 0;
 
-   if (localityName && shelfName && quantityInShelf !== null) {
+      if (localityName && shelfName && quantityInShelf !== null) {
         const locality =
           (await this.localityRepository.findOne({
             where: { name: localityName },
@@ -612,14 +617,18 @@ async removeAll(): Promise<void> {
 
         const stock = this.productStockRepository.create({
           product,
+          productId: product.id, 
           shelf,
-          locality,  
+          shelfId: shelf.id,
+          locality,
+          localityId: locality.id,
           quantity: quantityInShelf,
           min_stock: shelfMinStock,
           max_stock: shelfMaxStock,
         });
-
+        
         await this.productStockRepository.save(stock);
+        await this.productStockService.updateProductTotalStock(product.id);
       }
     }
 

@@ -84,4 +84,5 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
 }

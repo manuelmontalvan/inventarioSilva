@@ -5,6 +5,7 @@ import {
   Column,
   ManyToOne,
   Unique,
+  JoinColumn
 } from 'typeorm';
 import { Product } from '../entities/product.entity';
 import { Locality } from '../locality/entities/locality.entity';
@@ -17,12 +18,21 @@ export class ProductStock {
   id: string;
 
   @ManyToOne(() => Product, (product) => product.stocks, { eager: true })
+  @JoinColumn({ name: 'productId' })
   product: Product;
 
+  @Column()
+  productId: string;
+
   @ManyToOne(() => Locality, { eager: true })
+  @JoinColumn({ name: 'localityId' })
   locality: Locality;
 
+  @Column()
+  localityId: string;
+  
   @ManyToOne(() => Shelf, { eager: true })
+  @JoinColumn({ name: 'shelfId' })
   shelf: Shelf;
 
   @Column()

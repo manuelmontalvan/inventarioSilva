@@ -10,13 +10,14 @@ import { ProductPurchase } from 'src/productPurchase/entities/product-purchase.e
 import { Sale } from 'src/productSales/entities/sale.entity';
 import {PurchaseOrder} from '../productPurchase/entities/purchase-order.entity'
 import { Shelf } from 'src/products/locality/shelves/entities/shelf.entity';
+import { ProductStockService } from '../products/product-stock/product-stock.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([InventoryMovement, Product,Locality , ProductStock,Sale,PurchaseOrder, Shelf  ]),
   ],
   controllers: [InventoryController],
-  providers: [InventoryService,ProductPurchase],
+  providers: [InventoryService,ProductPurchase, ProductStockService],
   exports: [InventoryService],
 })
 export class InventoryModule {}

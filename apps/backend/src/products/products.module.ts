@@ -11,6 +11,7 @@ import {ProductCostHistory} from '../productPurchase/entities/product-cost-histo
 import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
 import { Shelf } from './locality/shelves/entities/shelf.entity';
+import { ProductStockService } from './product-stock/product-stock.service';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { Shelf } from './locality/shelves/entities/shelf.entity';
     ]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
+
+  providers: [ProductsService ,ProductStockService ],
 })
 export class ProductsModule {}

@@ -68,6 +68,10 @@ export function ProductsTab({
       addToast({ title: "Selecciona una localidad", color: "danger" });
       return;
     }
+        if (!shelfId) {
+      addToast({ title: "Selecciona una percha", color: "danger" });
+      return;
+    }
 
     const filteredStocks = product.stocks?.filter(
       (s) => s.locality?.id === localityId
