@@ -57,8 +57,10 @@ def predict(
 
         return {
             "success": True,
+            "model_used": prediction_data.pop("model_type", "desconocido"),  # mostrar modelo
             **prediction_data
-        }
+}
+
     
     except HTTPException as e:
         raise e
@@ -122,8 +124,89 @@ def get_metrics():
             "message": "No hay métricas disponibles. Entrena los modelos primero."
         }
 
-    logger.info(f"{len(metrics)} métricas devueltas correctamente.")
+    resumen = []
+    for key, model_metrics in metrics.items():
+        best = min(model_metrics.items(), key=lambda x: x[1]["RMSE"])
+        resumen.append({
+            "product_name": key[0],
+            "brand": key[1],
+            "unit": key[2],
+            "best_model": best[0],
+            "MAE": round(best[1]["MAE"], 2),
+            "RMSE": round(best[1]["RMSE"], 2),
+        })
+
+    logger.info(f"{len(resumen)} métricas resumidas devueltas correctamente.")
     return {
         "success": True,
-        "metrics": metrics
+        "summary": resumen,
+        "raw": metrics  # opcional, para mantener las métricas completas
     }
+
+@router.get("/predict/all-models")
+def predict_all_models(
+    product_name: str = Query(..., min_length=1),
+    brand: str = Query("Sin marca", min_length=1),
+    unit: str = Query("Sin unidad", min_length=1),
+    days: int = Query(7, ge=1, le=60)
+):
+    from datetime import datetime, timedelta
+    import pandas as pd
+
+    key = (product_name, brand, unit)
+
+    if key not in models:
+        raise HTTPException(status_code=404, detail="No hay modelos entrenados para este producto.")
+
+    try:
+        base_dates = [(datetime.today() + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, days + 1)]
+        forecasts = {}
+
+        for model_name, model in models[key].items():
+            try:
+                if model_name == "prophet":
+                    cap = model.history['cap'].max() if 'cap' in model.history else 100
+                    future = model.make_future_dataframe(periods=days)
+                    future['cap'] = cap
+                    future['floor'] = 0
+                    forecast = model.predict(future).tail(days)
+                    yhat = forecast['yhat'].clip(lower=0).tolist()
+
+                elif model_name == "linear":
+                    timestamps = [[(datetime.today() + timedelta(days=i)).toordinal()] for i in range(1, days + 1)]
+                    yhat = model.predict(timestamps).tolist()
+
+                elif model_name == "arima":
+                    yhat = model.predict(n_periods=days).tolist()
+
+                else:
+                    continue
+
+                # Construir forecast con fechas
+                forecast_list = [
+                    {"ds": base_dates[i], "yhat": round(max(0, float(yhat[i])), 2)}
+                    for i in range(min(len(base_dates), len(yhat)))
+                ]
+
+                # Obtener métricas si existen
+                model_metrics = metrics.get(key, {}).get(model_name, {})
+                forecasts[model_name] = {
+                    "forecast": forecast_list,
+                    "metrics": model_metrics or None
+                }
+
+            except Exception as model_error:
+                logger.warning(f"❌ Error procesando modelo {model_name} para {key}: {model_error}")
+                continue
+
+        return {
+            "product": product_name,
+            "brand": brand,
+            "unit": unit,
+            "days": days,
+            "forecasts": forecasts
+        }
+
+    except Exception as e:
+        logger.exception(f"Error al generar múltiples predicciones: {e}")
+        raise HTTPException(status_code=500, detail="Error al generar predicciones para múltiples modelos.")

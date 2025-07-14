@@ -56,5 +56,7 @@ projected_sales?: number;
 @IsOptional()
 @IsNumber()
 percent_change?: number;
-
+ @IsOptional()
+  @IsString()
+  model_type?: string;
 }

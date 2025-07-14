@@ -3,9 +3,53 @@ from prophet import Prophet
 from collections import defaultdict
 from app.db.connection import get_connection
 import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from pmdarima import auto_arima
 
-models = {}    # Almacena modelos entrenados
-metrics = {}   # Almacena métricas MAE y RMSE por modelo
+models = {}    # Almacena modelos entrenados por tipo
+metrics = {}   # Almacena métricas MAE y RMSE por tipo
+
+def train_linear_regression(df):
+    df = df.copy()
+    df['ds'] = pd.to_datetime(df['ds'])
+    df = df.sort_values('ds')
+    df['timestamp'] = df['ds'].map(pd.Timestamp.toordinal)
+
+    train_size = int(len(df) * 0.8)
+    X_train = df['timestamp'][:train_size].values.reshape(-1, 1)
+    y_train = df['y'][:train_size]
+    X_test = df['timestamp'][train_size:].values.reshape(-1, 1)
+    y_test = df['y'][train_size:]
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+    return model, mae, rmse
+
+def train_arima(df):
+    df = df.copy()
+    df = df.set_index('ds')
+    df = df.asfreq('D').fillna(0)
+
+    train_size = int(len(df) * 0.8)
+    train = df.iloc[:train_size]
+    test = df.iloc[train_size:]
+
+    try:
+        model = auto_arima(train['y'], seasonal=True, m=7, suppress_warnings=True)
+        forecast = model.predict(n_periods=len(test))
+
+        mae = mean_absolute_error(test['y'], forecast)
+        rmse = np.sqrt(mean_squared_error(test['y'], forecast))
+        return model, mae, rmse
+    except Exception as e:
+        print(f"❌ ARIMA fallo en {df.index[0]}: {e}")
+        return None, None, None
 
 def train_models_from_db():
     conn = get_connection()
@@ -35,18 +79,14 @@ def train_models_from_db():
 
     for key, records in grouped.items():
         df = pd.DataFrame(records)
-
-        # Agrupar y sumar por fecha
         df = df.groupby("ds").sum().reset_index()
-
-        # Ordenar por fecha ascendente (importante)
         df = df.sort_values(by='ds').reset_index(drop=True)
 
         if df.shape[0] < 2:
             print(f"⏭️ Skip {key} por pocos datos ({df.shape[0]})")
             continue
 
-        # 🔍 Eliminar outliers extremos usando IQR
+        # Eliminar outliers
         q1 = df['y'].quantile(0.25)
         q3 = df['y'].quantile(0.75)
         iqr = q3 - q1
@@ -57,48 +97,55 @@ def train_models_from_db():
         if df.shape[0] < 2:
             print(f"⚠️ Skip {key} después de limpieza por pocos datos")
             continue
-         # Cap y floor para predicciones
+
         cap_value = df['y'].max() * 1.2
         df['cap'] = cap_value
         df['floor'] = 0
 
-        # 📊 División en train/test 80/20
         train_size = int(len(df) * 0.8)
         train_df = df.iloc[:train_size]
         test_df = df.iloc[train_size:]
 
-        # 🧠 Entrenar Prophet con crecimiento plano
-        model = Prophet(
+        models[key] = {}
+        metrics[key] = {}
+
+        # Prophet
+        prophet_model = Prophet(
             growth="logistic",
             yearly_seasonality=False,
             weekly_seasonality=True,
             daily_seasonality=False
         )
-        model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
-        model.fit(train_df)
+        prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+        prophet_model.fit(train_df)
 
-        # 📅 Generar predicciones para el test set
-        cap_value = model.history['cap'].max()
-        future = model.make_future_dataframe(periods=len(test_df), freq='D')
+        future = prophet_model.make_future_dataframe(periods=len(test_df), freq='D')
         future['cap'] = cap_value
         future['floor'] = 0
-        forecast = model.predict(future)
-
+        forecast = prophet_model.predict(future)
 
         pred = forecast[['ds', 'yhat']].tail(len(test_df)).reset_index(drop=True)
         true = test_df[['ds', 'y']].reset_index(drop=True)
-        pred.columns = ['ds', 'yhat']
-
-          # Recortar predicciones exageradas si aún las hay
         pred['yhat'] = pred['yhat'].clip(lower=0, upper=cap_value)
-       
-        # 📈 Calcular métricas
-        mae = np.mean(np.abs(true['y'] - pred['yhat']))
-        rmse = np.sqrt(np.mean((true['y'] - pred['yhat']) ** 2))
 
-        metrics[key] = {'MAE': mae, 'RMSE': rmse}
-        models[key] = model
+        prophet_mae = mean_absolute_error(true['y'], pred['yhat'])
+        prophet_rmse = np.sqrt(mean_squared_error(true['y'], pred['yhat']))
 
-        print(f"✅ Modelo entrenado para: {key} | MAE: {mae:.2f} | RMSE: {rmse:.2f}")
+        models[key]['prophet'] = prophet_model
+        metrics[key]['prophet'] = {'MAE': prophet_mae, 'RMSE': prophet_rmse}
+        print(f"✅ Prophet entrenado para {key} | MAE: {prophet_mae:.2f} | RMSE: {prophet_rmse:.2f}")
+
+        # Linear Regression
+        lin_model, lin_mae, lin_rmse = train_linear_regression(df)
+        models[key]['linear'] = lin_model
+        metrics[key]['linear'] = {'MAE': lin_mae, 'RMSE': lin_rmse}
+        print(f"📐 Linear entrenado para {key} | MAE: {lin_mae:.2f} | RMSE: {lin_rmse:.2f}")
+
+        # ARIMA
+        arima_model, arima_mae, arima_rmse = train_arima(df)
+        if arima_model:
+            models[key]['arima'] = arima_model
+            metrics[key]['arima'] = {'MAE': arima_mae, 'RMSE': arima_rmse}
+            print(f"📊 ARIMA entrenado para {key} | MAE: {arima_mae:.2f} | RMSE: {arima_rmse:.2f}")
 
     return models, metrics

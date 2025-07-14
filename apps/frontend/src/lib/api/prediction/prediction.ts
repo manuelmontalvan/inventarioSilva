@@ -1,5 +1,5 @@
 import axios from "axios";
-import { PredictionResponse } from "@/types/prediction";
+import { PredictionResponse , MultiModelPredictionResponse } from "@/types/prediction";
 
 const PYTHON_API_BASE =
   process.env.NODE_ENV === "development"
@@ -39,3 +39,24 @@ console.log("👉 URL:", `${PYTHON_API_BASE}/predict`);
 };
 
 
+export const getAllModelPredictions = async (
+  product_name: string,
+  brand: string,
+  unit: string,
+  days: number = 7
+): Promise<MultiModelPredictionResponse> => {
+  const response = await axios.get(`${PYTHON_API_BASE}/predict/all-models`, {
+    params: {
+      product_name,
+      brand,
+      unit,
+      days,
+    },
+    headers: {
+      "x-api-key": API_KEY || "",
+    },
+  });
+
+  console.log("📡 Llamando a /predict/all-models:", response.data);
+  return response.data;
+};

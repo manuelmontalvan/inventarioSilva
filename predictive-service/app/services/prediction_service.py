@@ -1,12 +1,13 @@
-from app.models.prophet_models import models
+from app.models.prophet_models import models, metrics
 from app.services.inventory_service import get_current_stock_general
 from cachetools import TTLCache
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 from .nest_client import guardar_prediccion_en_nest
 from .sales_service import get_last_month_sales
 from math import sqrt
 from .sales_service import get_sales_history
+import pandas as pd
 
 
 # 1. Cache configurado con un TTL de 1 hora
@@ -19,6 +20,12 @@ def make_cache_key(product_name: str, brand: str, unit: str, days: int) -> str:
     raw_key = f"{product_name}:{brand}:{unit}:{days}"
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
+def seleccionar_mejor_modelo(key):
+    modelos = metrics.get(key)
+    if not modelos:
+        return "prophet"
+    return min(modelos.items(), key=lambda x: x[1]["RMSE"])[0]
+
 
 def get_forecast(product_name: str, brand: str, unit: str, days: int):
     cache_key = make_cache_key(product_name, brand, unit, days)
@@ -29,7 +36,8 @@ def get_forecast(product_name: str, brand: str, unit: str, days: int):
 
     # 3. Obtener modelo
     key = (product_name, brand, unit)
-    model = models.get(key)
+    modelo_seleccionado = seleccionar_mejor_modelo(key)
+    model = models.get(key, {}).get(modelo_seleccionado)
 
     if not model:
         return None, None
@@ -39,30 +47,111 @@ def get_forecast(product_name: str, brand: str, unit: str, days: int):
     else:
         cap_value = 100  # fallback si no existe 'cap'
         print(f"⚠️ Cap no encontrado para {key}, usando fallback = {cap_value}")
+    
+    # Generar predicción según modelo
+    if modelo_seleccionado == "prophet":
+        cap_value = model.history['cap'].max() if "cap" in model.history else 100
+        future = model.make_future_dataframe(periods=days)
+        future['cap'] = cap_value
+        future['floor'] = 0
+        forecast = model.predict(future)
+        result_df = forecast[['ds', 'yhat']].tail(days)
 
-    # 4. Predecir y construir respuesta
-    future = model.make_future_dataframe(periods=days)
-    future["cap"] = cap_value
-    future["floor"] = 0
+    elif modelo_seleccionado == "linear":
+        last_date = datetime.today()
+        dates = [last_date + timedelta(days=i) for i in range(1, days + 1)]
+        timestamps = [[d.toordinal()] for d in dates]
+        yhat = model.predict(timestamps)
+        result_df = pd.DataFrame({
+            "ds": [d.strftime("%Y-%m-%d") for d in dates],
+            "yhat": yhat
+        })
 
+    elif modelo_seleccionado == "arima":
+        forecast = model.predict(n_periods=days)
+        last_date = datetime.today()
+        dates = [last_date + timedelta(days=i) for i in range(1, days + 1)]
+        result_df = pd.DataFrame({
+            "ds": [d.strftime("%Y-%m-%d") for d in dates],
+            "yhat": forecast
+        })
 
-    forecast = model.predict(future)
-    result = forecast[["ds", "yhat"]].tail(days).to_dict(orient="records")
+    else:
+        print(f"⚠️ Tipo de modelo desconocido: {modelo_seleccionado}")
+        return None, None
+
 
     # ⚠️ Conversión de Timestamp → string (para evitar error de serialización)
-    result_df = forecast[["ds", "yhat"]].tail(days)
-    result_df["yhat"] = result_df["yhat"].apply(lambda x: max(0, x))
-    result_df["ds"] = result_df["ds"].dt.strftime("%Y-%m-%d")
-    result = result_df.to_dict(orient="records")
+    # Después del bloque de predicción según modelo...
+
+    if modelo_seleccionado == "prophet":
+        result_df = forecast[["ds", "yhat"]].tail(days)
+        result_df["yhat"] = result_df["yhat"].apply(lambda x: max(0, x))
+        result_df["ds"] = result_df["ds"].dt.strftime("%Y-%m-%d")
+        result = result_df.to_dict(orient="records")
+    else:
+        result_df["yhat"] = result_df["yhat"].apply(lambda x: max(0, x))
+        result = result_df.to_dict(orient="records")
+
 
     current_stock = get_current_stock_general(product_name, brand, unit)
     total_predicted = sum(item["yhat"] for item in result)
     alert_restock = total_predicted > current_stock
 
     # 5. Guardar en caché y retornar
-    prediction_cache[cache_key] = (result, alert_restock)
-    return result, alert_restock
+    prediction_cache[cache_key] = (result, alert_restock, modelo_seleccionado)
+    return result, alert_restock, modelo_seleccionado
 
+def get_forecast_all_models(product_name: str, brand: str, unit: str, days: int):
+    from app.models.prophet_models import models
+    from datetime import datetime, timedelta
+    import pandas as pd
+
+    key = (product_name, brand, unit)
+    result_all = {}
+    modelos = ["prophet", "linear", "arima"]
+
+    for modelo in modelos:
+        model = models.get(key, {}).get(modelo)
+        if not model:
+            continue
+
+        try:
+            if modelo == "prophet":
+                future = model.make_future_dataframe(periods=days)
+                future["cap"] = 100
+                future["floor"] = 0
+                forecast = model.predict(future)
+                df = forecast[["ds", "yhat"]].tail(days)
+                df["yhat"] = df["yhat"].apply(lambda x: max(0, x))
+                df["ds"] = df["ds"].dt.strftime("%Y-%m-%d")
+
+            elif modelo == "linear":
+                last_date = datetime.today()
+                dates = [last_date + timedelta(days=i) for i in range(1, days + 1)]
+                timestamps = [[d.toordinal()] for d in dates]
+                yhat = model.predict(timestamps)
+                df = pd.DataFrame({
+                    "ds": [d.strftime("%Y-%m-%d") for d in dates],
+                    "yhat": yhat
+                })
+                df["yhat"] = df["yhat"].apply(lambda x: max(0, x))
+
+            elif modelo == "arima":
+                forecast = model.predict(n_periods=days)
+                last_date = datetime.today()
+                dates = [last_date + timedelta(days=i) for i in range(1, days + 1)]
+                df = pd.DataFrame({
+                    "ds": [d.strftime("%Y-%m-%d") for d in dates],
+                    "yhat": forecast
+                })
+                df["yhat"] = df["yhat"].apply(lambda x: max(0, x))
+
+            result_all[modelo] = df.to_dict(orient="records")
+        except Exception as e:
+            print(f"❌ Error en modelo {modelo}: {e}")
+
+    return result_all
 
 def calcular_tendencia(result):
     """
@@ -104,7 +193,7 @@ def calcular_metricas_reales(product_name, brand, unit, forecast):
 
 def generar_prediccion(product_name, brand, unit, days):
     # Obtener la predicción real
-    result, alert_restock = get_forecast(product_name, brand, unit, days)
+    result, alert_restock, model_type = get_forecast(product_name, brand, unit, days)
     if result is None:
         print("No hay modelo para el producto especificado.")
         return None
@@ -150,6 +239,7 @@ def generar_prediccion(product_name, brand, unit, days):
         "sales_last_month": last_month_sales,
         "projected_sales": projected_sales,
         "percent_change": percent_change, 
+        "model_type": model_type,
     }
 
     # Guardar la predicción en NestJS

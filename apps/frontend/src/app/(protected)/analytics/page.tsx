@@ -1,4 +1,6 @@
 "use client";
+import { MultiModelPredictionResponse } from "@/types/prediction";
+import { getAllModelPredictions } from "@/lib/api/prediction/prediction"; // asegúrate de importarlo
 
 import { useEffect, useState } from "react";
 import { getPrediction } from "@/lib/api/prediction/prediction";
@@ -25,6 +27,8 @@ export default function PredictiveAnalyticsPage() {
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
   const [selectedProduct, setSelectedProduct] =
     useState<ProductSearchResult | null>(null);
+  const [multiModelPrediction, setMultiModelPrediction] =
+    useState<MultiModelPredictionResponse | null>(null);
 
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
@@ -91,15 +95,13 @@ export default function PredictiveAnalyticsPage() {
     setLoadingPrediction(true);
     setErrorPrediction(null);
 
-    getPrediction(
+    getAllModelPredictions(
       selectedProduct.product_name,
       selectedBrand,
       selectedUnit,
-      days,
-      tendency,
-      alertRestock
+      days
     )
-      .then(setPredictionData)
+      .then(setMultiModelPrediction)
       .catch((e) => {
         const detail = e.response?.data?.detail;
 
@@ -227,29 +229,62 @@ export default function PredictiveAnalyticsPage() {
           {loadingCompare ? "Cargando..." : "Ver productos por renovar stock"}
         </button>
 
-        {predictionData && (
-          <SummaryCards
-            loading={false}
-            totalSales={predictionData.forecast.reduce(
-              (acc, f) => acc + f.yhat,
-              0
-            )}
-            productName={predictionData.product}
-            brand={predictionData.brand}
-            unit={predictionData.unit}
-            days={predictionData.days}
-            tendency={predictionData.tendency}
-            alertRestock={predictionData.alert_restock}
-            metrics={predictionData.metrics}
-          />
-        )}
+        <SummaryCards
+          loading={loadingPrediction}
+          totalSales={Object.values(
+            multiModelPrediction?.forecasts || {}
+          ).reduce(
+            (acc, model) =>
+              acc + (model?.forecast?.reduce((a, f) => a + f.yhat, 0) || 0),
+            0
+          )}
+          productName={multiModelPrediction?.product || ""}
+          brand={multiModelPrediction?.brand || ""}
+          unit={multiModelPrediction?.unit || ""}
+          days={multiModelPrediction?.days || days}
+          tendency={
+            multiModelPrediction?.forecasts.prophet?.forecast ? "creciente" : ""
+          }
+          alertRestock={false}
+          multiModel={multiModelPrediction?.forecasts}
+        />
 
-        {loadingPrediction ? (
-          <div>Cargando gráfico...</div>
-        ) : errorPrediction ? (
-          <div className="text-red-600">Error: {errorPrediction}</div>
-        ) : (
-          <SalesChart data={chartData} />
+        {multiModelPrediction && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Object.entries(multiModelPrediction.forecasts).map(
+              ([modelType, { forecast, metrics }]) => {
+                const chartData = forecast.map((point) => {
+                  const date = new Date(point.ds);
+                  const name = date.toLocaleDateString("es-ES", {
+                    month: "short",
+                    day: "2-digit",
+                  });
+                  return {
+                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    ventas: point.yhat,
+                  };
+                });
+
+                return (
+                  <div
+                    key={modelType}
+                    className="bg-white dark:bg-gray-900 p-4 rounded shadow"
+                  >
+                    <h2 className="text-md font-semibold text-gray-700 dark:text-white mb-2 capitalize">
+                      Modelo: {modelType}
+                    </h2>
+                    {metrics && (
+                      <div className="text-xs text-gray-500 mb-2">
+                        MAE: {metrics.MAE.toFixed(2)} | RMSE:{" "}
+                        {metrics.RMSE.toFixed(2)}
+                      </div>
+                    )}
+                    <SalesChart data={chartData} />
+                  </div>
+                );
+              }
+            )}
+          </div>
         )}
 
         <SimpleModal

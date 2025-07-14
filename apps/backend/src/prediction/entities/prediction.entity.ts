@@ -41,5 +41,6 @@ projected_sales?: number;
 
 @Column({ type: 'float', nullable: true })
 percent_change?: number;
-
+ @Column({ nullable: true })
+  model_type?: string;
 }
