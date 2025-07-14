@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(APIKeyMiddleware)
+
 # 🔐 Middlewares
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +38,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.add_middleware(APIKeyMiddleware)
 # 📦 Rutas
 app.include_router(predict_router)
 app.include_router(compare_router)
