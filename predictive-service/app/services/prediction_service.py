@@ -179,7 +179,9 @@ def get_forecast_all_models(product_name: str, brand: str, unit: str, days: int)
                 "alert_restock": alert_restock,
                 "sales_last_month": last_month_sales_float,
                 "projected_sales": projected_sales,
-                "percent_change": percent_change
+                "percent_change": percent_change,
+                "current_quality": current_stock,
+
             }
 
         except Exception as e:
@@ -252,8 +254,9 @@ def generar_prediccion(product_name, brand, unit, days):
         last_month_sales_float = 0.0
     
     # Proyección total de ventas en los próximos días
-    projected_sales = sum(item["yhat"] for item in result)   
-   
+    projected_sales = sum(item["yhat"] for item in result)  
+
+    current_stock = get_current_stock_general(product_name, brand, unit)
 
 
     # Calcular variación porcentual (manejar caso 0)
@@ -280,6 +283,7 @@ def generar_prediccion(product_name, brand, unit, days):
         "projected_sales": projected_sales,
         "percent_change": percent_change, 
         "model_type": model_type,
+         "current_quality": current_stock,
     }
 
     # Guardar la predicción en NestJS

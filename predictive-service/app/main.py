@@ -19,6 +19,8 @@ async def lifespan(app: FastAPI):
 
     scheduler.start()
     retrain_models_job()
+    print(f"Modelos cargados: {list(models.keys())[:5]}")  # Mostrar solo algunos keys para no saturar logs
+
     yield
     print("🛑 Apagando scheduler...")
     scheduler.shutdown()
@@ -36,7 +38,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(predict_router)
 
 # 📦 Rutas
 app.include_router(predict_router)

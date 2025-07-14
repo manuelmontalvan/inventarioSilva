@@ -225,7 +225,8 @@ def predict_all_models(
                     "alert_restock": alert_restock,
                     "sales_last_month": last_month_sales,
                     "projected_sales": total_predicted,
-                    "percent_change": percent_change
+                    "percent_change": percent_change,
+                     "current_quality": stock,
                 }
 
             except Exception as model_error:
