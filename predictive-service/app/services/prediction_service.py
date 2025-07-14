@@ -102,6 +102,8 @@ def get_forecast(product_name: str, brand: str, unit: str, days: int):
     prediction_cache[cache_key] = (result, alert_restock, modelo_seleccionado)
     return result, alert_restock, modelo_seleccionado
 
+
+   
 def get_forecast_all_models(product_name: str, brand: str, unit: str, days: int):
     from app.models.prophet_models import models
     from datetime import datetime, timedelta
@@ -147,11 +149,49 @@ def get_forecast_all_models(product_name: str, brand: str, unit: str, days: int)
                 })
                 df["yhat"] = df["yhat"].apply(lambda x: max(0, x))
 
-            result_all[modelo] = df.to_dict(orient="records")
+            forecast_data = df.to_dict(orient="records")
+
+            tendency = calcular_tendencia(forecast_data)
+            metrics_calc = calcular_metricas_reales(product_name, brand, unit, forecast_data)
+
+            from .sales_service import get_last_month_sales
+            last_month_sales = get_last_month_sales(product_name, brand, unit)
+            try:
+                last_month_sales_float = float(last_month_sales)
+            except (TypeError, ValueError):
+                last_month_sales_float = 0.0
+
+            projected_sales = sum(item["yhat"] for item in forecast_data)
+
+            if last_month_sales_float > 0:
+                percent_change = round(((projected_sales - last_month_sales_float) / last_month_sales_float) * 100, 2)
+            else:
+                percent_change = None
+
+            from app.services.inventory_service import get_current_stock_general
+            current_stock = get_current_stock_general(product_name, brand, unit)
+            alert_restock = projected_sales > current_stock
+
+            result_all[modelo] = {
+                "forecast": forecast_data,
+                "metrics": metrics_calc,
+                "tendency": tendency,
+                "alert_restock": alert_restock,
+                "sales_last_month": last_month_sales_float,
+                "projected_sales": projected_sales,
+                "percent_change": percent_change
+            }
+
         except Exception as e:
             print(f"❌ Error en modelo {modelo}: {e}")
 
-    return result_all
+    return {
+        "product": product_name,
+        "brand": brand,
+        "unit": unit,
+        "days": days,
+        "forecasts": result_all
+    }
 
 def calcular_tendencia(result):
     """

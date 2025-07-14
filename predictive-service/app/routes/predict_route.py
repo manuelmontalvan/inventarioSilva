@@ -188,11 +188,44 @@ def predict_all_models(
                     for i in range(min(len(base_dates), len(yhat)))
                 ]
 
-                # Obtener métricas si existen
-                model_metrics = metrics.get(key, {}).get(model_name, {})
+                # Cálculos adicionales por modelo
+                from app.services.sales_service import get_last_month_sales
+                from app.services.sales_service import get_sales_history
+                from math import sqrt
+
+                sales_dict = {
+                    item["ds"]: item["y"] for item in get_sales_history(product_name, brand, unit)
+                }
+
+                errors = [
+                    float(sales_dict.get(p["ds"], 0)) - p["yhat"]
+                    for p in forecast_list if p["ds"] in sales_dict
+                ]
+
+                mae = round(sum(abs(e) for e in errors) / len(errors), 2) if errors else 0.0
+                rmse = round(sqrt(sum(e**2 for e in errors) / len(errors)), 2) if errors else 0.0
+                total_predicted = sum(p["yhat"] for p in forecast_list)
+                last_month_sales = float(get_last_month_sales(product_name, brand, unit) or 0.0)
+                percent_change = round(((total_predicted - last_month_sales) / last_month_sales) * 100, 2) if last_month_sales > 0 else None
+
+                # Tendencia
+                diffs = [forecast_list[i]["yhat"] - forecast_list[i-1]["yhat"] for i in range(1, len(forecast_list))]
+                avg_diff = sum(diffs) / len(diffs) if diffs else 0
+                tendency = "creciente" if avg_diff > 0.1 else "decreciente" if avg_diff < -0.1 else "estable"
+
+                # Stock actual y alerta
+                from app.services.inventory_service import get_current_stock_general
+                stock = get_current_stock_general(product_name, brand, unit)
+                alert_restock = total_predicted > stock
+
                 forecasts[model_name] = {
                     "forecast": forecast_list,
-                    "metrics": model_metrics or None
+                    "metrics": {"MAE": mae, "RMSE": rmse},
+                    "tendency": tendency,
+                    "alert_restock": alert_restock,
+                    "sales_last_month": last_month_sales,
+                    "projected_sales": total_predicted,
+                    "percent_change": percent_change
                 }
 
             except Exception as model_error:
@@ -200,6 +233,7 @@ def predict_all_models(
                 continue
 
         return {
+            "success": True,
             "product": product_name,
             "brand": brand,
             "unit": unit,

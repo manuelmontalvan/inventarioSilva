@@ -1,8 +1,10 @@
 # app/routes/compare_route.py
 
 from fastapi import APIRouter, Query
-from app.services.prediction_service import get_forecast
-from app.models.prophet_models import models  # Aquí viven los modelos entrenados
+from app.models.prophet_models import models, metrics
+from app.services.prediction_service import get_forecast_all_models
+from typing import Dict
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -13,33 +15,40 @@ def compare_forecasts(
     days: int = Query(7, ge=1, le=60),
 ):
     results = []
-
-    # Obtener todos los productos entrenados como tuplas (product_name, brand, unit)
     unique_keys = list(models.keys())
 
     for product_name, brand_name, unit_name in unique_keys:
-        # Si se filtró por brand o unit, saltar si no coinciden
         if brand != "Sin marca" and brand_name != brand:
             continue
         if unit != "Sin unidad" and unit_name != unit:
             continue
 
-        forecast, _ = get_forecast(product_name, brand_name, unit_name, days)
+        try:
+            all_forecasts: Dict[str, dict] = get_forecast_all_models(product_name, brand_name, unit_name, days)
 
-        if not forecast:
+            if not all_forecasts:
+                continue
+
+            model_forecasts = {}
+            for model_name, data in all_forecasts.items():
+                forecast = data.get("forecast", [])
+                total = sum(item["yhat"] for item in forecast)
+                model_forecasts[model_name] = {
+                    "total_forecast": round(total, 2),
+                    "forecast": forecast,
+                    "metrics": data.get("metrics")
+                }
+
+            results.append({
+                "product": product_name,
+                "brand": brand_name,
+                "unit": unit_name,
+                "forecasts": model_forecasts
+            })
+
+        except Exception as e:
+            print(f"Error procesando {product_name} ({brand_name}/{unit_name}): {e}")
             continue
-
-        total = sum(item["yhat"] for item in forecast)
-
-        results.append({
-            "product": product_name,
-            "brand": brand_name,
-            "unit": unit_name,
-            "total_forecast": total,
-            "forecast": forecast
-        })
-
-    results.sort(key=lambda x: x["total_forecast"], reverse=True)
 
     return {
         "success": True,
