@@ -16,6 +16,7 @@ def compare_forecasts(
 ):
     results = []
     unique_keys = list(models.keys())
+    print("🔍 Keys en modelos:", list(models.keys()))
 
     for product_name, brand_name, unit_name in unique_keys:
         if brand != "Sin marca" and brand_name != brand:
@@ -24,13 +25,13 @@ def compare_forecasts(
             continue
 
         try:
-            all_forecasts: Dict[str, dict] = get_forecast_all_models(product_name, brand_name, unit_name, days)
-
-            if not all_forecasts:
+            all_forecasts = get_forecast_all_models(product_name, brand_name, unit_name, days)
+            
+            if not all_forecasts or "forecasts" not in all_forecasts:
                 continue
 
             model_forecasts = {}
-            for model_name, data in all_forecasts.items():
+            for model_name, data in all_forecasts["forecasts"].items():
                 forecast = data.get("forecast", [])
                 total = sum(item["yhat"] for item in forecast)
                 model_forecasts[model_name] = {
@@ -38,7 +39,7 @@ def compare_forecasts(
                     "forecast": forecast,
                     "metrics": data.get("metrics")
                 }
-
+            
             results.append({
                 "product": product_name,
                 "brand": brand_name,

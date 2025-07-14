@@ -2,13 +2,13 @@
 import { MultiModelPredictionResponse } from "@/types/prediction";
 import { getAllModelPredictions } from "@/lib/api/prediction/prediction";
 import { useEffect, useState } from "react";
-import {
-  ProductForecastComparison,
-} from "@/types/prediction";
+import { ProductForecastComparison } from "@/types/prediction";
 import {
   searchPredictiveProducts,
   ProductSearchResult,
 } from "@/lib/api/sales/productSales";
+import { exportAllForecasts } from "@/lib/api/prediction/prediction";
+
 import ProtectedRoute from "@/components/restricted/protectedRoute";
 import SearchBar from "@/components/predictive/searchBar";
 import ProductSelectors from "@/components/predictive/productSelector";
@@ -17,12 +17,15 @@ import SalesChart from "@/components/predictive/salesChart";
 import { compareForecasts } from "@/lib/api/prediction/compare";
 import SimpleModal from "@/components/predictive/Modal";
 import ProductRestockTable from "@/components/predictive/productRestockTable";
+import { addToast } from "@heroui/toast";
 
 export default function PredictiveAnalyticsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<ProductSearchResult | null>(null);
-  const [multiModelPrediction, setMultiModelPrediction] = useState<MultiModelPredictionResponse | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductSearchResult | null>(null);
+  const [multiModelPrediction, setMultiModelPrediction] =
+    useState<MultiModelPredictionResponse | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
   const [errorPrediction, setErrorPrediction] = useState<string | null>(null);
@@ -30,7 +33,9 @@ export default function PredictiveAnalyticsPage() {
   const [days, setDays] = useState(7);
   const [daysInput, setDaysInput] = useState(days.toString());
   const [restockModalOpen, setRestockModalOpen] = useState(false);
-  const [restockProducts, setRestockProducts] = useState<ProductForecastComparison[]>([]);
+  const [restockProducts, setRestockProducts] = useState<
+    ProductForecastComparison[]
+  >([]);
   const [loadingCompare, setLoadingCompare] = useState(false);
 
   useEffect(() => {
@@ -82,19 +87,31 @@ export default function PredictiveAnalyticsPage() {
       .catch((e) => {
         const detail = e.response?.data?.detail;
         if (detail?.includes("no se encontró un modelo")) {
-          setErrorPrediction("Este producto no tiene suficientes datos para generar una predicción.");
+          setErrorPrediction(
+            "Este producto no tiene suficientes datos para generar una predicción."
+          );
         } else {
-          setErrorPrediction(detail || e.message || "Error desconocido al obtener la predicción");
+          setErrorPrediction(
+            detail || e.message || "Error desconocido al obtener la predicción"
+          );
         }
       })
       .finally(() => setLoadingPrediction(false));
   }, [selectedProduct, selectedBrand, selectedUnit, days]);
-
+  
   const handleCompareLowStock = async () => {
     setLoadingCompare(true);
     try {
       const response = await compareForecasts("Sin marca", "Sin unidad", days);
+      console.log("Respuesta compareForecasts:", response);
+
+      // Solo para debug, sin filtro:
+      // setRestockProducts(response.comparison);
+
+      // filtro original:
       const low = response.comparison.filter((p) => p.total_forecast < 5);
+      console.log("Productos con total_forecast < 5:", low);
+
       setRestockProducts(low);
       setRestockModalOpen(true);
     } catch (err) {
@@ -123,7 +140,9 @@ export default function PredictiveAnalyticsPage() {
           }}
         />
 
-        {errorPrediction && <p className="text-red-500 text-sm">{errorPrediction}</p>}
+        {errorPrediction && (
+          <p className="text-red-500 text-sm">{errorPrediction}</p>
+        )}
 
         {selectedProduct && (
           <ProductSelectors
@@ -152,7 +171,11 @@ export default function PredictiveAnalyticsPage() {
             onBlur={() => {
               const parsed = parseInt(daysInput);
               if (isNaN(parsed) || parsed < 7 || parsed > 60) {
-                alert("Ingresa un número de días entre 7 y 60");
+                addToast({
+                  title: "Ingresa un número de días entre 7 y 60",
+                  color: "danger",
+                });
+
                 setDaysInput(days.toString());
               }
             }}
@@ -169,21 +192,42 @@ export default function PredictiveAnalyticsPage() {
         </button>
 
         {multiModelPrediction && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => exportAllForecasts(multiModelPrediction)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+            >
+              📥 Descargar Excel de Predicción
+            </button>
+          </div>
+        )}
+
+        {multiModelPrediction && (
           <>
-            <SummaryCards
-              loading={loadingPrediction}
-              totalSales={Object.values(multiModelPrediction.forecasts).reduce(
-                (acc, model) => acc + (model?.forecast?.reduce((a, f) => a + f.yhat, 0) || 0),
-                0
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {Object.entries(multiModelPrediction.forecasts).map(
+                ([modelName, modelData]) => (
+                  <SummaryCards
+                    key={modelName}
+                    loading={loadingPrediction}
+                    totalSales={modelData.forecast.reduce(
+                      (sum, f) => sum + f.yhat,
+                      0
+                    )}
+                    productName={multiModelPrediction.product}
+                    brand={multiModelPrediction.brand}
+                    unit={multiModelPrediction.unit}
+                    days={multiModelPrediction.days}
+                    tendency={modelData.tendency ?? ""}
+                    percentChange={modelData.percent_change}
+                    alertRestock={modelData.alert_restock}
+                    currentQuantity={modelData.current_quantity}
+                    modelName={modelName}
+                    model={modelData}
+                  />
+                )
               )}
-              productName={multiModelPrediction.product}
-              brand={multiModelPrediction.brand}
-              unit={multiModelPrediction.unit}
-              days={multiModelPrediction.days}
-              tendency={""}
-              alertRestock={false}
-              multiModel={multiModelPrediction.forecasts}
-            />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {Object.entries(multiModelPrediction.forecasts).map(
@@ -201,11 +245,17 @@ export default function PredictiveAnalyticsPage() {
                   });
 
                   return (
-                    <div key={modelType} className="bg-white dark:bg-gray-900 p-4 rounded shadow">
-                      <h2 className="text-md font-semibold mb-2 capitalize">Modelo: {modelType}</h2>
+                    <div
+                      key={modelType}
+                      className="bg-white dark:bg-gray-900 p-4 rounded shadow"
+                    >
+                      <h2 className="text-md font-semibold mb-2 capitalize">
+                        Modelo: {modelType}
+                      </h2>
                       {metrics && (
                         <p className="text-xs text-gray-500 mb-2">
-                          MAE: {metrics.MAE.toFixed(2)} | RMSE: {metrics.RMSE.toFixed(2)}
+                          MAE: {metrics.MAE.toFixed(2)} | RMSE:{" "}
+                          {metrics.RMSE.toFixed(2)}
                         </p>
                       )}
                       <SalesChart data={chartData} />
@@ -222,6 +272,7 @@ export default function PredictiveAnalyticsPage() {
           onClose={() => setRestockModalOpen(false)}
           title="Productos que necesitan renovación de stock"
         >
+          
           <ProductRestockTable products={restockProducts} />
         </SimpleModal>
       </div>

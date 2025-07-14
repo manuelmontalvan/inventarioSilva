@@ -1,10 +1,7 @@
-
 export interface PredictionPoint {
   ds: string;
   yhat: number;
 }
-
-
 
 export interface PredictionResponse {
   success: boolean;
@@ -18,12 +15,12 @@ export interface PredictionResponse {
   metrics?: {
     MAE: number;
     RMSE: number;
-  }
+  };
 }
 
 export interface ForecastItem {
-  ds: string;         // fecha
-  yhat: number;       // valor predicho
+  ds: string; // fecha
+  yhat: number; // valor predicho
   yhat_upper?: number;
   yhat_lower?: number;
 }
@@ -42,11 +39,17 @@ export interface PredictionComparisonResponse {
 }
 
 export interface ModelForecastWithMetrics {
-  forecast: PredictionPoint[]; // tus puntos predichos
+  forecast: PredictionPoint[];
   metrics?: {
     MAE: number;
     RMSE: number;
   };
+  tendency: string;
+  alert_restock: boolean;
+  sales_last_month: number;
+  projected_sales: number;
+  percent_change: number | null;
+  current_quantity?: number;
 }
 
 export interface MultiModelPredictionResponse {
@@ -59,19 +62,6 @@ export interface MultiModelPredictionResponse {
     prophet?: ModelForecastWithMetrics;
     linear?: ModelForecastWithMetrics;
     arima?: ModelForecastWithMetrics;
-  };
-}
-
-
-
-export interface ModelForecastWithMetrics {
-  forecast: {
-    ds: string;
-    yhat: number;
-  }[];
-  metrics?: {
-    MAE: number;
-    RMSE: number;
   };
 }
 
@@ -88,4 +78,8 @@ export interface SummaryCardsProps {
   };
   tendency?: string;
   alertRestock?: boolean;
+  modelName?: string;
+  model?: ModelForecastWithMetrics;
+  currentQuantity?: number;
+
 }

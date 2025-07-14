@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { Customer } from "@/types/customer";
 import { ProductI, Category, UnitOfMeasure } from "@/types/product";
 import { Combobox } from "@/components/ui/combobox";
-import { Button } from "@/components/ui/button";
+import { Button } from "@heroui/button";
 import { ProductsTab } from "../tabla/productTab";
 import { CreateSaleDto } from "@/types/productSales";
 import { addToast } from "@heroui/toast";
 import { getProducts } from "@/lib/api/products/products";
+import ModernDatePicker from "@/components/ui/modernDatePicker";
 
 interface SaleItem {
   productId: string;
@@ -45,6 +46,7 @@ export default function SalesForm({
   const [paymentMethod, setPaymentMethod] = useState("");
   const [status, setStatus] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
+  const [saleDate, setSaleDate] = useState<Date | undefined>(undefined);
 
   const [products, setProducts] = useState<ProductI[]>([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -170,10 +172,11 @@ export default function SalesForm({
           productId: item.productId,
           quantity: item.quantity,
           unit_price: item.unit_price,
+          ...(saleDate ? { sale_date: saleDate.toISOString() } : {}),
         })),
         notes: "",
       });
-      
+
       setSelectedCustomerId("");
       setSelectedCustomer(null);
       setPaymentMethod("");
@@ -190,12 +193,17 @@ export default function SalesForm({
   };
 
   return (
-    <div className="space-y-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg">
-      <h2 className="text-xl font-bold">Registrar Venta</h2>
+    <div className="space-y-6 bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-xl shadow-lg">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+        Registrar Venta
+      </h2>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Cliente */}
         <div>
-          <label className="block font-medium mb-1">Cliente</label>
+          <label className="block font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
+            Cliente
+          </label>
           <Combobox
             items={customers.map((c) => ({
               label: c.identification || c.name,
@@ -210,7 +218,7 @@ export default function SalesForm({
             placeholder="Buscar por cédula o nombre"
           />
           {selectedCustomer && (
-            <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 space-y-1">
               <p>
                 <strong>Nombre:</strong> {selectedCustomer.name}{" "}
                 {selectedCustomer.lastname || ""}
@@ -222,8 +230,11 @@ export default function SalesForm({
           )}
         </div>
 
+        {/* Método de Pago */}
         <div>
-          <label className="block font-medium mb-1">Método de Pago</label>
+          <label className="block font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
+            Método de Pago
+          </label>
           <Combobox
             items={[
               { label: "Efectivo", value: "cash" },
@@ -236,8 +247,11 @@ export default function SalesForm({
           />
         </div>
 
+        {/* Estado */}
         <div>
-          <label className="block font-medium mb-1">Estado</label>
+          <label className="block font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
+            Estado
+          </label>
           <Combobox
             items={[
               { label: "Pendiente", value: "pending" },
@@ -250,8 +264,9 @@ export default function SalesForm({
           />
         </div>
 
+        {/* Categoría */}
         <div>
-          <label className="block font-medium mb-1">
+          <label className="block font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
             Filtrar por Categoría
           </label>
           <Combobox
@@ -263,6 +278,18 @@ export default function SalesForm({
         </div>
       </div>
 
+      {/* Selector de Fecha */}
+      <div className="max-w-xs mt-2">
+        <label className="block font-medium text-sm text-gray-700 dark:text-gray-300 mb-1">
+          Fecha de Venta (opcional)
+        </label>
+        <ModernDatePicker
+          date={saleDate || undefined}
+          onChange={setSaleDate}
+        />
+      </div>
+
+      {/* Tabla de productos */}
       <ProductsTab
         products={products}
         units={units}
@@ -274,42 +301,41 @@ export default function SalesForm({
         onPageChange={setCurrentPage}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        localities={[]} // o tu lista real de localidades si aplica
+        localities={[]}
         hideLocality={true}
         selectedLocality={""}
       />
 
+      {/* Tabla de items agregados */}
       {items.length > 0 && (
-        <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg mt-6">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-100 dark:bg-gray-800">
+        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mt-6">
+          <table className="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
               <tr>
-                <th className="px-4 py-2 text-left">Producto</th>
-                <th className="px-4 py-2 text-left">Marca</th>
-                <th className="px-4 py-2 text-left">Unidad</th>
-
-                <th className="px-4 py-2 text-left">Cantidad</th>
-
-                <th className="px-4 py-2 text-left">Precio Unitario</th>
-                <th className="px-4 py-2 text-left">Subtotal</th>
-                <th className="px-4 py-2 text-left">Acción</th>
+                <th className="px-3 py-2 text-left">Producto</th>
+                <th className="px-3 py-2 text-left">Marca</th>
+                <th className="px-3 py-2 text-left">Unidad</th>
+                <th className="px-3 py-2 text-left">Cantidad</th>
+                <th className="px-3 py-2 text-left">Precio Unitario</th>
+                <th className="px-3 py-2 text-left">Subtotal</th>
+                <th className="px-3 py-2 text-left">Acción</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 divide-y divide-gray-200 dark:divide-gray-700">
               {items.map((item) => (
                 <tr key={item.productId}>
-                  <td className="px-4 py-2">{item.name}</td>
-                  <td className="px-4 py-2">{item.brand_name}</td>
-
-                  <td className="px-4 py-2">{item.unit_name}</td>
-                  <td className="px-4 py-2">{item.quantity}</td>
-                  <td className="px-4 py-2">${item.unit_price.toFixed(2)}</td>
-                  <td className="px-4 py-2">${item.total.toFixed(2)}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2">{item.name}</td>
+                  <td className="px-3 py-2">{item.brand_name}</td>
+                  <td className="px-3 py-2">{item.unit_name}</td>
+                  <td className="px-3 py-2">{item.quantity}</td>
+                  <td className="px-3 py-2">${item.unit_price.toFixed(2)}</td>
+                  <td className="px-3 py-2">${item.total.toFixed(2)}</td>
+                  <td className="px-3 py-2">
                     <Button
-                      variant="destructive"
+                      variant="bordered"
                       size="sm"
-                      onClick={() => handleRemoveItem(item.productId)}
+                      onPress={() => handleRemoveItem(item.productId)}
+                      color="danger"
                     >
                       Eliminar
                     </Button>
@@ -317,10 +343,10 @@ export default function SalesForm({
                 </tr>
               ))}
               <tr>
-                <td colSpan={4} className="text-right font-bold px-4 py-2">
+                <td colSpan={4} className="text-right font-bold px-3 py-2">
                   Total
                 </td>
-                <td className="font-bold px-4 py-2">
+                <td className="font-bold px-3 py-2">
                   ${totalGeneral.toFixed(2)}
                 </td>
                 <td />
@@ -330,7 +356,8 @@ export default function SalesForm({
         </div>
       )}
 
-      <Button className="w-full mt-4" onClick={handleSubmit}>
+      {/* Botón */}
+      <Button color="success"  onPress={handleSubmit}>
         Guardar Venta
       </Button>
     </div>

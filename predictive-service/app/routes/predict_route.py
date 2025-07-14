@@ -2,9 +2,11 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from app.models.prophet_models import models
 from app.services.prediction_service import get_forecast, generar_prediccion  # ← se incluye generar_prediccion
-from app.services.export_service import create_forecast_excel
+from app.services.export_service import create_forecast_excel_multi
 from app.models.prophet_models import metrics
 from app.utils.logging_config import logger  # ← nuevo import
+from fastapi import APIRouter, HTTPException, Body
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
@@ -84,26 +86,17 @@ def list_available_models():
     }
 
 
-@router.get("/predict/export")
-def export_forecast_excel(
-    product_name: str = Query(..., min_length=1),
-    brand: str = Query("Sin marca", min_length=1),
-    unit: str = Query("Sin unidad", min_length=1),
-    days: int = Query(7, ge=1, le=60),
-):
+@router.post("/predict/export-all")
+def export_all_forecasts_excel(data: dict = Body(...)):
     try:
-        validate_input_params(product_name, brand, unit)
+        product = data["product"]
+        brand = data["brand"]
+        unit = data["unit"]
+        days = data["days"]
+        forecasts = data["forecasts"]
 
-        forecast, alert_restock = get_forecast(product_name, brand, unit, days)
-
-        if not forecast:
-            logger.error(f"Exportación fallida: modelo no encontrado para {product_name} - {brand} - {unit}")
-            raise HTTPException(status_code=404, detail="Modelo no encontrado o sin datos.")
-
-        excel_file = create_forecast_excel(forecast, alert_restock)
-        filename = f"forecast_{product_name}_{brand}_{unit}.xlsx"
-
-        logger.info(f"Exportación de Excel completada: {filename}")
+        excel_file = create_forecast_excel_multi(forecasts, product, brand, unit, days)
+        filename = f"forecast_{product}_{brand}_{unit}.xlsx"
 
         return StreamingResponse(
             excel_file,
@@ -111,8 +104,8 @@ def export_forecast_excel(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
-        logger.exception(f"Error inesperado al exportar predicción: {e}")
-        raise HTTPException(status_code=500, detail="Ocurrió un error al exportar el archivo.")
+        logger.exception("Error al exportar predicciones")
+        raise HTTPException(status_code=500, detail="No se pudo generar el archivo.")
 
 
 @router.get("/metrics")
