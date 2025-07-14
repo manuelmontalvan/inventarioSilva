@@ -3,8 +3,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  BarChart,
-  LineChart,
+ 
   TrendingUp,
   TrendingDown,
   AlertTriangle,
