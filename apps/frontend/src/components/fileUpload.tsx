@@ -9,7 +9,10 @@ type FileUploadProps = {
   onSuccess: () => void;
 };
 
-export default function FileUpload({ uploadFunction, onSuccess }: FileUploadProps) {
+export default function FileUpload({
+  uploadFunction,
+  onSuccess,
+}: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -59,17 +62,21 @@ export default function FileUpload({ uploadFunction, onSuccess }: FileUploadProp
     } catch (error: unknown) {
       let errorMessage = "Error inesperado";
 
-      if (
-        error &&
-        typeof error === "object"
-      ) {
+      if (error && typeof error === "object") {
         // intenta leer response.data.message
-        if ("response" in error && error.response && typeof error.response === "object") {
+        if (
+          "response" in error &&
+          error.response &&
+          typeof error.response === "object"
+        ) {
           const response = error.response as { data?: { message?: string } };
           if (response.data?.message) {
             errorMessage = response.data.message;
           }
-        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+        } else if (
+          "message" in error &&
+          typeof (error as { message: unknown }).message === "string"
+        ) {
           errorMessage = (error as { message: string }).message;
         }
       }
@@ -98,9 +105,12 @@ export default function FileUpload({ uploadFunction, onSuccess }: FileUploadProp
           variant="bordered"
           disabled={loading}
           color="success"
+          className="max-w-[200px] truncate overflow-hidden whitespace-nowrap"
         >
-          <UploadCloud className="w-4 h-4" />
-          {file ? file.name : "Seleccionar archivo"}
+          <UploadCloud className="w-4 h-4 shrink-0" />
+          <span className="truncate">
+            {file ? file.name : "Seleccionar archivo"}
+          </span>
         </Button>
 
         <Button

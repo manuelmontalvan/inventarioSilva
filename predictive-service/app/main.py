@@ -8,7 +8,6 @@ from app.scheduler import scheduler, retrain_models_job
 from contextlib import asynccontextmanager
 from app.middleware.api_key import APIKeyMiddleware
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -19,7 +18,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.start()
     retrain_models_job()
-    print(f"Modelos cargados: {list(models.keys())[:5]}")  # Mostrar solo algunos keys para no saturar logs
+    print(f"Modelos cargados: {list(models.keys())[:5]}")
 
     yield
     print("🛑 Apagando scheduler...")
@@ -27,23 +26,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# 🔐 Middlewares
+# ⚠️ ¡CORS debe ir antes del APIKeyMiddleware!
 app.add_middleware(
     CORSMiddleware,
-     allow_origins=[
+    allow_origins=[
         "https://inventario-silva.vercel.app",
-        "http://localhost:3000"
+        "http://localhost:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 🛡️ Este debe ir después del CORS
 app.add_middleware(APIKeyMiddleware)
+
 # 📦 Rutas
 app.include_router(predict_router)
 app.include_router(compare_router)
 
-# 🏠 Ruta raíz
 @app.get("/")
 def root():
     return {"message": "API de predicción funcionando"}
