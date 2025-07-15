@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   getSoldProducts,
   getSaleHistory,
@@ -23,10 +23,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@heroui/button";
 
-function exportToExcel(data: any[]) {
+// ✅ Exportar Excel
+function exportToExcel(data: any[], productName: string) {
   const worksheet = XLSX.utils.json_to_sheet(
     data.map((item) => ({
-      Producto: item.productName || "-", // <-- Agregado
       Fecha: item.saleDate?.slice(0, 10),
       Cliente: item.customerName,
       Factura: item.invoiceNumber,
@@ -36,30 +36,27 @@ function exportToExcel(data: any[]) {
     }))
   );
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Ventas");
-  XLSX.writeFile(workbook, "historial_ventas.xlsx");
+  const sheetName = productName || "Ventas";
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, `historial_ventas_${sheetName.replace(/\s+/g, "_")}.xlsx`);
 }
 
-function exportToPDF(data: any[]) {
+// ✅ Exportar PDF
+function exportToPDF(data: any[], productName: string) {
   const doc = new jsPDF();
+
+  if (productName) {
+    doc.setFontSize(12);
+    doc.text(productName, 14, 14);
+  }
+
   doc.setFontSize(14);
-  doc.text("Historial de Ventas", 14, 16);
+  doc.text("Historial de Ventas", 14, productName ? 22 : 16);
 
   autoTable(doc, {
-    startY: 20,
-    head: [
-      [
-        "Producto",
-        "Fecha",
-        "Cliente",
-        "Factura",
-        "Cantidad",
-        "Precio Unitario",
-        "Total",
-      ], // <-- Agregado
-    ],
+    startY: productName ? 26 : 20,
+    head: [["Fecha", "Cliente", "Factura", "Cantidad", "Precio Unitario", "Total"]],
     body: data.map((item) => [
-      item.productName || "-", // <-- Agregado
       item.saleDate?.slice(0, 10),
       item.customerName || "-",
       item.invoiceNumber || "-",
@@ -67,17 +64,28 @@ function exportToPDF(data: any[]) {
       `$${Number(item.unitPrice).toFixed(2)}`,
       `$${Number(item.totalPrice).toFixed(2)}`,
     ]),
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+    headStyles: {
+      fillColor: [79, 70, 229],
+      textColor: 255,
+      fontStyle: "bold",
+    },
   });
 
-  doc.save("historial_ventas.pdf");
+  const safeName = productName?.replace(/\s+/g, "_") || "historial_ventas";
+  doc.save(`${safeName}.pdf`);
 }
 
+// ⌨️ Autocompletado de producto
 function ProductAutocomplete({
   products,
   onSelect,
 }: {
   products: SoldProduct[];
-  onSelect: (id: string) => void;
+  onSelect: (id: string, name: string) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -96,7 +104,7 @@ function ProductAutocomplete({
   const handleSelect = (p: SoldProduct) => {
     setSearchTerm(p.name);
     setShowDropdown(false);
-    onSelect(p.id);
+    onSelect(p.id, p.name);
   };
 
   return (
@@ -135,6 +143,8 @@ function ProductAutocomplete({
     </div>
   );
 }
+
+// 🔁 Unificar tendencias
 function mergeTrends(
   priceTrend: { month: string; unitPrice: number }[],
   salesTrend: { period: string; totalQuantity: number }[]
@@ -158,27 +168,30 @@ function mergeTrends(
     a.period.localeCompare(b.period)
   );
 }
+
 function getUniqueMonths(history: any[]): string[] {
   const months = new Set<string>();
   history.forEach((item) => {
     if (item.saleDate) {
-      const month = item.saleDate.slice(0, 7); // yyyy-MM
+      const month = item.saleDate.slice(0, 7);
       months.add(month);
     }
   });
-  return Array.from(months).sort(); // Opcional: ordenar
+  return Array.from(months).sort();
 }
 
+// ✅ Componente principal
 export default function ProductSalesHistory() {
   const [productId, setProductId] = useState("");
+  const [productName, setProductName] = useState("");
   const [products, setProducts] = useState<SoldProduct[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [mergedTrend, setMergedTrend] = useState<MergedSaleTrendItem[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<string>(""); // "" = todos
- 
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   const itemsPerPage = 10;
+
   useEffect(() => {
     getSoldProducts().then(setProducts);
   }, []);
@@ -196,8 +209,6 @@ export default function ProductSalesHistory() {
     });
   }, [productId]);
 
- 
-
   const filteredHistory = selectedMonth
     ? history.filter((item) => item.saleDate?.startsWith(selectedMonth))
     : history;
@@ -206,13 +217,20 @@ export default function ProductSalesHistory() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
   return (
     <div className="p-4 md:p-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
         Historial de Ventas por Producto
       </h1>
 
-      <ProductAutocomplete products={products} onSelect={setProductId} />
+      <ProductAutocomplete
+        products={products}
+        onSelect={(id, name) => {
+          setProductId(id);
+          setProductName(name);
+        }}
+      />
 
       {productId && (
         <>
@@ -244,20 +262,18 @@ export default function ProductSalesHistory() {
                   </select>
                 </div>
 
-                {/* Contenedor vacío para "espacio" */}
-                <div className="flex-1"></div>
+                <div className="flex-1" />
 
-                {/* Contenedor para botón exportar centrado */}
                 <div className="flex gap-4 justify-center">
                   <Button
-                    onPress={() => exportToExcel(filteredHistory)}
+                    onPress={() => exportToExcel(filteredHistory, productName)}
                     variant="bordered"
                     color="success"
                   >
                     Exportar Excel
                   </Button>
                   <Button
-                    onPress={() => exportToPDF(filteredHistory)}
+                    onPress={() => exportToPDF(filteredHistory, productName)}
                     variant="bordered"
                     color="warning"
                   >
@@ -270,24 +286,12 @@ export default function ProductSalesHistory() {
                 <table className="min-w-full border text-sm md:text-base">
                   <thead className="bg-gray-100 dark:bg-gray-700 border-b">
                     <tr>
-                      <th className="p-2 text-left text-gray-800 dark:text-gray-200">
-                        Fecha
-                      </th>
-                      <th className="p-2 text-left text-gray-800 dark:text-gray-200">
-                        Cliente
-                      </th>
-                      <th className="p-2 text-left text-gray-800 dark:text-gray-200">
-                        Factura
-                      </th>
-                      <th className="p-2 text-right text-gray-800 dark:text-gray-200">
-                        Cantidad
-                      </th>
-                      <th className="p-2 text-right text-gray-800 dark:text-gray-200">
-                        Precio Unitario
-                      </th>
-                      <th className="p-2 text-right text-gray-800 dark:text-gray-200">
-                        Total
-                      </th>
+                      <th className="p-2 text-left">Fecha</th>
+                      <th className="p-2 text-left">Cliente</th>
+                      <th className="p-2 text-left">Factura</th>
+                      <th className="p-2 text-right">Cantidad</th>
+                      <th className="p-2 text-right">Precio Unitario</th>
+                      <th className="p-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -312,7 +316,6 @@ export default function ProductSalesHistory() {
                 </table>
               </div>
 
-              {/* Paginación */}
               <div className="flex flex-wrap justify-center gap-2 mt-4">
                 {Array.from({ length: totalPages }, (_, index) => (
                   <button
@@ -339,30 +342,10 @@ export default function ProductSalesHistory() {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={mergedTrend}>
                   <CartesianGrid stroke="#ccc" strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="period"
-                    stroke="#4B5563"
-                    tick={{ fill: "currentColor" }}
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    stroke="#4B5563"
-                    tick={{ fill: "currentColor" }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke="#4B5563"
-                    tick={{ fill: "currentColor" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      borderRadius: "4px",
-                      borderColor: "#374151",
-                    }}
-                    itemStyle={{ color: "#f9fafb" }}
-                  />
+                  <XAxis dataKey="period" stroke="#4B5563" />
+                  <YAxis yAxisId="left" stroke="#4B5563" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#4B5563" />
+                  <Tooltip />
                   <Line
                     yAxisId="left"
                     type="monotone"

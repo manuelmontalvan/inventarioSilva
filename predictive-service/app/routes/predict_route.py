@@ -145,6 +145,9 @@ def predict_all_models(
 ):
     from datetime import datetime, timedelta
     import pandas as pd
+    from app.services.sales_service import get_last_month_sales, get_sales_history
+    from app.services.inventory_service import get_current_stock_general
+    from math import sqrt
 
     key = (product_name, brand, unit)
 
@@ -181,22 +184,25 @@ def predict_all_models(
                     for i in range(min(len(base_dates), len(yhat)))
                 ]
 
-                # Cálculos adicionales por modelo
-                from app.services.sales_service import get_last_month_sales
-                from app.services.sales_service import get_sales_history
-                from math import sqrt
+                # Intentar usar métricas entrenadas si existen
+                model_metrics = metrics.get(key, {}).get(model_name)
 
-                sales_dict = {
-                    item["ds"]: item["y"] for item in get_sales_history(product_name, brand, unit)
-                }
+                if model_metrics:
+                    mae = round(model_metrics["MAE"], 2)
+                    rmse = round(model_metrics["RMSE"], 2)
+                else:
+                    sales_dict = {
+                        item["ds"]: item["y"] for item in get_sales_history(product_name, brand, unit)
+                    }
 
-                errors = [
-                    float(sales_dict.get(p["ds"], 0)) - p["yhat"]
-                    for p in forecast_list if p["ds"] in sales_dict
-                ]
+                    errors = [
+                        float(sales_dict.get(p["ds"], 0)) - p["yhat"]
+                        for p in forecast_list if p["ds"] in sales_dict
+                    ]
 
-                mae = round(sum(abs(e) for e in errors) / len(errors), 2) if errors else 0.0
-                rmse = round(sqrt(sum(e**2 for e in errors) / len(errors)), 2) if errors else 0.0
+                    mae = round(sum(abs(e) for e in errors) / len(errors), 2) if errors else 0.0
+                    rmse = round(sqrt(sum(e**2 for e in errors) / len(errors)), 2) if errors else 0.0
+
                 total_predicted = sum(p["yhat"] for p in forecast_list)
                 last_month_sales = float(get_last_month_sales(product_name, brand, unit) or 0.0)
                 percent_change = round(((total_predicted - last_month_sales) / last_month_sales) * 100, 2) if last_month_sales > 0 else None
@@ -207,19 +213,21 @@ def predict_all_models(
                 tendency = "creciente" if avg_diff > 0.1 else "decreciente" if avg_diff < -0.1 else "estable"
 
                 # Stock actual y alerta
-                from app.services.inventory_service import get_current_stock_general
                 stock = get_current_stock_general(product_name, brand, unit)
                 alert_restock = total_predicted > stock
 
                 forecasts[model_name] = {
                     "forecast": forecast_list,
-                    "metrics": {"MAE": mae, "RMSE": rmse},
+                    "metrics": {
+                        "MAE": mae,
+                        "RMSE": rmse
+                    },
                     "tendency": tendency,
                     "alert_restock": alert_restock,
                     "sales_last_month": last_month_sales,
                     "projected_sales": total_predicted,
                     "percent_change": percent_change,
-                     "current_quality": stock,
+                    "current_quality": stock,
                 }
 
             except Exception as model_error:
