@@ -31,6 +31,10 @@ export interface ProductForecastComparison {
   unit: string;
   total_forecast: number;
   forecast: ForecastItem[];
+
+  current_quality: number;   // stock actual
+  alert_restock: boolean;    // alerta de reposición
+  needed_stock: number;      // cantidad necesaria para reponer
 }
 
 export interface PredictionComparisonResponse {

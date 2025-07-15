@@ -1,6 +1,4 @@
-// src/components/predictive/productRestockTable.tsx
-"use client";
-
+import React from "react";
 import { ProductForecastComparison } from "@/types/prediction";
 
 interface Props {
@@ -9,29 +7,32 @@ interface Props {
 
 export default function ProductRestockTable({ products }: Props) {
   if (products.length === 0) {
-    return <p className="text-gray-600 dark:text-gray-300">No hay productos por renovar stock.</p>;
+    return <p>No hay productos con alerta de stock.</p>;
   }
 
   return (
-    <table className="min-w-full table-auto border border-gray-200 dark:border-gray-700">
-      <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white">
-        <tr>
-          <th className="p-2 text-left">Producto</th>
-          <th className="p-2 text-left">Marca</th>
-          <th className="p-2 text-left">Unidad</th>
-          <th className="p-2 text-left">Ventas estimadas</th>
+    <table className="w-full table-auto border-collapse border border-gray-300">
+      <thead>
+        <tr className="bg-gray-200">
+          <th className="border border-gray-300 px-3 py-1 text-left">Producto</th>
+          <th className="border border-gray-300 px-3 py-1 text-left">Marca</th>
+          <th className="border border-gray-300 px-3 py-1 text-left">Unidad</th>
+          <th className="border border-gray-300 px-3 py-1 text-right">Stock Actual</th>
+          <th className="border border-gray-300 px-3 py-1 text-right">Cantidad Necesaria</th>
         </tr>
       </thead>
       <tbody>
-        {products.map((p, index) => (
-          <tr
-            key={`${p.product}-${index}`}
-            className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <td className="p-2">{p.product}</td>
-            <td className="p-2">{p.brand}</td>
-            <td className="p-2">{p.unit}</td>
-            <td className="p-2 text-right">{p.total_forecast.toFixed(2)}</td>
+        {products.map((p) => (
+          <tr key={`${p.product}-${p.brand}-${p.unit}`}>
+            <td className="border border-gray-300 px-3 py-1">{p.product}</td>
+            <td className="border border-gray-300 px-3 py-1">{p.brand}</td>
+            <td className="border border-gray-300 px-3 py-1">{p.unit}</td>
+            <td className="border border-gray-300 px-3 py-1 text-right">
+              {p.current_quality?.toFixed(2) ?? "0.00"}
+            </td>
+            <td className="border border-gray-300 px-3 py-1 text-right">
+              {p.needed_stock?.toFixed(2) ?? "0.00"}
+            </td>
           </tr>
         ))}
       </tbody>

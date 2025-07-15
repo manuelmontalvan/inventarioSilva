@@ -1,4 +1,3 @@
-// src/components/ui/simpleModal.tsx
 "use client";
 
 import React from "react";
@@ -19,11 +18,12 @@ export default function SimpleModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 backdrop:blur bg-opacity-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 backdrop-blur bg-opacity-30 flex items-center justify-center">
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-3xl relative">
         <button
           className="absolute top-2 right-3 text-gray-700 dark:text-gray-300 text-xl font-bold"
           onClick={onClose}
+          aria-label="Cerrar modal"
         >
           ×
         </button>
