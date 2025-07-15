@@ -311,6 +311,25 @@ async getSalePriceTrend(productId: string) {
     };
   });
 }
+async getMonthlySalesTrend(productId: string) {
+  const records = await this.productSaleRepository.find({
+    where: { productId },
+    order: { sale_date: 'ASC' },
+  });
+
+  const grouped = records.reduce((acc, r) => {
+    if (!r.sale_date) return acc;
+    const month = new Date(r.sale_date).toISOString().slice(0, 7); // yyyy-MM
+    acc[month] = (acc[month] || 0) + Number(r.quantity);
+    return acc;
+  }, {} as Record<string, number>);
+
+  return Object.entries(grouped).map(([month, totalQuantity]) => ({
+    period: month,
+    totalQuantity,
+  }));
+}
+
 
 async getSoldProducts() {
   const result = await this.productSaleRepository

@@ -1,5 +1,11 @@
 import axios from "@/lib/axiosInstance";
-import { SaleI, CreateSaleDto,SoldProduct } from "@/types/productSales";
+import {
+  SaleI,
+  CreateSaleDto,
+  SoldProduct,
+  SalePriceTrendItem,
+  SaleQuantityTrendItem,
+} from "@/types/productSales";
 export interface ProductSearchResult {
   product_name: string;
   brands: string[];
@@ -23,26 +29,20 @@ export interface SaleTrendItem {
   unitPrice: number;
 }
 
-
-
-
 export const getSales = async (): Promise<SaleI[]> => {
   const { data } = await axios.get("/sales");
   return data;
 };
-
 
 export const getSaleById = async (id: string): Promise<SaleI> => {
   const { data } = await axios.get(`/sales/${id}`);
   return data;
 };
 
-
 export const createSale = async (sale: CreateSaleDto): Promise<SaleI> => {
   const { data } = await axios.post("/sales", sale);
   return data;
 };
-
 
 export const updateSale = async (
   id: string,
@@ -52,16 +52,13 @@ export const updateSale = async (
   return data;
 };
 
-
 export const deleteSale = async (id: string): Promise<void> => {
   await axios.delete(`/sales/${id}`);
 };
 
-
 export const deleteAllSales = async (): Promise<void> => {
   await axios.delete("/sales/all");
 };
-
 
 export const searchPredictiveProducts = async (
   query: string
@@ -71,7 +68,6 @@ export const searchPredictiveProducts = async (
   });
   return data;
 };
-
 
 export const importSalesFromExcel = async (file: File) => {
   const formData = new FormData();
@@ -83,9 +79,8 @@ export const importSalesFromExcel = async (file: File) => {
     },
   });
 
-  return data; 
-}
-
+  return data;
+};
 
 export const getSaleHistory = async (
   productId?: string,
@@ -98,14 +93,19 @@ export const getSaleHistory = async (
   return data;
 };
 
-
 export const getSalePriceTrend = async (
   productId: string
-): Promise<SaleTrendItem[]> => {
+): Promise<SalePriceTrendItem[]> => {
   const { data } = await axios.get(`/sales/trend/${productId}`);
   return data;
 };
 
+export const getMonthlySalesTrend = async (
+  productId: string
+): Promise<SaleQuantityTrendItem[]> => {
+  const { data } = await axios.get(`/sales/${productId}/monthly-sales-trend`);
+  return data;
+};
 
 export const getSoldProducts = async (): Promise<SoldProduct[]> => {
   const { data } = await axios.get("/sales/products");

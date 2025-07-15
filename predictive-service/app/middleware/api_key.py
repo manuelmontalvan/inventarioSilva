@@ -8,11 +8,11 @@ API_KEY = os.getenv("API_KEY")
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # ✅ Deja pasar las preflight OPTIONS sin API key
+        # ⚠️ Deja pasar las solicitudes de preflight CORS
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # ✅ Permitir documentación pública
+        # Deja pasar documentación pública
         if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
             return await call_next(request)
 
@@ -21,3 +21,4 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             raise HTTPException(status_code=401, detail="API key inválida o ausente")
 
         return await call_next(request)
+

@@ -87,6 +87,12 @@ export const getPurchasePriceTrend = async (
   const { data } = await axios.get(`/purchase-orders/price-trend/${productId}`);
   return data;
 };
+export const getMonthlyPurchaseQuantityTrend = async (
+  productId: string
+): Promise<{ period: string; totalQuantity: number }[]> => {
+  const { data } = await axios.get(`/purchase-orders/monthly-quantity-trend/${productId}`);
+  return data;
+};
 
 export const getPurchasedProducts = async (): Promise<ProductI[]> => {
   const { data } = await axios.get('/purchase-orders/purchased-products');

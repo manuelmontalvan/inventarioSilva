@@ -70,3 +70,22 @@ export interface SoldProduct {
     name: string;
   };
 }
+
+// Tendencia de precio promedio mensual por producto
+export interface SalePriceTrendItem {
+  month: string;       // Ej: '2025-06'
+  unitPrice: number;   // Precio promedio de ese mes
+}
+
+// Tendencia de cantidad vendida mensual por producto
+export interface SaleQuantityTrendItem {
+  period: string;         // Ej: '2025-06' (o '2025-W01' si es semanal)
+  totalQuantity: number;  // Cantidad total vendida
+}
+
+// Tendencia combinada para el gráfico
+export interface MergedSaleTrendItem {
+  period: string;
+  unitPrice?: number;
+  totalQuantity?: number;
+}

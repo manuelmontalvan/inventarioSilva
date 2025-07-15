@@ -90,6 +90,13 @@ export class PurchaseOrderController {
     return this.service.getPurchasePriceTrend(productId);
   }
 
+ // purchase-orders.controller.ts
+@Get('monthly-quantity-trend/:productId')
+getMonthlyQuantityTrend(@Param('productId') productId: string) {
+  return this.service.getMonthlyPurchaseQuantityTrend(productId);
+}
+
+
   @Get('purchased-products')
   getPurchasedProducts() {
     return this.service.getPurchasedProducts();

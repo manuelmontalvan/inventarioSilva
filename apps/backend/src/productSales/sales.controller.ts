@@ -80,6 +80,12 @@ export class SalesController {
     return this.salesService.remove(id);
   }
 
+  @Get(':productId/monthly-sales-trend')
+async getMonthlySalesTrend(@Param('productId') productId: string) {
+  return this.salesService.getMonthlySalesTrend(productId);
+}
+
+
   // NUEVO: Obtener historial de ventas por producto y fechas
   @UseGuards(JwtAuthGuard)
   @Get('history/by-product')

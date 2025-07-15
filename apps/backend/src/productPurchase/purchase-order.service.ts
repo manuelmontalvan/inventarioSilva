@@ -432,6 +432,29 @@ export class PurchaseOrderService {
 
     return trend;
   }
+  async getMonthlyPurchaseQuantityTrend(productId: string) {
+  const records = await this.purchaseRepo.find({
+    where: { product: { id: productId } },
+    relations: ['product'],
+    order: { purchase_date: 'ASC' },
+  });
+
+  const grouped: Record<string, ProductPurchase[]> = records.reduce((acc, r) => {
+    const month = new Date(r.purchase_date).toISOString().slice(0, 7); // yyyy-MM
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(r);
+    return acc;
+  }, {} as Record<string, ProductPurchase[]>);
+
+  return Object.entries(grouped).map(([month, purchases]) => {
+    const totalQuantity = purchases.reduce((sum, p) => sum + Number(p.quantity), 0);
+    return {
+      period: month,
+      totalQuantity: totalQuantity,
+    };
+  });
+}
+
 
  async getPurchasedProducts() {
   const products = await this.productRepo
