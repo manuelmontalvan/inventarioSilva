@@ -30,7 +30,15 @@ export const updatePurchaseOrder = async (
 };
 
 export const deletePurchaseOrder = async (id: string): Promise<void> => {
-  await axios.delete(`/purchase-orders/${id}`);
+  try {
+    await axios.delete(`/purchase-orders/${id}`);
+  } catch (error) {
+    console.error('Error deleting purchase order:', error);
+    throw error;
+  }
+};
+export const clearAllPurchaseOrders = async (): Promise<void> => {
+  await axios.delete("/purchase-orders");
 };
 
 export const uploadPurchaseOrderFile = async (

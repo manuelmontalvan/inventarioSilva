@@ -212,6 +212,7 @@ export default function ProductStockPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  
 
   return (
     <ProtectedRoute>

@@ -38,7 +38,9 @@ export class PurchaseOrder {
   @JoinColumn({ name: 'registeredById' })
   registeredBy: User;
 
-  @OneToMany(() => ProductPurchase, (pp) => pp.order, { cascade: true })
+  @OneToMany(() => ProductPurchase, (pp) => pp.order, {
+    cascade: ['remove'], // más explícito
+  })
   purchase_lines: ProductPurchase[];
 
   @CreateDateColumn()

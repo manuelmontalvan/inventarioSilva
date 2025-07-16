@@ -179,13 +179,13 @@ export default function ProductAdminPage() {
   return (
     <ProtectedRoute>
       <div className="p-6 min-h-screen dark:bg-gray-900 bg-gray-100 text-gray-900">
-        <div className="flex justify-between items-center mb-4 max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold dark:text-white flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4 max-w-6xl mx-auto w-full">
+          <h1 className="text-2xl md:text-3xl font-bold dark:text-white flex items-center gap-2">
             <Box className="w-6 h-6 text-green-600" />
             Gestión de Productos
           </h1>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
             <FileUpload
               uploadFunction={uploadProducts}
               onSuccess={fetchProducts}
@@ -193,7 +193,7 @@ export default function ProductAdminPage() {
 
             <Button
               onPress={() => setShowCreateModal(true)}
-              className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2"
+              className="bg-green-600/20 text-green-400 hover:bg-green-600/30 hover:text-green-300 border-green-600/30 flex items-center gap-2 w-full sm:w-auto"
             >
               <PlusCircle className="w-4 h-4" /> Crear Producto
             </Button>
@@ -320,16 +320,16 @@ export default function ProductAdminPage() {
           />
         </div>
 
-        <div className="flex justify-center gap-2 mt-4">
+        <div className="flex flex-wrap justify-center gap-2 mt-4 px-2">
           {Array.from({ length: totalPages }, (_, i) => (
             <button
               key={i}
               onClick={() => setCurrentPage(i + 1)}
               disabled={currentPage === i + 1}
-              className={`px-3 py-1 rounded ${
+              className={`px-3 py-1 text-sm rounded transition-colors duration-200 ${
                 currentPage === i + 1
                   ? "bg-green-600 text-white"
-                  : "bg-gray-700 text-gray-300"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               }`}
             >
               {i + 1}

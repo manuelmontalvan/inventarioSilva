@@ -1,5 +1,6 @@
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 import os
 from dotenv import load_dotenv
 
@@ -8,17 +9,17 @@ API_KEY = os.getenv("API_KEY")
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # ⚠️ Deja pasar las solicitudes de preflight CORS
+        # ✅ Maneja explícitamente preflight requests
         if request.method == "OPTIONS":
-            return await call_next(request)
+            return Response(status_code=204)
 
-        # Deja pasar documentación pública
+        # ✅ Permite acceso a documentación pública
         if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
             return await call_next(request)
 
+        # 🔐 Verifica API Key en otros casos
         api_key = request.headers.get("X-API-Key")
         if api_key != API_KEY:
             raise HTTPException(status_code=401, detail="API key inválida o ausente")
 
         return await call_next(request)
-

@@ -2,15 +2,20 @@
 
 import React, { useState } from "react";
 import { PurchaseOrder } from "@/types/purchaseOrders";
+import ConfirmModal from "@/components/confirmModal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ExportDropdown from "@/components/ui/ExportDropdown";
+import { Button } from "@heroui/button";
+import { clearAllPurchaseOrders } from "@/lib/api/purchases/purchaseOrders";
+import { addToast } from "@heroui/toast";
 
 interface Props {
   orders: PurchaseOrder[];
   products: { id: string; name: string }[];
+  onClear?: () => void;
 }
 
 // Define interface para extender jsPDF y tipar lastAutoTable
@@ -20,7 +25,11 @@ interface JsPDFWithAutoTable extends jsPDF {
   };
 }
 
-export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
+export const PurchaseOrderTable: React.FC<Props> = ({
+  orders: initialOrders,
+  products,
+  onClear,
+}) => {
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(
     null
@@ -28,7 +37,8 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [orders, setOrders] = useState(initialOrders);
   const filteredOrders = orders.filter((order) => {
     const supplierName = order.supplier?.name?.toLowerCase() || "";
     const invoice = order.invoice_number?.toLowerCase() || "";
@@ -54,11 +64,30 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedOrderIds.length === paginatedOrders.length) {
+const toggleSelectAll = () => {
+  if (selectedOrderIds.length === filteredOrders.length) {
+    setSelectedOrderIds([]);
+  } else {
+    setSelectedOrderIds(filteredOrders.map((order) => order.id));
+  }
+};
+
+
+  const confirmDelete = async () => {
+    try {
+      await clearAllPurchaseOrders();
+      setConfirmOpen(false);
+      setSelectedOrder(null);
       setSelectedOrderIds([]);
-    } else {
-      setSelectedOrderIds(paginatedOrders.map((order) => order.id));
+      setSearch("");
+      setOrders([]);
+      addToast({title:"Se limpiaron todos los datos", color:"success" })
+    
+      if (onClear) onClear(); // Avisar al padre para refrescar datos si es necesario
+    } catch (error) {
+      console.error("Error borrando órdenes", error);
+      addToast({title:"Error al vaciar las órdenes.", color:"danger" })
+      // Aquí podrías mostrar un toast o alerta
     }
   };
 
@@ -164,7 +193,6 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
     );
 
     order.purchase_lines.forEach((item) => {
-
       const name = item.product.name || "Producto sin nombre";
       const brandName = item.product.brand?.name || "N/A";
       const unitName = item.product.unit_of_measure?.name || "N/A";
@@ -438,6 +466,13 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
           onExportSelectedCsv={handleExportSelectedCsv}
           multipleSelected={selectedOrderIds.length > 0}
         />
+        <Button
+          onPress={() => setConfirmOpen(true)}
+          color="danger"
+          variant="bordered"
+        >
+          Vaciar datos
+        </Button>
       </div>
 
       {paginatedOrders.length === 0 ? (
@@ -633,6 +668,13 @@ export const PurchaseOrderTable: React.FC<Props> = ({ orders, products }) => {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Vaciar historial"
+        message="¿Seguro que deseas eliminar todas las ventas?"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 };

@@ -48,7 +48,8 @@ export class PurchaseOrderService {
 
     @InjectRepository(UnitOfMeasure)
     private readonly unitOfMeasureRepo: Repository<UnitOfMeasure>,
-
+     @InjectRepository(PurchaseOrder)
+    private readonly purchaseOrderRepository: Repository<PurchaseOrder>, // <-- Aquí debe ir
     private readonly dataSource: DataSource,
   ) {}
 
@@ -228,12 +229,29 @@ export class PurchaseOrderService {
   }
 
   async remove(id: string) {
-    const found = await this.orderRepo.findOneBy({ id });
-    if (!found) throw new NotFoundException('Orden de compra no encontrada');
+  const found = await this.orderRepo.findOne({
+    where: { id },
+    relations: ['purchase_lines'], // asegúrate de incluir relaciones
+  });
 
-    await this.orderRepo.delete(id);
-    return { message: 'Orden eliminada correctamente' };
+  if (!found) throw new NotFoundException('Orden de compra no encontrada');
+
+  await this.orderRepo.remove(found); // activa cascada
+  return { message: 'Orden eliminada correctamente' };
+}
+// src/purchases/purchase-orders.service.ts
+
+async clearAll() {
+  try {
+    // TRUNCATE con CASCADE
+    await this.purchaseOrderRepository.query(`TRUNCATE TABLE purchase_orders CASCADE`);
+  } catch (error) {
+    console.error("Error clearing purchase orders:", error);
+    throw error;
   }
+}
+
+
 
   async importPurchaseOrderFromFile(
     filePath: string,

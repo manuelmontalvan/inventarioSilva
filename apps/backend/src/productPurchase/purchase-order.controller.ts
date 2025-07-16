@@ -50,6 +50,12 @@ export class PurchaseOrderController {
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
+  // src/purchases/purchase-orders.controller.ts
+
+  @Delete()
+  async clearAll() {
+    return this.service.clearAll();
+  }
 
   @Post('upload')
   @UseInterceptors(
