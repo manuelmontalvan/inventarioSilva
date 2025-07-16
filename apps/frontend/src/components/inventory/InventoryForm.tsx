@@ -222,11 +222,12 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
 
     try {
       // Eliminar `availableStocks` y enviar solo lo necesario
-      const cleanMovements = movementList.map((movement) => {
-        const copy = { ...movement };
-        delete copy.availableStocks;
-        return copy;
-      });
+      const cleanMovements = movementList.map(movement => {
+  const copy = { ...movement };
+  delete copy.availableStocks;
+  return copy;
+});
+
 
       await onSubmit({
         type,

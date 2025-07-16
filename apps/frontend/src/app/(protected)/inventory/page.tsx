@@ -41,25 +41,49 @@ export default function InventoryPage() {
   }, []);
 
   const handleSubmit = async (data: {
-    type: "IN" | "OUT";
-    movements: {
-      productId: string;
-      quantity: number;
-      unitId: string;
-      localityId: string;
-      productName?: string;
-      brandName?: string;
-      unitName?: string;
-      shelfId?: string;
-      shelfName?: string;
-    }[];
-    invoice_number?: string;
-    orderNumber?: string;
-    notes?: string;
-  }) => {
-    await createInventoryMovement(data);
-    await loadMovements();
-  };
+  type: "IN" | "OUT";
+  movements: {
+    productId: string | undefined;
+    quantity: number;
+    unitId: string | undefined;
+    localityId?: string | undefined;
+    productName?: string;
+    brandName?: string;
+    unitName?: string;
+    shelfId?: string;
+    shelfName?: string;
+  }[];
+  invoice_number?: string;
+  orderNumber?: string;
+  notes?: string;
+}) => {
+  // Validar que todos los campos requeridos estén definidos
+  const cleanedMovements = data.movements.map((m) => {
+    if (!m.productId || !m.unitId || !m.localityId) {
+      throw new Error("Faltan campos obligatorios en un movimiento.");
+    }
+
+    return {
+      productId: m.productId,
+      quantity: m.quantity,
+      unitId: m.unitId,
+      localityId: m.localityId,
+      shelfId: m.shelfId,
+      // si quieres incluir campos opcionales puedes añadirlos aquí
+    };
+  });
+
+  await createInventoryMovement({
+    type: data.type,
+    movements: cleanedMovements,
+    invoice_number: data.invoice_number,
+    orderNumber: data.orderNumber,
+    notes: data.notes,
+  });
+
+  await loadMovements();
+};
+
 
   return (
     <ProtectedRoute>
@@ -74,7 +98,7 @@ export default function InventoryPage() {
               <Button
                 onPress={() => setOpenTotalsModal(true)}
                 color="success"
-                variant="bordered"                
+                variant="bordered"
               >
                 Ver Totales de Stock
               </Button>
