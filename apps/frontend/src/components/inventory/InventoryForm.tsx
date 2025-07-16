@@ -129,7 +129,7 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           title: `Se cargaron ${mappedMovements.length} productos de la orden`,
           color: "success",
         });
-      } catch (error) {
+      } catch {
         setMovementList([]);
         addToast({
           title: "Error cargando la orden",
@@ -222,9 +222,11 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
 
     try {
       // Eliminar `availableStocks` y enviar solo lo necesario
-      const cleanMovements = movementList.map(
-        ({ availableStocks, ...rest }) => rest
-      );
+      const cleanMovements = movementList.map((movement) => {
+        const copy = { ...movement };
+        delete copy.availableStocks;
+        return copy;
+      });
 
       await onSubmit({
         type,

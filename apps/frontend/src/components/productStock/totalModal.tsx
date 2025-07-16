@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { searchProductStocks } from "@/lib/api/products/productStocks";
 import { ProductStock } from "@/types/productStock";
-import { cn } from "@/lib/utils";
-
 export default function ProductStockTotalsModal({
   open,
   onClose,
