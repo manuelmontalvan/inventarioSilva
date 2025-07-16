@@ -13,16 +13,16 @@ import { UnitsModule } from './products/unitsOfMeasure/units.module'; // Unidade
 import { LocalityModule } from './products/locality/locality.module';
 import { PurchaseOrderModule } from './productPurchase/purchase-order.module';
 import { SupplierModule } from './productPurchase/supplier/supplier.module';
-import {InventoryModule} from './Inventory/inventory.module'
-import {CustomersModule} from './productSales/customers/customers.module'
-import {AnalyticsModule} from './analytics/analytics.module'
-import {PricingModule} from './pricing/pricing.module'
-import{ProductStockModule} from './products/product-stock/product-stock.module'
+import { InventoryModule } from './Inventory/inventory.module';
+import { CustomersModule } from './productSales/customers/customers.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { PricingModule } from './pricing/pricing.module';
+import { ProductStockModule } from './products/product-stock/product-stock.module';
 import { SalesModule } from './productSales/sales.module';
 import { ShelfModule } from './products/locality/shelves/shelf.module';
 import { PagesModule } from './page/page.module';
 import { PredictionModule } from './prediction/prediction.module';
-
+import { SharedModule } from './shared/sahred.module';
 
 @Module({
   imports: [
@@ -66,8 +66,8 @@ import { PredictionModule } from './prediction/prediction.module';
     SalesModule,
     ShelfModule,
     PagesModule,
-    PredictionModule  
-  
+    PredictionModule,
+    SharedModule,
   ],
   providers: [RolesSeed, UserSeed],
 })

@@ -81,10 +81,9 @@ export class SalesController {
   }
 
   @Get(':productId/monthly-sales-trend')
-async getMonthlySalesTrend(@Param('productId') productId: string) {
-  return this.salesService.getMonthlySalesTrend(productId);
-}
-
+  async getMonthlySalesTrend(@Param('productId') productId: string) {
+    return this.salesService.getMonthlySalesTrend(productId);
+  }
 
   // NUEVO: Obtener historial de ventas por producto y fechas
   @UseGuards(JwtAuthGuard)
@@ -102,6 +101,11 @@ async getMonthlySalesTrend(@Param('productId') productId: string) {
   @Get('trend/:productId')
   async getSalePriceTrend(@Param('productId') productId: string) {
     return this.salesService.getSalePriceTrend(productId);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Get('/top-products')
+  getTopSoldProducts(@Query('limit') limit?: string) {
+    return this.salesService.getTopSoldProducts(Number(limit) || 10);
   }
 
   // NUEVO: Obtener productos vendidos únicos

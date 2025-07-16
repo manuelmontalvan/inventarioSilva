@@ -32,34 +32,36 @@ def compare_forecasts(
                 continue
 
             model_forecasts = {}
-            alert_restock = False
+    
             current_quality = get_current_stock_general(product_name, brand_name, unit_name)
+            general_alert = False
 
             for model_name, data in all_forecasts["forecasts"].items():
                 forecast = data.get("forecast", [])
                 total = sum(item["yhat"] for item in forecast)
+                needed_stock = max(0, round(total - current_quality, 2))
+                alert_restock = total > current_quality
+                if alert_restock:
+                    general_alert = True
+               
                 model_forecasts[model_name] = {
                     "total_forecast": round(total, 2),
                     "forecast": forecast,
                     "metrics": data.get("metrics"),
+                    "alert_restock": alert_restock,
+                    "needed_stock": needed_stock,
                 }
+          
 
-                # Si algún modelo pronostica más que el stock actual, activa alerta
-                if total > current_quality:
-                    alert_restock = True
-
-            # Calcular cantidad necesaria para reponer (máximo total_forecast menos stock)
-            max_total_forecast = max(f["total_forecast"] for f in model_forecasts.values()) if model_forecasts else 0
-            needed_stock = max(0, round(max_total_forecast - current_quality, 2))
-
+           
             results.append({
                 "product": product_name,
                 "brand": brand_name,
                 "unit": unit_name,
                 "forecasts": model_forecasts,
                 "current_quality": current_quality,
-                "alert_restock": alert_restock,
-                "needed_stock": needed_stock,
+                "general_alert": general_alert,
+
             })
 
         except Exception as e:

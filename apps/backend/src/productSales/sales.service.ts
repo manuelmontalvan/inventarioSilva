@@ -248,108 +248,161 @@ export class SalesService {
     return `ORD-V-${dateStr}-${correlativoStr}`;
   }
   async getSalesHistory(
-  productId?: string,
-  startDate?: string,
-  endDate?: string,
-) {
-  const query = this.productSaleRepository
-    .createQueryBuilder('sale')
-    .leftJoinAndSelect('sale.sale', 'parentSale')
-    .leftJoinAndSelect('parentSale.customer', 'customer')
-    .leftJoinAndSelect('sale.product', 'product')
-    .orderBy('sale.sale_date', 'DESC');
+    productId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const query = this.productSaleRepository
+      .createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.sale', 'parentSale')
+      .leftJoinAndSelect('parentSale.customer', 'customer')
+      .leftJoinAndSelect('sale.product', 'product')
+      .orderBy('sale.sale_date', 'DESC');
 
-  if (productId) {
-    query.andWhere('sale.productId = :productId', { productId });
+    if (productId) {
+      query.andWhere('sale.productId = :productId', { productId });
+    }
+
+    if (startDate) {
+      query.andWhere('sale.sale_date >= :startDate', { startDate });
+    }
+
+    if (endDate) {
+      query.andWhere('sale.sale_date <= :endDate', { endDate });
+    }
+
+    const records = await query.getMany();
+
+    return records.map((s) => ({
+      productName: s.product?.name ?? s.product_name,
+      brandName: s.brand_name ?? '-',
+      unitName: s.unit_of_measure_name ?? '-',
+      quantity: s.quantity,
+      unitPrice: s.unit_price,
+      totalPrice: s.total_price,
+      saleDate: s.sale_date,
+      customerName: s.sale?.customer?.name ?? 'Sin cliente',
+      orderNumber: s.sale?.orderNumber,
+      invoiceNumber: s.invoice_number ?? '-',
+      notes: s.notes ?? '-',
+    }));
   }
+  async getSalePriceTrend(productId: string) {
+    const records = await this.productSaleRepository.find({
+      where: { productId },
+      order: { sale_date: 'ASC' },
+    });
 
-  if (startDate) {
-    query.andWhere('sale.sale_date >= :startDate', { startDate });
+    const grouped: Record<string, ProductSale[]> = records.reduce(
+      (acc, r) => {
+        if (!r.sale_date) return acc; // prevención contra undefined
+
+        const month = new Date(r.sale_date).toISOString().slice(0, 7);
+        if (!acc[month]) acc[month] = [];
+        acc[month].push(r);
+        return acc;
+      },
+      {} as Record<string, ProductSale[]>,
+    );
+
+    return Object.entries(grouped).map(([month, sales]) => {
+      const avgPrice =
+        sales.reduce((sum, s) => sum + Number(s.unit_price), 0) / sales.length;
+      return {
+        month,
+        unitPrice: +avgPrice.toFixed(2),
+      };
+    });
   }
+  async getMonthlySalesTrend(productId: string) {
+    const records = await this.productSaleRepository.find({
+      where: { productId },
+      order: { sale_date: 'ASC' },
+    });
 
-  if (endDate) {
-    query.andWhere('sale.sale_date <= :endDate', { endDate });
+    const grouped = records.reduce(
+      (acc, r) => {
+        if (!r.sale_date) return acc;
+        const month = new Date(r.sale_date).toISOString().slice(0, 7); // yyyy-MM
+        acc[month] = (acc[month] || 0) + Number(r.quantity);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    return Object.entries(grouped).map(([month, totalQuantity]) => ({
+      period: month,
+      totalQuantity,
+    }));
   }
-
-  const records = await query.getMany();
-
-  return records.map((s) => ({
-    productName: s.product?.name ?? s.product_name,
-    brandName: s.brand_name ?? '-',
-    unitName: s.unit_of_measure_name ?? '-',
-    quantity: s.quantity,
-    unitPrice: s.unit_price,
-    totalPrice: s.total_price,
-    saleDate: s.sale_date,
-    customerName: s.sale?.customer?.name ?? 'Sin cliente',
-    orderNumber: s.sale?.orderNumber,
-    invoiceNumber: s.invoice_number ?? '-',
-    notes: s.notes ?? '-',
-  }));
-}
-async getSalePriceTrend(productId: string) {
-  const records = await this.productSaleRepository.find({
-    where: { productId },
-    order: { sale_date: 'ASC' },
-  });
-
-  const grouped: Record<string, ProductSale[]> = records.reduce((acc, r) => {
-    if (!r.sale_date) return acc; // prevención contra undefined
-
-    const month = new Date(r.sale_date).toISOString().slice(0, 7);
-    if (!acc[month]) acc[month] = [];
-    acc[month].push(r);
-    return acc;
-  }, {} as Record<string, ProductSale[]>);
-
-  return Object.entries(grouped).map(([month, sales]) => {
-    const avgPrice =
-      sales.reduce((sum, s) => sum + Number(s.unit_price), 0) / sales.length;
-    return {
-      month,
-      unitPrice: +avgPrice.toFixed(2),
-    };
-  });
-}
-async getMonthlySalesTrend(productId: string) {
-  const records = await this.productSaleRepository.find({
-    where: { productId },
-    order: { sale_date: 'ASC' },
-  });
-
-  const grouped = records.reduce((acc, r) => {
-    if (!r.sale_date) return acc;
-    const month = new Date(r.sale_date).toISOString().slice(0, 7); // yyyy-MM
-    acc[month] = (acc[month] || 0) + Number(r.quantity);
-    return acc;
-  }, {} as Record<string, number>);
-
-  return Object.entries(grouped).map(([month, totalQuantity]) => ({
-    period: month,
-    totalQuantity,
-  }));
-}
-
-
-async getSoldProducts() {
-  const result = await this.productSaleRepository
+async getTopSoldProducts(limit = 10, startMonth?: string, endMonth?: string) {
+  const qb = this.productSaleRepository
     .createQueryBuilder('ps')
     .select([
-      'DISTINCT ps.productId AS product_id',
-      'ps.product_name AS product_name',
-      'ps.brand_name AS brand_name',
-      'ps.unit_of_measure_name AS unit_name',
+      'ps.productId AS "productId"',
+      'ps.product_name AS "productName"',
+      'ps.brand_name AS "brandName"',
+      'ps.unit_of_measure_name AS "unitName"',
+      'SUM(ps.quantity) AS "totalQuantity"',
     ])
-    .getRawMany();
+    .groupBy('ps.productId')
+    .addGroupBy('ps.product_name')
+    .addGroupBy('ps.brand_name')
+    .addGroupBy('ps.unit_of_measure_name');
 
-  return result.map((p) => ({
-    id: p.product_id,
-    name: p.product_name,
-    brand: { name: p.brand_name },
-    unit_of_measure: { name: p.unit_name },
+  // Filtro por rango de meses, si están definidos
+  if (startMonth) {
+    qb.andWhere(`TO_CHAR(ps.sale_date, 'YYYY-MM') >= :startMonth`, { startMonth });
+  }
+  if (endMonth) {
+    qb.andWhere(`TO_CHAR(ps.sale_date, 'YYYY-MM') <= :endMonth`, { endMonth });
+  }
+
+  qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
+
+  const result = await qb.getRawMany();
+
+  return result.map((r) => ({
+    productId: r.productId,
+    productName: r.productName,
+    brandName: r.brandName,
+    unitName: r.unitName,
+    totalQuantity: Number(r.totalQuantity),
   }));
 }
 
+async getMonthlySales() {
+  return await this.saleRepository
+    .createQueryBuilder('sale')
+    .select([
+      "DATE_TRUNC('month', sale.sale_date) AS month",
+      "SUM(sale.total_amount) AS totalSales",
+    ])
+    .groupBy("month")
+    .orderBy("month", "ASC")
+    .getRawMany();
+}
+
+
+
+  async getSoldProducts() {
+    const result = await this.productSaleRepository
+      .createQueryBuilder('ps')
+      .select([
+        'DISTINCT ps.productId AS product_id',
+        'ps.product_name AS product_name',
+        'ps.brand_name AS brand_name',
+        'ps.unit_of_measure_name AS unit_name',
+      ])
+      .getRawMany();
+
+    return result.map((p) => ({
+      id: p.product_id,
+      name: p.product_name,
+      brand: { name: p.brand_name },
+      unit_of_measure: { name: p.unit_name },
+    }));
+  }
 
   async findAll() {
     return this.saleRepository.find({

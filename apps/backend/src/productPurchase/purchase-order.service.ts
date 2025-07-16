@@ -433,58 +433,95 @@ export class PurchaseOrderService {
     return trend;
   }
   async getMonthlyPurchaseQuantityTrend(productId: string) {
-  const records = await this.purchaseRepo.find({
-    where: { product: { id: productId } },
-    relations: ['product'],
-    order: { purchase_date: 'ASC' },
-  });
+    const records = await this.purchaseRepo.find({
+      where: { product: { id: productId } },
+      relations: ['product'],
+      order: { purchase_date: 'ASC' },
+    });
 
-  const grouped: Record<string, ProductPurchase[]> = records.reduce((acc, r) => {
-    const month = new Date(r.purchase_date).toISOString().slice(0, 7); // yyyy-MM
-    if (!acc[month]) acc[month] = [];
-    acc[month].push(r);
-    return acc;
-  }, {} as Record<string, ProductPurchase[]>);
+    const grouped: Record<string, ProductPurchase[]> = records.reduce(
+      (acc, r) => {
+        const month = new Date(r.purchase_date).toISOString().slice(0, 7); // yyyy-MM
+        if (!acc[month]) acc[month] = [];
+        acc[month].push(r);
+        return acc;
+      },
+      {} as Record<string, ProductPurchase[]>,
+    );
 
-  return Object.entries(grouped).map(([month, purchases]) => {
-    const totalQuantity = purchases.reduce((sum, p) => sum + Number(p.quantity), 0);
-    return {
-      period: month,
-      totalQuantity: totalQuantity,
-    };
-  });
-}
-
-
- async getPurchasedProducts() {
-  const products = await this.productRepo
-    .createQueryBuilder('product')
+    return Object.entries(grouped).map(([month, purchases]) => {
+      const totalQuantity = purchases.reduce(
+        (sum, p) => sum + Number(p.quantity),
+        0,
+      );
+      return {
+        period: month,
+        totalQuantity: totalQuantity,
+      };
+    });
+  }
+  async getTopPurchasedProducts(limit = 10, startMonth?: string, endMonth?: string) {
+  const qb = this.purchaseRepo
+    .createQueryBuilder('purchase')
+    .leftJoin('purchase.product', 'product')
     .leftJoin('product.brand', 'brand')
     .leftJoin('product.unit_of_measure', 'unit')
-    .innerJoin('product.purchase_history', 'purchase') // solo productos comprados
     .select([
-      'product.id',
-      'product.name',
-      'brand.name',
-      'unit.name',
+      'product.id AS "productId"',
+      'product.name AS "productName"',
+      'brand.name AS "brandName"',
+      'unit.name AS "unitName"',
+      'SUM(purchase.quantity) AS "totalQuantity"',
     ])
     .groupBy('product.id')
-    .addGroupBy('brand.id')
-    .addGroupBy('unit.id')
-    .getRawMany();
+    .addGroupBy('product.name')
+    .addGroupBy('brand.name')
+    .addGroupBy('unit.name');
 
-  // Como getRawMany devuelve filas planas con alias, mapeamos para armar objeto:
-  return products.map(p => ({
-    id: p.product_id,
-    name: p.product_name,
-    brand: {
-      name: p.brand_name,
-    },
-    unit_of_measure: {
-      name: p.unit_name,
-    },
+  if (startMonth) {
+    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') >= :startMonth`, { startMonth });
+  }
+  if (endMonth) {
+    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') <= :endMonth`, { endMonth });
+  }
+
+  qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
+
+  const result = await qb.getRawMany();
+
+  return result.map((r) => ({
+    productId: r.productId,
+    productName: r.productName,
+    brandName: r.brandName,
+    unitName: r.unitName,
+    totalQuantity: Number(r.totalQuantity),
   }));
 }
 
+  
 
+  async getPurchasedProducts() {
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoin('product.brand', 'brand')
+      .leftJoin('product.unit_of_measure', 'unit')
+      .innerJoin('product.purchase_history', 'purchase') // solo productos comprados
+      .select(['product.id', 'product.name', 'brand.name', 'unit.name'])
+      .groupBy('product.id')
+      .addGroupBy('brand.id')
+      .addGroupBy('unit.id')
+      .getRawMany();
+
+    // Como getRawMany devuelve filas planas con alias, mapeamos para armar objeto:
+    return products.map((p) => ({
+      id: p.product_id,
+      name: p.product_name,
+      brand: {
+        name: p.brand_name,
+      },
+      unit_of_measure: {
+        name: p.unit_name,
+      },
+    }));
+  }
 }

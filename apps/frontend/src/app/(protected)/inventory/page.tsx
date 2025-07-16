@@ -18,12 +18,14 @@ import {
   CardFooter,
   CardAction,
 } from "@/components/ui/card";
-
+import ProductStockTotalsModal from "@/components/productStock/totalModal";
 import InventoryForm from "@/components/inventory/InventoryForm";
 import InventoryTable from "@/components/inventory/InventoryTable";
+import { Button } from "@heroui/button";
 
 export default function InventoryPage() {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [openTotalsModal, setOpenTotalsModal] = useState(false);
 
   const loadMovements = async () => {
     try {
@@ -68,7 +70,15 @@ export default function InventoryPage() {
             <CardDescription>
               Registra entradas o salidas de productos al inventario.
             </CardDescription>
-            <CardAction></CardAction>
+            <CardAction>
+              <Button
+                onPress={() => setOpenTotalsModal(true)}
+                color="success"
+                variant="bordered"                
+              >
+                Ver Totales de Stock
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             <InventoryForm onSubmit={handleSubmit} />
@@ -93,6 +103,10 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
       </div>
+      <ProductStockTotalsModal
+        open={openTotalsModal}
+        onClose={() => setOpenTotalsModal(false)}
+      />
     </ProtectedRoute>
   );
 }

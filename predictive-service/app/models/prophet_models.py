@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from pmdarima import auto_arima
+from app.services.prepare_data_prophet import prepare_data_for_prophet
 
 models = {}    # Almacena modelos entrenados por tipo
 metrics = {}   # Almacena métricas MAE y RMSE por tipo
@@ -77,34 +78,14 @@ def train_models_from_db():
     models.clear()
     metrics.clear()
 
-    for key, records in grouped.items():
-        df = pd.DataFrame(records)
-        df = df.groupby("ds").sum().reset_index()
-        df = df.sort_values(by='ds').reset_index(drop=True)
-
-        if df.shape[0] < 2:
-            print(f"⏭️ Skip {key} por pocos datos ({df.shape[0]})")
+    for key, records in grouped.items():  # <-- corregido indentación aquí
+        train_df, test_df, holidays_df = prepare_data_for_prophet(records)
+        
+        if train_df is None or test_df is None:
+            print(f"⏭️ Skip {key} por datos insuficientes después de preparación")
             continue
 
-        # Eliminar outliers
-        q1 = df['y'].quantile(0.25)
-        q3 = df['y'].quantile(0.75)
-        iqr = q3 - q1
-        lower_bound = q1 - 1.5 * iqr
-        upper_bound = q3 + 1.5 * iqr
-        df = df[(df['y'] >= lower_bound) & (df['y'] <= upper_bound)]
-
-        if df.shape[0] < 2:
-            print(f"⚠️ Skip {key} después de limpieza por pocos datos")
-            continue
-
-        cap_value = df['y'].max() * 1.2
-        df['cap'] = cap_value
-        df['floor'] = 0
-
-        train_size = int(len(df) * 0.8)
-        train_df = df.iloc[:train_size]
-        test_df = df.iloc[train_size:]
+        cap_value = train_df['cap'].iloc[0]
 
         models[key] = {}
         metrics[key] = {}
@@ -112,16 +93,19 @@ def train_models_from_db():
         # Prophet
         prophet_model = Prophet(
             growth="logistic",
+            seasonality_mode="multiplicative",  
             yearly_seasonality=False,
-            weekly_seasonality=True,
-            daily_seasonality=False
+            weekly_seasonality=True,            
+            changepoint_prior_scale=0.15,
+            holidays=holidays_df
         )
-        prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+        prophet_model.add_seasonality(name='monthly', period=30.5, fourier_order=4)
         prophet_model.fit(train_df)
 
         future = prophet_model.make_future_dataframe(periods=len(test_df), freq='D')
         future['cap'] = cap_value
         future['floor'] = 0
+
         forecast = prophet_model.predict(future)
 
         pred = forecast[['ds', 'yhat']].tail(len(test_df)).reset_index(drop=True)
@@ -136,13 +120,14 @@ def train_models_from_db():
         print(f"✅ Prophet entrenado para {key} | MAE: {prophet_mae:.2f} | RMSE: {prophet_rmse:.2f}")
 
         # Linear Regression
-        lin_model, lin_mae, lin_rmse = train_linear_regression(df)
+        full_df = pd.concat([train_df, test_df]).reset_index(drop=True)
+        lin_model, lin_mae, lin_rmse = train_linear_regression(full_df)
         models[key]['linear'] = lin_model
         metrics[key]['linear'] = {'MAE': lin_mae, 'RMSE': lin_rmse}
         print(f"📐 Linear entrenado para {key} | MAE: {lin_mae:.2f} | RMSE: {lin_rmse:.2f}")
 
         # ARIMA
-        arima_model, arima_mae, arima_rmse = train_arima(df)
+        arima_model, arima_mae, arima_rmse = train_arima(full_df)
         if arima_model:
             models[key]['arima'] = arima_model
             metrics[key]['arima'] = {'MAE': arima_mae, 'RMSE': arima_rmse}

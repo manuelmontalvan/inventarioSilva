@@ -108,7 +108,8 @@ export default function PredictiveAnalyticsPage() {
       console.log("Respuesta compareForecasts:", response);
 
       // Filtra productos con alerta de reposición
-      const needRestock = response.comparison.filter((p) => p.alert_restock === true);
+      const needRestock = response.comparison.filter((p) => p.general_alert === true);
+
 
       setRestockProducts(needRestock);
       setRestockModalOpen(true);

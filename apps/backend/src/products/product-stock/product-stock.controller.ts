@@ -22,6 +22,13 @@ export class ProductStockController {
   create(@Body() dto: CreateProductStockDto) {
     return this.service.create(dto);
   }
+ 
+
+@Get('totals')
+async getStockTotals() {
+  return this.service.getProductStockTotals();
+}
+
 
   @Get()
   findAll(@Query('productId') productId?: string) {

@@ -90,12 +90,15 @@ export class PurchaseOrderController {
     return this.service.getPurchasePriceTrend(productId);
   }
 
- // purchase-orders.controller.ts
-@Get('monthly-quantity-trend/:productId')
-getMonthlyQuantityTrend(@Param('productId') productId: string) {
-  return this.service.getMonthlyPurchaseQuantityTrend(productId);
-}
-
+  // purchase-orders.controller.ts
+  @Get('monthly-quantity-trend/:productId')
+  getMonthlyQuantityTrend(@Param('productId') productId: string) {
+    return this.service.getMonthlyPurchaseQuantityTrend(productId);
+  }
+  @Get('/top-products')
+  getTopProducts() {
+    return this.service.getTopPurchasedProducts();
+  }
 
   @Get('purchased-products')
   getPurchasedProducts() {

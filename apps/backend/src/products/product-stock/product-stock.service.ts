@@ -106,34 +106,65 @@ export class ProductStockService {
       if (!shelf) throw new NotFoundException('Percha no encontrada');
       stock.shelf = shelf;
     }
-    
 
     Object.assign(stock, dto);
-      // Guardar cambios en stock
-  const updatedStock = await this.stockRepo.save(stock);
+    // Guardar cambios en stock
+    const updatedStock = await this.stockRepo.save(stock);
 
-  // Actualizar cantidad total en producto sumando todas sus stocks
-  await this.updateProductTotalStock(updatedStock.productId);
+    // Actualizar cantidad total en producto sumando todas sus stocks
+    await this.updateProductTotalStock(updatedStock.productId);
 
     return updatedStock;
   }
 
+  async updateProductTotalStock(productId: string) {
+    const result = await this.stockRepo
+      .createQueryBuilder('stock')
+      .select('SUM(stock.quantity)', 'total')
+      .where('stock.productId = :productId', { productId })
+      .getRawOne();
 
-  
-   async updateProductTotalStock(productId: string) {
+    const total = parseFloat(result?.total ?? '0');
+
+    await this.productRepo.update(productId, {
+      current_quantity: total,
+    });
+  }
+
+async getProductStockTotals(): Promise<
+  {
+    productId: string;
+    productName: string;
+    localityId: string;
+    localityName: string;
+    quantity: number;
+  }[]
+> {
   const result = await this.stockRepo
     .createQueryBuilder('stock')
-    .select('SUM(stock.quantity)', 'total')
-    .where('stock.productId = :productId', { productId })
-    .getRawOne();
+    .leftJoin('stock.product', 'product')
+    .leftJoin('stock.locality', 'locality')
+    .select('product.id', 'productId')
+    .addSelect('product.name', 'productName')
+    .addSelect('locality.id', 'localityId')
+    .addSelect('locality.name', 'localityName')
+    .addSelect('SUM(stock.quantity)', 'quantity')
+    .groupBy('product.id')
+    .addGroupBy('product.name')
+    .addGroupBy('locality.id')
+    .addGroupBy('locality.name')
+    .orderBy('product.name', 'ASC')
+    .addOrderBy('locality.name', 'ASC')
+    .getRawMany();
 
-  const total = parseFloat(result?.total ?? '0');
-
-  await this.productRepo.update(productId, {
-    current_quantity: total,
-  });
+  return result.map((row) => ({
+    productId: row.productId,
+    productName: row.productName,
+    localityId: row.localityId,
+    localityName: row.localityName,
+    quantity: parseFloat(row.quantity),
+  }));
 }
-
 
   async remove(id: string): Promise<void> {
     const result = await this.stockRepo.delete(id);

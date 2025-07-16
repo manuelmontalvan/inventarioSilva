@@ -100,6 +100,27 @@ export const getSalePriceTrend = async (
   return data;
 };
 
+export const getTopSoldProducts = async (
+  startMonth?: string,
+  endMonth?: string,
+  limit = 10
+): Promise<
+  {
+    productId: string;
+    productName: string;
+    brandName: string;
+    unitName: string;
+    totalQuantity: number;
+  }[]
+> => {
+  const params: Record<string, string | number> = { limit };
+  if (startMonth) params.startMonth = startMonth;
+  if (endMonth) params.endMonth = endMonth;
+
+  const { data } = await axios.get("/sales/top-products", { params });
+  return data;
+};
+
 export const getMonthlySalesTrend = async (
   productId: string
 ): Promise<SaleQuantityTrendItem[]> => {

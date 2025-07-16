@@ -24,17 +24,22 @@ export interface ForecastItem {
   yhat_upper?: number;
   yhat_lower?: number;
 }
-
+export interface ForecastModelData {
+  total_forecast: number;
+  forecast: ForecastItem[];
+  metrics?: Record<string, number>;
+  alert_restock: boolean;
+  needed_stock: number;
+}
 export interface ProductForecastComparison {
   product: string;
   brand: string;
   unit: string;
-  total_forecast: number;
-  forecast: ForecastItem[];
-
-  current_quality: number;   // stock actual
-  alert_restock: boolean;    // alerta de reposición
-  needed_stock: number;      // cantidad necesaria para reponer
+  current_quality: number;
+  general_alert: boolean;
+  forecasts: {
+    [modelName: string]: ForecastModelData;
+  };
 }
 
 export interface PredictionComparisonResponse {

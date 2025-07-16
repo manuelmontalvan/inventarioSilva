@@ -1,17 +1,21 @@
 // lib/api/productStock.ts
-import axios from '@/lib/axiosInstance'; // asumiendo que tienes axiosInstance configurado
-import { ProductStock, CreateProductStockDto } from '@/types/productStock';
+import axios from "@/lib/axiosInstance"; // asumiendo que tienes axiosInstance configurado
+import { ProductStock, CreateProductStockDto } from "@/types/productStock";
 
-export const getProductStocks = async (productId?: string): Promise<ProductStock[]> => {
-  const res = await axios.get('/product-stock', {
+export const getProductStocks = async (
+  productId?: string
+): Promise<ProductStock[]> => {
+  const res = await axios.get("/product-stock", {
     params: productId ? { productId } : {},
     withCredentials: true,
   });
   return res.data;
 };
 
-export const createProductStock = async (data: CreateProductStockDto): Promise<ProductStock> => {
-  const res = await axios.post('/product-stock', data);
+export const createProductStock = async (
+  data: CreateProductStockDto
+): Promise<ProductStock> => {
+  const res = await axios.post("/product-stock", data);
   return res.data;
 };
 
@@ -28,10 +32,19 @@ export const deleteProductStock = async (id: string): Promise<null> => {
   return res.status === 204 ? null : res.data;
 };
 
-export const searchProductStocks = async (query: string): Promise<ProductStock[]> => {
-  const res = await axios.get('/product-stock/search', {
+export const searchProductStocks = async (
+  query: string
+): Promise<ProductStock[]> => {
+  const res = await axios.get("/product-stock/search", {
     params: { q: query },
     withCredentials: true,
   });
+  return res.data;
+};
+
+export const getStockTotals = async (): Promise<
+  { productId: string; productName: string; totalQuantity: number }[]
+> => {
+  const res = await axios.get("/product-stock/totals");
   return res.data;
 };

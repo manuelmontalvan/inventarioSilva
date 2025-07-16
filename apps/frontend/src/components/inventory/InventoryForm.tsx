@@ -6,6 +6,7 @@ import { getProducts } from "@/lib/api/products/products";
 import { ProductsTab } from "@/components/tabla/productTab";
 import { addToast } from "@heroui/toast";
 import { getLocalities } from "@/lib/api/products/localities";
+import { getOrderDetailsByOrderNumber } from "@/lib/api/shared";
 
 interface Movement {
   productId: string;
@@ -14,9 +15,16 @@ interface Movement {
   productName: string;
   brandName: string;
   unitName: string;
-  localityId: string;
+  localityId?: string;
   shelfId?: string;
   shelfName?: string;
+  availableStocks?: {
+    localityId: string;
+    localityName: string;
+    shelfId?: string;
+    shelfName?: string;
+    quantity: number;
+  }[];
 }
 
 interface InventoryFormProps {
@@ -41,24 +49,24 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
   const [notes, setNotes] = useState("");
   const [localities, setLocalities] = useState<Locality[]>([]);
   const [selectedLocality, setSelectedLocality] = useState<string>("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
- useEffect(() => {
-  const fetch = async () => {
-    try {
-      const res = await getProducts({
-        page: currentPage,
-        limit: 10,
-        search: searchTerm,
-      });
-      setProducts(res.data);
-      setTotalPages(res.totalPages);
-    } catch {
-      addToast({ title: "Error cargando productos", color: "danger" });
-    }
-  };
-  fetch();
-}, [currentPage, searchTerm]);
-
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const res = await getProducts({
+          page: currentPage,
+          limit: 10,
+          search: searchTerm,
+        });
+        setProducts(res.data);
+        setTotalPages(res.totalPages);
+      } catch {
+        addToast({ title: "Error cargando productos", color: "danger" });
+      }
+    };
+    fetch();
+  }, [currentPage, searchTerm, refreshKey]);
 
   useEffect(() => {
     const fetchLocalities = async () => {
@@ -72,6 +80,70 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
     };
     fetchLocalities();
   }, []);
+  useEffect(() => {
+    const loadOrderDetails = async () => {
+      if (!orderNumber || orderNumber.trim() === "") return;
+
+      try {
+        const res = await getOrderDetailsByOrderNumber(orderNumber.trim());
+
+        if (!res || !Array.isArray(res.items)) {
+          addToast({
+            title: "Orden no encontrada o sin productos",
+            color: "warning",
+          });
+          return;
+        }
+
+        const productsMap = new Map(products.map((p) => [p.id, p]));
+
+        const mappedMovements: Movement[] = res.items.map((item) => {
+          const product = productsMap.get(item.productId);
+
+          const availableStocks =
+            product?.stocks?.map((s) => ({
+              localityId: s.locality?.id ?? "",
+              localityName: s.locality?.name ?? "",
+              shelfId: s.shelf?.id,
+              shelfName: s.shelf?.name,
+              quantity: s.quantity,
+            })) ?? [];
+          const defaultStock = availableStocks[0];
+          return {
+            productId: item.productId,
+            productName: item.productName,
+            brandName: item.brand || "",
+            unitName: item.unit || "",
+            unitId: product?.unit_of_measure?.id || "",
+            quantity: item.quantity,
+            availableStocks,
+            localityId: defaultStock?.localityId,
+            shelfId: defaultStock?.shelfId,
+            shelfName: defaultStock?.shelfName,
+          };
+        });
+
+        setMovementList(mappedMovements);
+
+        addToast({
+          title: `Se cargaron ${mappedMovements.length} productos de la orden`,
+          color: "success",
+        });
+      } catch (error) {
+        setMovementList([]);
+        addToast({
+          title: "Error cargando la orden",
+          color: "danger",
+        });
+      }
+    };
+
+    const timeout = setTimeout(() => {
+      loadOrderDetails();
+    }, 500); // debounce
+
+    return () => clearTimeout(timeout);
+  }, [orderNumber, products]);
 
   const handleAdd = (
     product: ProductI,
@@ -81,6 +153,12 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
     shelfId?: string,
     shelfName?: string
   ) => {
+    const unitId = product.unit_of_measure?.id;
+    if (!unitId || !/^[0-9a-fA-F\-]{36}$/.test(unitId)) {
+      addToast({ title: "Unidad de medida inválida", color: "danger" });
+      return false;
+    }
+
     if (!localityId) {
       addToast({ title: "No se encontró localidad", color: "danger" });
       return false;
@@ -93,13 +171,14 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
         productName: product.name,
         brandName: product.brand?.name || "",
         unitName: product.unit_of_measure?.name || "",
-        unitId: product.unit_of_measure?.id || "",
+        unitId,
         quantity,
         localityId,
         shelfId,
         shelfName,
       },
     ]);
+
     return true;
   };
 
@@ -115,19 +194,51 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       return;
     }
 
+    // Mostrar advertencias si hay shelves que podrían quedar bajo mínimo
+    if (type === "OUT") {
+      movementList.forEach((movement) => {
+        const selectedStock = movement.availableStocks?.find(
+          (s) =>
+            s.localityId === movement.localityId &&
+            s.shelfId === movement.shelfId
+        );
 
+        if (selectedStock && selectedStock.quantity - movement.quantity < 0) {
+          addToast({
+            title: `Stock insuficiente para "${movement.productName}" en ${selectedStock.shelfName}`,
+            color: "danger",
+          });
+        } else if (
+          selectedStock &&
+          selectedStock.quantity - movement.quantity < 5 // puedes reemplazar 5 por stock mínimo real
+        ) {
+          addToast({
+            title: `Advertencia: Stock bajo para "${movement.productName}" en ${selectedStock.shelfName}`,
+            color: "warning",
+          });
+        }
+      });
+    }
 
     try {
+      // Eliminar `availableStocks` y enviar solo lo necesario
+      const cleanMovements = movementList.map(
+        ({ availableStocks, ...rest }) => rest
+      );
+
       await onSubmit({
         type,
-        movements: movementList,
+        movements: cleanMovements,
         invoice_number: invoiceNumber || undefined,
         orderNumber: orderNumber || undefined,
         notes: notes || undefined,
       });
 
       addToast({ title: "Movimiento guardado", color: "success" });
+      setRefreshKey((prev) => prev + 1); // fuerza recarga de productos y stock
+
       setMovementList([]);
+
       setInvoiceNumber("");
       setOrderNumber("");
       setNotes("");
@@ -261,8 +372,9 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
                 <th className="px-4 py-2 text-left border-r">Marca</th>
                 <th className="px-4 py-2 text-left border-r">Unidad</th>
                 <th className="px-4 py-2 text-left border-r">Cantidad</th>
-                <th className="px-4 py-2 text-left border-r">Localidad</th>
-                <th className="px-4 py-2 text-left border-r">Percha</th>
+                <th className="px-4 py-2 text-left border-r">
+                  Localidad + Percha
+                </th>
                 <th className="px-4 py-2 text-left">Acción</th>
               </tr>
             </thead>
@@ -277,10 +389,47 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
                   <td className="px-4 py-2 border-r">{m.unitName}</td>
                   <td className="px-4 py-2 border-r">{m.quantity}</td>
                   <td className="px-4 py-2 border-r">
-                    {localities.find((l) => l.id === m.localityId)?.name ||
-                      "N/A"}
+                    {m.availableStocks ? (
+                      <select
+                        value={`${m.localityId ?? ""}|${m.shelfId ?? ""}`}
+                        onChange={(e) => {
+                          const [locId, shelfId] = e.target.value.split("|");
+                          const stock = m.availableStocks?.find(
+                            (s) =>
+                              s.localityId === locId && s.shelfId === shelfId
+                          );
+                          setMovementList((prev) =>
+                            prev.map((mov) =>
+                              mov.productId === m.productId
+                                ? {
+                                    ...mov,
+                                    localityId: stock?.localityId,
+                                    shelfId: stock?.shelfId,
+                                    shelfName: stock?.shelfName,
+                                    // quantity: mov.quantity, <-- no cambiar cantidad aquí
+                                  }
+                                : mov
+                            )
+                          );
+                        }}
+                        className="border rounded px-2 py-1 w-full"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {m.availableStocks.map((s) => (
+                          <option
+                            key={`${s.localityId}-${s.shelfId}`}
+                            value={`${s.localityId}|${s.shelfId}`}
+                          >
+                            {s.localityName} - {s.shelfName || "Sin percha"}{" "}
+                            (Stock: {s.quantity})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      localities.find((l) => l.id === m.localityId)?.name ||
+                      "N/A"
+                    )}
                   </td>
-                  <td className="px-4 py-2 border-r">{m.shelfName ?? "-"}</td>
                   <td className="px-4 py-2">
                     <button
                       onClick={() => handleRemove(m.productId, m.shelfId)}

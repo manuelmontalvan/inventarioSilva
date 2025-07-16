@@ -6,36 +6,49 @@ interface Props {
 }
 
 export default function ProductRestockTable({ products }: Props) {
-  if (products.length === 0) {
-    return <p>No hay productos con alerta de stock.</p>;
+  // Filtrar productos que tienen al menos un modelo con alerta de restock
+  const filteredProducts = products.filter((p) =>
+    Object.values(p.forecasts).some((model) => model.alert_restock)
+  );
+
+  if (filteredProducts.length === 0) {
+    return <p className="text-gray-600 text-sm">No hay productos con alerta de stock.</p>;
   }
 
   return (
-    <table className="w-full table-auto border-collapse border border-gray-300">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="border border-gray-300 px-3 py-1 text-left">Producto</th>
-          <th className="border border-gray-300 px-3 py-1 text-left">Marca</th>
-          <th className="border border-gray-300 px-3 py-1 text-left">Unidad</th>
-          <th className="border border-gray-300 px-3 py-1 text-right">Stock Actual</th>
-          <th className="border border-gray-300 px-3 py-1 text-right">Cantidad Necesaria</th>
-        </tr>
-      </thead>
-      <tbody>
-        {products.map((p) => (
-          <tr key={`${p.product}-${p.brand}-${p.unit}`}>
-            <td className="border border-gray-300 px-3 py-1">{p.product}</td>
-            <td className="border border-gray-300 px-3 py-1">{p.brand}</td>
-            <td className="border border-gray-300 px-3 py-1">{p.unit}</td>
-            <td className="border border-gray-300 px-3 py-1 text-right">
-              {p.current_quality?.toFixed(2) ?? "0.00"}
-            </td>
-            <td className="border border-gray-300 px-3 py-1 text-right">
-              {p.needed_stock?.toFixed(2) ?? "0.00"}
-            </td>
+    <div className="overflow-auto rounded-md border border-gray-300">
+      <table className="w-full table-auto border-collapse text-sm">
+        <thead className="bg-gray-100 text-left">
+          <tr>
+            <th className="px-3 py-2 border-b">Producto</th>
+            <th className="px-3 py-2 border-b">Marca</th>
+            <th className="px-3 py-2 border-b">Unidad</th>
+            <th className="px-3 py-2 border-b text-right">Modelo</th>
+            <th className="px-3 py-2 border-b text-right">Stock Actual</th>
+            <th className="px-3 py-2 border-b text-right">Total Forecast</th>
+            <th className="px-3 py-2 border-b text-right">Faltante</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {filteredProducts.map((product) =>
+            Object.entries(product.forecasts)
+              .filter(([, forecast]) => forecast.alert_restock)
+              .map(([modelName, forecast]) => (
+                <tr key={`${product.product}-${product.brand}-${product.unit}-${modelName}`}>
+                  <td className="px-3 py-1 border-t">{product.product}</td>
+                  <td className="px-3 py-1 border-t">{product.brand}</td>
+                  <td className="px-3 py-1 border-t">{product.unit}</td>
+                  <td className="px-3 py-1 border-t text-right font-medium text-blue-600">{modelName}</td>
+                  <td className="px-3 py-1 border-t text-right">{product.current_quality.toFixed(2)}</td>
+                  <td className="px-3 py-1 border-t text-right">{forecast.total_forecast.toFixed(2)}</td>
+                  <td className="px-3 py-1 border-t text-right text-red-600 font-semibold">
+                    {forecast.needed_stock.toFixed(2)}
+                  </td>
+                </tr>
+              ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
