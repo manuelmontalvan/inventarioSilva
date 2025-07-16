@@ -6,7 +6,6 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from pmdarima import auto_arima
-from services.prepare_data_prophet import prepare_data_for_prophet
 
 models = {}    # Almacena modelos entrenados por tipo
 metrics = {}   # Almacena métricas MAE y RMSE por tipo
