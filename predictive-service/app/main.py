@@ -35,8 +35,7 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["X-API-Key", "Content-Type", "Authorization"],
-
+    allow_headers=["*"],
 )
 
 # 🛡️ Este debe ir después del CORS
