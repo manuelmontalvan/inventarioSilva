@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@heroui/button";
 import { Search, Loader2 } from "lucide-react";
 import { searchProductStocks } from "@/lib/api/products/productStocks";
 import { ProductStock } from "@/types/productStock";
+
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+
 export default function ProductStockTotalsModal({
   open,
   onClose,
@@ -51,6 +53,42 @@ export default function ProductStockTotalsModal({
 
     fetchStocks();
   }, [open, query]);
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Totales de Productos por Localidad", 14, 15);
+    autoTable(doc, {
+      startY: 20,
+      head: [["Producto", "Marca", "Localidad", "Percha", "Cantidad"]],
+      body: stocks.map((item) => [
+        item.product.name,
+        item.product.brand?.name || "-",
+        item.locality.name,
+        item.shelf.name,
+        item.quantity.toFixed(2),
+      ]),
+    });
+    doc.save("stock_totales.pdf");
+  };
+
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      stocks.map((item) => ({
+        Producto: item.product.name,
+        Marca: item.product.brand?.name || "-",
+        Localidad: item.locality.name,
+        Percha: item.shelf.name,
+        Cantidad: item.quantity.toFixed(2),
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Totales");
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(data, "stock_totales.xlsx");
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -58,6 +96,26 @@ export default function ProductStockTotalsModal({
         <DialogTitle className="text-xl font-bold mb-2">
           Totales de Productos por Localidad
         </DialogTitle>
+        <div className="flex justify-end gap-2 mb-4">
+          <Button
+            size="sm"
+            variant="bordered"
+            color="success"
+            onPress={exportToPDF}
+            disabled={stocks.length === 0}
+          >
+            Exportar PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="bordered"
+            color="warning"
+            onPress={exportToExcel}
+            disabled={stocks.length === 0}
+          >
+            Exportar Excel
+          </Button>
+        </div>
 
         {/* Input de búsqueda */}
         <div className="mb-4 relative">
@@ -100,12 +158,17 @@ export default function ProductStockTotalsModal({
                       <td className="p-2">{item.product.brand?.name || "-"}</td>
                       <td className="p-2">{item.locality.name}</td>
                       <td className="p-2">{item.shelf.name}</td>
-                      <td className="p-2 text-right">{item.quantity.toFixed(2)}</td>
+                      <td className="p-2 text-right">
+                        {item.quantity.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                   {currentData.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                      <td
+                        colSpan={5}
+                        className="p-4 text-center text-muted-foreground"
+                      >
                         No se encontraron resultados.
                       </td>
                     </tr>
@@ -122,17 +185,19 @@ export default function ProductStockTotalsModal({
                 </span>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="bordered"
+                    color="success"
                     size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    onPress={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
                   >
                     Anterior
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="bordered"
+                    color="success"
                     size="sm"
-                    onClick={() =>
+                    onPress={() =>
                       setCurrentPage((p) => Math.min(p + 1, totalPages))
                     }
                     disabled={currentPage === totalPages}
