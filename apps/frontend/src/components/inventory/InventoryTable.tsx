@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { InventoryMovement } from "@/types/inventory";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface Props {
   movements: InventoryMovement[];
@@ -31,10 +35,111 @@ export default function InventoryTable({ movements }: Props) {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+const exportToPDF = () => {
+  const doc = new jsPDF({ orientation: "landscape" }); // Mejor orientación para muchas columnas
+  const title = "Movimientos de Inventario";
+  const date = new Date().toLocaleString("es-EC");
+
+  doc.setFontSize(14);
+  doc.text(title, 14, 15);
+  doc.setFontSize(10);
+  doc.text(`Generado: ${date}`, 14, 22);
+
+  autoTable(doc, {
+    startY: 28,
+    head: [[
+      "Fecha",
+      "Tipo",
+      "Producto",
+      "Marca",
+      "Unidad",
+      "Cantidad",
+      "Localidad",
+      "Percha",
+      "Orden",
+      "Factura",
+      "Notas"
+    ]],
+    body: filteredMovements.map((m) => [
+      new Date(m.createdAt).toLocaleString("es-EC", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "UTC",
+      }),
+      m.type === "IN" ? "Entrada" : "Salida",
+      m.productName || m.product?.name || "-",
+      m.brandName || "-",
+      m.unitName || "-",
+      m.quantity,
+      m.locality?.name || "-",
+      m.shelfName || m.shelfId || "-",
+      m.orderNumber || "-",
+      m.invoice_number || "-",
+      m.notes || "-",
+    ]),
+    styles: {
+      fontSize: 9,
+      cellPadding: 2,
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: [0, 102, 204], // Azul
+      textColor: 255,
+      halign: "center",
+    },
+    columnStyles: {
+      0: { cellWidth: 28 },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 22 },
+      5: { cellWidth: 20, halign: "right" },
+      6: { cellWidth: 28 },
+      7: { cellWidth: 24 },
+      8: { cellWidth: 26 },
+      9: { cellWidth: 26 },
+      10: { cellWidth: 26 },
+    },
+    margin: { top: 28, left: 14, right: 14 },
+  });
+
+  doc.save("movimientos_inventario.pdf");
+};
+
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredMovements.map((m) => ({
+        Fecha: new Date(m.createdAt).toLocaleString("es-EC", {
+          dateStyle: "short",
+          timeStyle: "short",
+          timeZone: "UTC",
+        }),
+        Tipo: m.type === "IN" ? "Entrada" : "Salida",
+        Producto: m.productName || m.product?.name || "-",
+        Marca: m.brandName || "-",
+        Unidad: m.unitName || "-",
+        Cantidad: m.quantity,
+        Localidad: m.locality?.name || "-",
+        Percha: m.shelfName || m.shelfId || "-",
+        Orden: m.orderNumber || "-",
+        Factura: m.invoice_number || "-",
+        Notas: m.notes || "-",
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Movimientos");
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(data, "movimientos_inventario.xlsx");
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+        {/* Input de búsqueda */}
         <input
           type="text"
           placeholder="Buscar por producto, tipo o orden..."
@@ -43,8 +148,32 @@ export default function InventoryTable({ movements }: Props) {
             setSearchTerm(e.target.value);
             setCurrentPage(1); // Reiniciar a página 1 al buscar
           }}
-          className="px-4 py-2 border rounded-md w-full max-w-md dark:bg-gray-800 dark:text-white dark:border-gray-600"
+          className="w-full sm:max-w-md px-4 py-2 border rounded-md text-sm
+               bg-white text-gray-900 border-gray-300
+               dark:bg-gray-800 dark:text-white dark:border-gray-600"
         />
+
+        {/* Botones de exportación */}
+        <div className="flex flex-wrap gap-2 justify-end">
+          <button
+            onClick={exportToPDF}
+            disabled={filteredMovements.length === 0}
+            className="px-4 py-2 text-sm rounded font-medium
+                 bg-red-600 text-white hover:bg-red-700
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Exportar PDF
+          </button>
+          <button
+            onClick={exportToExcel}
+            disabled={filteredMovements.length === 0}
+            className="px-4 py-2 text-sm rounded font-medium
+                 bg-green-600 text-white hover:bg-green-700
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Exportar Excel
+          </button>
+        </div>
       </div>
 
       <div className="overflow-auto border rounded-lg shadow-sm bg-white dark:bg-gray-900">
