@@ -101,14 +101,24 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
           const product = productsMap.get(item.productId);
 
           const availableStocks =
-            product?.stocks?.map((s) => ({
-              localityId: s.locality?.id ?? "",
-              localityName: s.locality?.name ?? "",
-              shelfId: s.shelf?.id,
-              shelfName: s.shelf?.name,
-              quantity: s.quantity,
-            })) ?? [];
+            product?.stocks
+              ?.filter((s) => s.locality?.id && s.shelf?.id) // solo si tiene percha y localidad
+              .map((s) => ({
+                localityId: s.locality!.id,
+                localityName: s.locality!.name,
+                shelfId: s.shelf!.id,
+                shelfName: s.shelf!.name,
+                quantity: s.quantity,
+              })) ?? [];
+
           const defaultStock = availableStocks[0];
+          if (availableStocks.length === 0) {
+            addToast({
+              title: `El producto "${item.productName}" no tiene stock disponible con percha asignada.`,
+              color: "warning",
+            });
+          }
+
           return {
             productId: item.productId,
             productName: item.productName,
@@ -222,12 +232,11 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
 
     try {
       // Eliminar `availableStocks` y enviar solo lo necesario
-      const cleanMovements = movementList.map(movement => {
-  const copy = { ...movement };
-  delete copy.availableStocks;
-  return copy;
-});
-
+      const cleanMovements = movementList.map((movement) => {
+        const copy = { ...movement };
+        delete copy.availableStocks;
+        return copy;
+      });
 
       await onSubmit({
         type,
