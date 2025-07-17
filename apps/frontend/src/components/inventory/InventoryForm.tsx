@@ -56,11 +56,11 @@ export default function InventoryForm({ onSubmit }: InventoryFormProps) {
       try {
         const res = await getProducts({
           page: currentPage,
-          limit: 10,
+          limit: 1000,
           search: searchTerm,
         });
         setProducts(res.data);
-        setTotalPages(res.totalPages);
+        setTotalPages(1);
       } catch {
         addToast({ title: "Error cargando productos", color: "danger" });
       }
