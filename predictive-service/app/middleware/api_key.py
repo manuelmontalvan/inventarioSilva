@@ -11,7 +11,11 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # ✅ Maneja explícitamente preflight requests
         if request.method == "OPTIONS":
-            return Response(status_code=204)
+            response = Response(status_code=204)
+            response.headers["Access-Control-Allow-Origin"] = "https://inventario-silva.vercel.app"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-API-Key"
+            return response
 
         # ✅ Permite acceso a documentación pública
         if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
