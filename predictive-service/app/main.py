@@ -26,16 +26,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+origins = [
+    "https://inventario-silva.vercel.app",  # Frontend en Vercel
+    # Puedes añadir más orígenes si los necesitas
+]
+
 # ⚠️ ¡CORS debe ir antes del APIKeyMiddleware!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://inventario-silva.vercel.app",
-        "http://localhost:3000",
-    ],
+    allow_origins=origins,  # Permite estos orígenes
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permite todos los headers
 )
 
 # 🛡️ Este debe ir después del CORS
