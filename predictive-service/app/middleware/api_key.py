@@ -8,16 +8,16 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+       async def dispatch(self, request: Request, call_next):
+        # Permitir preflight automáticamente (ya lo hace CORSMiddleware, pero igual se valida)
         if request.method == "OPTIONS":
-            # IMPORTANTE: No respondas directamente ni pongas headers acá
-            # Solo pasa adelante, CORSMiddleware ya maneja esto
             return await call_next(request)
 
-        # Documentación pública
+        # Permitir acceso a documentación
         if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
             return await call_next(request)
 
+        # Verificación de API Key
         api_key = request.headers.get("X-API-Key")
         if api_key != API_KEY:
             raise HTTPException(status_code=401, detail="API key inválida o ausente")

@@ -6,15 +6,19 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-
+import { clearInventoryMovements } from "@/lib/api/inventory";
+import { addToast } from "@heroui/toast";
+import ConfirmModal from "@/components/confirmModal";
 interface Props {
   movements: InventoryMovement[];
+  onClear?: () => void;
 }
 
-export default function InventoryTable({ movements }: Props) {
+export default function InventoryTable({ movements, onClear, }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [searchTerm, setSearchTerm] = useState("");
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
   const filteredMovements = movements.filter((m) => {
     const search = searchTerm.toLowerCase();
@@ -30,81 +34,97 @@ export default function InventoryTable({ movements }: Props) {
     );
   });
 
+  const handleClearTable = async () => {   
+
+    try {
+      await clearInventoryMovements();
+       addToast({title:"Se limpiaron todos los datos", color:"success" })
+    if (onClear) onClear();
+    } catch (error) {
+      console.error("Error al vaciar movimientos:", error);
+      alert("Ocurrió un error al intentar vaciar los movimientos.");
+    }finally {
+    setConfirmOpen(false); // ✅ cerrar el modal
+  }
+  };
+
   const totalPages = Math.ceil(filteredMovements.length / itemsPerPage);
   const paginated = filteredMovements.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-const exportToPDF = () => {
-  const doc = new jsPDF({ orientation: "landscape" }); // Mejor orientación para muchas columnas
-  const title = "Movimientos de Inventario";
-  const date = new Date().toLocaleString("es-EC");
+  const exportToPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape" }); // Mejor orientación para muchas columnas
+    const title = "Movimientos de Inventario";
+    const date = new Date().toLocaleString("es-EC");
 
-  doc.setFontSize(14);
-  doc.text(title, 14, 15);
-  doc.setFontSize(10);
-  doc.text(`Generado: ${date}`, 14, 22);
+    doc.setFontSize(14);
+    doc.text(title, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generado: ${date}`, 14, 22);
 
-  autoTable(doc, {
-    startY: 28,
-    head: [[
-      "Fecha",
-      "Tipo",
-      "Producto",
-      "Marca",
-      "Unidad",
-      "Cantidad",
-      "Localidad",
-      "Percha",
-      "Orden",
-      "Factura",
-      "Notas"
-    ]],
-    body: filteredMovements.map((m) => [
-      new Date(m.createdAt).toLocaleString("es-EC", {
-        dateStyle: "short",
-        timeStyle: "short",
-        timeZone: "UTC",
-      }),
-      m.type === "IN" ? "Entrada" : "Salida",
-      m.productName || m.product?.name || "-",
-      m.brandName || "-",
-      m.unitName || "-",
-      m.quantity,
-      m.locality?.name || "-",
-      m.shelfName || m.shelfId || "-",
-      m.orderNumber || "-",
-      m.invoice_number || "-",
-      m.notes || "-",
-    ]),
-    styles: {
-      fontSize: 9,
-      cellPadding: 2,
-      overflow: "linebreak",
-    },
-    headStyles: {
-      fillColor: [0, 102, 204], // Azul
-      textColor: 255,
-      halign: "center",
-    },
-    columnStyles: {
-      0: { cellWidth: 28 },
-      1: { cellWidth: 20 },
-      2: { cellWidth: 38 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 22 },
-      5: { cellWidth: 20, halign: "right" },
-      6: { cellWidth: 28 },
-      7: { cellWidth: 24 },
-      8: { cellWidth: 26 },
-      9: { cellWidth: 26 },
-      10: { cellWidth: 26 },
-    },
-    margin: { top: 28, left: 14, right: 14 },
-  });
+    autoTable(doc, {
+      startY: 28,
+      head: [
+        [
+          "Fecha",
+          "Tipo",
+          "Producto",
+          "Marca",
+          "Unidad",
+          "Cantidad",
+          "Localidad",
+          "Percha",
+          "Orden",
+          "Factura",
+          "Notas",
+        ],
+      ],
+      body: filteredMovements.map((m) => [
+        new Date(m.createdAt).toLocaleString("es-EC", {
+          dateStyle: "short",
+          timeStyle: "short",
+          timeZone: "UTC",
+        }),
+        m.type === "IN" ? "Entrada" : "Salida",
+        m.productName || m.product?.name || "-",
+        m.brandName || "-",
+        m.unitName || "-",
+        m.quantity,
+        m.locality?.name || "-",
+        m.shelfName || m.shelfId || "-",
+        m.orderNumber || "-",
+        m.invoice_number || "-",
+        m.notes || "-",
+      ]),
+      styles: {
+        fontSize: 9,
+        cellPadding: 2,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [0, 102, 204], // Azul
+        textColor: 255,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 38 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 20, halign: "right" },
+        6: { cellWidth: 28 },
+        7: { cellWidth: 24 },
+        8: { cellWidth: 26 },
+        9: { cellWidth: 26 },
+        10: { cellWidth: 26 },
+      },
+      margin: { top: 28, left: 14, right: 14 },
+    });
 
-  doc.save("movimientos_inventario.pdf");
-};
+    doc.save("movimientos_inventario.pdf");
+  };
 
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
@@ -136,6 +156,7 @@ const exportToPDF = () => {
     saveAs(data, "movimientos_inventario.xlsx");
   };
 
+ 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
@@ -172,6 +193,15 @@ const exportToPDF = () => {
                  disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Exportar Excel
+          </button>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            disabled={filteredMovements.length === 0}
+            className="px-4 py-2 text-sm rounded font-medium
+       bg-yellow-500 text-white hover:bg-yellow-600
+       disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Vaciar tabla
           </button>
         </div>
       </div>
@@ -254,6 +284,13 @@ const exportToPDF = () => {
           Siguiente
         </button>
       </div>
+       <ConfirmModal
+              isOpen={confirmOpen}
+              title="Vaciar historial"
+              message="¿Seguro que deseas eliminar todos los movimientos?"
+              onConfirm={handleClearTable}
+              onCancel={() => setConfirmOpen(false)}
+            />
     </div>
   );
 }

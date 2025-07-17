@@ -1,63 +1,50 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-import os
-from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
+from app.routes.predict_route import router as predict_router
+from app.routes.compare_route import router as compare_router
+from app.models.prophet_models import train_models_from_db, models
+from app.scheduler import scheduler, retrain_models_job
+from contextlib import asynccontextmanager
+from app.middleware.api_key import APIKeyMiddleware
 
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        train_models_from_db()
+        print("✅ Modelos Prophet entrenados correctamente")
+    except Exception as e:
+        print(f"❌ Error entrenando modelos Prophet: {e}")
 
-app = FastAPI()
+    scheduler.start()
+    retrain_models_job()
+    print(f"Modelos cargados: {list(models.keys())[:5]}")
 
-# CORS middleware debe ir primero
-origins = [
-    "https://inventario-silva.vercel.app",  # Frontend en Vercel
-    "http://localhost:3000",                  # Para desarrollo local (opcional)
-]
+    yield
+    print("🛑 Apagando scheduler...")
+    scheduler.shutdown()
 
+app = FastAPI(lifespan=lifespan)
+
+# ⚠️ ¡CORS debe ir antes del APIKeyMiddleware!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://inventario-silva.vercel.app",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Middleware para loguear peticiones
-class LoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        print(f"[LOG] Incoming request: {request.method} {request.url}")
-        response = await call_next(request)
-        return response
-
-app.add_middleware(LoggingMiddleware)
-
-# Middleware para API Key (debe ir después de CORS)
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Permitir OPTIONS para preflight sin validar API key
-        if request.method == "OPTIONS":
-            return await call_next(request)
-
-        # Permitir docs y openapi sin API key
-        if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi.json"):
-            return await call_next(request)
-
-        api_key = request.headers.get("X-API-Key")
-        if api_key != API_KEY:
-            raise HTTPException(status_code=401, detail="API key inválida o ausente")
-
-        return await call_next(request)
-
+# 🛡️ Este debe ir después del CORS
 app.add_middleware(APIKeyMiddleware)
 
-@app.get("/")
-async def root():
-    print("Root endpoint was called")
-    return {"message": "API de predicción funcionando"}
+# 📦 Rutas
+app.include_router(predict_router)
+app.include_router(compare_router)
 
-# Ejemplo de ruta para probar
-@app.get("/predict/all-models")
-async def predict_all_models(request: Request):
-    print(f"Request received at /predict/all-models from {request.client.host}")
-    return {"result": "ok"}
+@app.get("/")
+def root():
+    return {"message": "API de predicción funcionando"}

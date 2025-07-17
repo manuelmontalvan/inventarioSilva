@@ -123,7 +123,8 @@ export default function InventoryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <InventoryTable movements={movements} />
+           <InventoryTable movements={movements} onClear={loadMovements} />
+
           </CardContent>
         </Card>
       </div>

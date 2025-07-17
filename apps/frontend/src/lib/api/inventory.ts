@@ -36,3 +36,6 @@ export const updateInventoryMovement = async (
 export const deleteInventoryMovement = async (id: string): Promise<void> => {
   await axios.delete(`/inventory/${id}`);
 };
+export const clearInventoryMovements = async (): Promise<void> => {
+  await axios.delete('/inventory/clear?confirm=YES');
+};

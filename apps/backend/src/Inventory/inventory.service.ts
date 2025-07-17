@@ -1,7 +1,6 @@
 // src/inventory/inventory-movement.service.ts
 import {
-  Injectable,
-  NotFoundException,
+  Injectable,  
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -159,6 +158,11 @@ export class InventoryService {
 
     return { movements: savedMovements, warnings };
   }
+  async clearAll(): Promise<{ message: string }> {
+  await this.movementRepo.clear();
+  return { message: 'Todos los movimientos de inventario han sido eliminados.' };
+}
+
 
   async findAll(): Promise<InventoryMovement[]> {
     return this.movementRepo.find({
