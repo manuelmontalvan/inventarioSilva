@@ -1,9 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { MarginConfig } from './entities/margin-config.entity';
 import { Tax } from './entities/tax.entity';
 import { CreateMarginConfigDto } from './dto/create-margin-config.dto';
@@ -15,6 +12,7 @@ import { Product } from '../products/entities/product.entity';
 
 @Injectable()
 export class PricingService {
+ 
   constructor(
     @InjectRepository(MarginConfig)
     private readonly marginRepo: Repository<MarginConfig>,
@@ -46,8 +44,10 @@ export class PricingService {
     const savedMargin = await this.marginRepo.save(config);
 
     // Actualizar productos
-    await this.updateProductsProfitMargin(dto.percentage ?? 0, dto.categoryId ?? undefined);
-
+    await this.updateProductsProfitMargin(
+      dto.percentage ?? 0,
+      dto.categoryId ?? undefined,
+    );
 
     return savedMargin;
   }
@@ -76,8 +76,10 @@ export class PricingService {
     const saved = await this.marginRepo.save(config);
 
     // Actualizar productos
-   await this.updateProductsProfitMargin(dto.percentage ?? 0, dto.categoryId ?? undefined);
-
+    await this.updateProductsProfitMargin(
+      dto.percentage ?? 0,
+      dto.categoryId ?? undefined,
+    );
 
     return saved;
   }
@@ -85,11 +87,49 @@ export class PricingService {
   async getAllMargins() {
     return this.marginRepo.find({ relations: ['category'] });
   }
+  async getMarginForCategoryOrGeneral(
+    categoryId: string,
+  ): Promise<number | null> {
+    const marginForCategory = await this.marginRepo.findOne({
+      where: { category: { id: categoryId } },
+    });
+
+    if (marginForCategory) {
+      return marginForCategory.percentage;
+    }
+
+    const generalMargin = await this.marginRepo.findOne({
+      where: { category: IsNull() },
+    });
+
+    if (generalMargin) {
+      return generalMargin.percentage;
+    }
+
+    return null;
+  }
 
   async deleteMargin(id: string) {
     const config = await this.marginRepo.findOneBy({ id });
     if (!config) throw new NotFoundException('Margen no encontrado');
     return this.marginRepo.delete(id);
+  }
+  // En PricingService
+  async getMarginForCategory(categoryId: string): Promise<number | null> {
+    // Primero intenta buscar margen específico de la categoría
+    const specific = await this.marginRepo.findOne({
+      where: { category: { id: categoryId } },
+      relations: ['category'],
+    });
+
+    if (specific) return specific.percentage;
+
+    // Luego busca margen global (sin categoría)
+    const global = await this.marginRepo.findOne({
+      where: { category: IsNull() },
+    });
+
+    return global ? global.percentage : null;
   }
 
   // === Taxes ===
@@ -118,32 +158,30 @@ export class PricingService {
 
   // === Actualizar margen en productos ===
 
-private async updateProductsProfitMargin(
-  percentage: number,
-  categoryId?: string,
-) {
-  const query = this.productRepo
-    .createQueryBuilder('product')
-    .leftJoinAndSelect('product.category', 'category');
+  private async updateProductsProfitMargin(
+    percentage: number,
+    categoryId?: string,
+  ) {
+    const query = this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category');
 
-  if (categoryId) {
-    query.where('category.id = :categoryId', { categoryId });
-  }
-
-  const products = await query.getMany();
-
-  for (const product of products) {
-    product.profit_margin = percentage;
-
-    if (product.purchase_price && percentage > 0) {
-      product.sale_price = parseFloat(
-        (product.purchase_price / (1 - percentage / 100)).toFixed(2),
-      );
+    if (categoryId) {
+      query.where('category.id = :categoryId', { categoryId });
     }
 
-    await this.productRepo.save(product);
+    const products = await query.getMany();
+
+    for (const product of products) {
+      product.profit_margin = percentage;
+
+      if (product.purchase_price && percentage > 0) {
+        product.sale_price = parseFloat(
+          (product.purchase_price / (1 - percentage / 100)).toFixed(2),
+        );
+      }
+
+      await this.productRepo.save(product);
+    }
   }
-}
-
-
 }

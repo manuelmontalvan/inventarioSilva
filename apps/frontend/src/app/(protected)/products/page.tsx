@@ -135,10 +135,12 @@ export default function ProductAdminPage() {
     try {
       if (selectedProducts.length === 0) {
         await deleteAllProducts();
-      } else {
+      } else if (bulkDeleteMode) {
         await Promise.all(
           selectedProducts.map((id) => deleteProduct(id.toString()))
         );
+      } else if (selectedProduct) {
+        await deleteProduct(selectedProduct.id);
       }
       setSelectedProducts([]);
       fetchProducts();

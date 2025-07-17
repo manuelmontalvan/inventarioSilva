@@ -12,7 +12,9 @@ import { InventoryMovement } from 'src/Inventory/inventory-movement.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
 import { Shelf } from './locality/shelves/entities/shelf.entity';
 import { ProductStockService } from './product-stock/product-stock.service';
-
+import { PricingService } from 'src/pricing/pricing.service';
+import { MarginConfig } from '../pricing/entities/margin-config.entity';
+import { Tax } from 'src/pricing/entities/tax.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -24,11 +26,13 @@ import { ProductStockService } from './product-stock/product-stock.service';
       ProductCostHistory, 
       ProductStock,
       InventoryMovement,
-      Shelf
+      Shelf,
+      MarginConfig,
+      Tax
     ]),
   ],
   controllers: [ProductsController],
 
-  providers: [ProductsService ,ProductStockService ],
+  providers: [ProductsService  ,ProductStockService, PricingService],
 })
 export class ProductsModule {}

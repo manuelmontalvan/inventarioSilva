@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -23,6 +23,7 @@ import { Shelf } from './locality/shelves/entities/shelf.entity';
 import { ProductStock } from './product-stock/product-stock.entity';
 import { QueryFailedError } from 'typeorm';
 import { ProductStockService } from './product-stock/product-stock.service';
+import { PricingService } from 'src/pricing/pricing.service';
 
 @Injectable()
 export class ProductsService {
@@ -45,7 +46,7 @@ export class ProductsService {
     private shelfRepository: Repository<Shelf>,
     @InjectRepository(ProductStock)
     private productStockRepository: Repository<ProductStock>,
-
+    private readonly pricingService: PricingService,
     private readonly productStockService: ProductStockService,
   ) {}
 
@@ -59,10 +60,7 @@ export class ProductsService {
     salePrice: number,
     purchasePrice: number,
   ): number {
-    if (salePrice <= 0 || purchasePrice <= 0) {
-      this.logger.warn(
-        `❗️[CALC] No se puede calcular margen: salePrice=${salePrice}, purchasePrice=${purchasePrice}`,
-      );
+    if (salePrice <= 0 || purchasePrice <= 0) {      
       return 0;
     }
 
@@ -75,9 +73,7 @@ export class ProductsService {
     profitMargin: number,
   ): number {
     if (purchasePrice <= 0 || profitMargin <= 0 || profitMargin >= 100) {
-      this.logger.warn(
-        `❗️[CALC] No se puede calcular precio de venta: purchasePrice=${purchasePrice}, profitMargin=${profitMargin}`,
-      );
+      
       return purchasePrice;
     }
 
@@ -117,15 +113,24 @@ export class ProductsService {
       );
 
     let sale_price = 0;
+    let final_profit_margin = profit_margin;
+
+    // Solo si no se pasó margen, buscamos el general o de categoría
+    if (profit_margin == null || profit_margin <= 0) {
+      const margin =
+        await this.pricingService.getMarginForCategoryOrGeneral(categoryId);
+      if (margin && margin > 0) {
+        final_profit_margin = margin;
+      }
+    }
 
     if (
       typeof purchase_price === 'number' &&
-      purchase_price > 0 &&
-      typeof profit_margin === 'number' &&
-      profit_margin > 0
+      final_profit_margin &&
+      final_profit_margin > 0
     ) {
       sale_price = parseFloat(
-        this.calculateSalePrice(purchase_price, profit_margin).toFixed(2),
+        this.calculateSalePrice(purchase_price, final_profit_margin).toFixed(2),
       );
     }
 
@@ -133,7 +138,7 @@ export class ProductsService {
       ...productData,
       purchase_price,
       sale_price,
-      profit_margin,
+      profit_margin: final_profit_margin,
       category,
       brand,
       unit_of_measure: unitOfMeasure,
@@ -307,9 +312,7 @@ export class ProductsService {
         ).toFixed(2),
       );
 
-      this.logger.debug(
-        `[UPDATE] Recalculado sale_price=${product.sale_price} usando PP=${product.purchase_price} y PM=${product.profit_margin}`,
-      );
+      
     }
 
     product.updatedBy = updatedBy;
@@ -569,7 +572,7 @@ export class ProductsService {
       }
 
       await this.productRepository.save(product);
- 
+
       created.push(product.name);
 
       // Opcional: agregar stock en shelf si viene en la fila
@@ -617,7 +620,7 @@ export class ProductsService {
 
         const stock = this.productStockRepository.create({
           product,
-          productId: product.id, 
+          productId: product.id,
           shelf,
           shelfId: shelf.id,
           locality,
@@ -626,7 +629,7 @@ export class ProductsService {
           min_stock: shelfMinStock,
           max_stock: shelfMaxStock,
         });
-        
+
         await this.productStockRepository.save(stock);
         await this.productStockService.updateProductTotalStock(product.id);
       }

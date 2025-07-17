@@ -15,6 +15,6 @@ import { Product } from '../products/entities/product.entity';
   ],
   providers: [PricingService],
   controllers: [PricingController], // <- Declara el controller aquí
-  exports: [PricingService],
+  exports: [PricingService,TypeOrmModule],
 })
 export class PricingModule {}
