@@ -32,36 +32,38 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private parseDateDMY(dateStr: any): Date | null {
-    if (!dateStr) return null;
+private parseDateDMY(dateStr: any): Date | null {
+  if (!dateStr) return null;
 
-    if (typeof dateStr === 'string') {
-      // Caso string tipo "25/06/2024"
-      const parts = dateStr.split('/');
-      if (parts.length !== 3) return null;
-      const [day, month, year] = parts.map(Number);
-      if (!day || !month || !year) return null;
-      return new Date(year, month, day);
-    }
+  if (typeof dateStr === 'string') {
+    // Primero probar con formato ISO (YYYY-MM-DD)
+    const parsedISO = new Date(dateStr);
+    if (!isNaN(parsedISO.getTime())) return parsedISO;
 
-    if (dateStr instanceof Date) {
-      // Si ya es un objeto Date, devuelve directamente
-      if (isNaN(dateStr.getTime())) return null;
-      return dateStr;
-    }
-
-    if (typeof dateStr === 'number') {
-      // Excel a veces envía fechas como número (timestamp)
-      // Convertir número Excel a JS Date
-      // En Excel el 1 es 1900-01-01, ajustamos:
-      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-      const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
-      if (isNaN(jsDate.getTime())) return null;
-      return jsDate;
-    }
-
-    return null; // Para cualquier otro tipo desconocido
+    // Si no es ISO, tratar D/M/Y con slashes
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts.map(Number);
+    if (!day || !month || !year) return null;
+    return new Date(year, month - 1, day);
   }
+
+  if (dateStr instanceof Date) {
+    if (isNaN(dateStr.getTime())) return null;
+    return dateStr;
+  }
+
+  if (typeof dateStr === 'number') {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
+    if (isNaN(jsDate.getTime())) return null;
+    return jsDate;
+  }
+
+  return null;
+}
+
+
 
   async create(createSaleDto: CreateSaleDto, user: User): Promise<Sale> {
     const sale = new Sale();
@@ -147,81 +149,83 @@ export class SalesService {
   }
 
   async importSalesFromExcel(fileBuffer: Buffer, user: User) {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const salesPromises: Promise<Sale>[] = [];
+  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+  const salesPromises: Promise<Sale>[] = [];
 
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-      if (rows.length === 0) continue;
+    if (rows.length === 0) continue;
 
-      const productSalesToCreate: CreateProductSaleDto[] = [];
+    const productSalesToCreate: CreateProductSaleDto[] = [];
 
-      let customer: Customer | null = null;
-      const firstCustomerName = rows[0]?.['customerName']?.trim();
-      if (firstCustomerName) {
-        customer = await this.customerRepository.findOne({
-          where: { name: firstCustomerName },
+    // Obtener cliente de la primera fila (asumiendo que es el mismo para toda la hoja)
+    let customer: Customer | null = null;
+    const firstCustomerName = rows[0]?.['customerName']?.trim();
+    if (firstCustomerName) {
+      customer = await this.customerRepository.findOne({
+        where: { name: firstCustomerName },
+      });
+      if (!customer) {
+        customer = this.customerRepository.create({
+          name: firstCustomerName,
         });
-        if (!customer) {
-          customer = this.customerRepository.create({
-            name: firstCustomerName,
-          });
-          customer = await this.customerRepository.save(customer);
-        }
+        customer = await this.customerRepository.save(customer);
       }
-
-      for (const row of rows) {
-        const product = await this.productRepository.findOne({
-          where: {
-            name: row['productName'],
-            brand: { name: row['brandName'] },
-            unit_of_measure: { name: row['unitName'] },
-          },
-          relations: ['brand', 'unit_of_measure'],
-        });
-
-        if (!product) {
-          throw new NotFoundException(
-            `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
-          );
-        }
-
-        if (product.sale_price === undefined) {
-          throw new BadRequestException(
-            `El producto ${product.name} no tiene precio de venta asignado.`,
-          );
-        }
-
-        const rawDate = row['saleDate'];
-        const parsedDate = this.parseDateDMY(rawDate) ?? new Date();
-
-        productSalesToCreate.push({
-          productId: product.id,
-          quantity: Number(row['quantity']),
-          unit_price: product.sale_price,
-          notes: row['notes'] || '',
-          sale_date: parsedDate.toISOString(),
-          invoice_number: row['invoice_number'] || '',
-        });
-      }
-
-      const createSaleDto: CreateSaleDto = {
-        productSales: productSalesToCreate,
-        payment_method: 'cash',
-        status: 'paid',
-        notes: `Importado desde  ${sheetName}`,
-        invoice_number: rows[0]?.['invoice_number'] || '',
-        customerId: customer?.id,
-      };
-
-      salesPromises.push(this.create(createSaleDto, user));
     }
 
-    // Aquí podrías usar await Promise.all(salesPromises) para esperar todas
-    return Promise.all(salesPromises);
+    for (const row of rows) {
+      const product = await this.productRepository.findOne({
+        where: {
+          name: row['productName'],
+          brand: { name: row['brandName'] },
+          unit_of_measure: { name: row['unitName'] },
+        },
+        relations: ['brand', 'unit_of_measure'],
+      });
+
+      if (!product) {
+        throw new NotFoundException(
+          `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
+        );
+      }
+
+      if (product.sale_price === undefined) {
+        throw new BadRequestException(
+          `El producto ${product.name} no tiene precio de venta asignado.`,
+        );
+      }
+
+        productSalesToCreate.push({
+        productId: product.id,
+        quantity: Number(row['quantity']),
+        unit_price: Number(row['unit_price']) || product.sale_price,
+        invoice_number: row['invoice_number'] || '',
+        sale_date: this.parseDateDMY(row['saleDate'])?.toISOString(),
+        
+        notes: row['notes'] || '',
+      });
+     
+
+    }
+
+    const createSaleDto: CreateSaleDto = {
+      productSales: productSalesToCreate,
+      payment_method: 'cash',
+      status: 'paid',
+      notes: `Importado desde ${sheetName}`,
+      invoice_number: rows[0]?.['invoice_number'] || '',
+      customerId: customer?.id,
+      // NO incluir sale_date a este nivel
+    };
+
+    salesPromises.push(this.create(createSaleDto, user));
   }
+
+  return Promise.all(salesPromises);
+}
+
 
   async getNextOrderNumber(): Promise<string> {
     const date = new Date();
