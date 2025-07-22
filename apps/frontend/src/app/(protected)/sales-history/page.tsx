@@ -108,7 +108,7 @@ function ProductAutocomplete({
   };
 
   return (
-    <div className="relative w-[300px]">
+    <div className="relative w-[300px] dark:text-white">
       <input
         type="text"
         placeholder="Buscar producto..."
@@ -121,13 +121,13 @@ function ProductAutocomplete({
         className="w-full border rounded px-2 py-1"
       />
       {showDropdown && (
-        <ul className="absolute bg-white z-10 border mt-1 rounded shadow w-full max-h-60 overflow-auto">
+        <ul className="absolute  z-10 border mt-1 rounded shadow w-full max-h-60 overflow-auto">
           {filtered.length > 0 ? (
             filtered.map((p) => (
               <li
                 key={p.id}
                 onClick={() => handleSelect(p)}
-                className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 cursor-pointer "
               >
                 {p.name} — {p.brand?.name || "Sin marca"} —{" "}
                 {p.unit_of_measure?.name || "Sin unidad"}

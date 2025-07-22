@@ -216,7 +216,7 @@ export default function ProductStockPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
+      <div className="p-6 dark:text-white">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">
             Lista de Ubicaciones de Productos

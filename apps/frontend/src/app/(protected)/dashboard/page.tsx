@@ -39,7 +39,7 @@ export default function DashboardPage() {
     []
   );
   const [totalProducts, setTotalProducts] = useState<number>(0);
-
+const [loading, setLoading] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
 
@@ -57,18 +57,24 @@ export default function DashboardPage() {
     if (!selectedMonth) return;
 
     const fetchData = async () => {
-  const [sales, purchases, monthly, totalProd] = await Promise.all([
-    getTopSoldProducts(selectedMonth, selectedMonth, 10),
-    getTopPurchasedProducts(selectedMonth, selectedMonth, 10),
-    getMonthlySalesAndPurchases(selectedMonth, selectedMonth),
-    getTotalProducts(),
-  ]);
-  setTopSales(sales);
-  setTopPurchases(purchases);
-  setMonthlyTotals(monthly);
-  setTotalProducts(totalProd.total);
-};
-
+      setLoading(true);
+    try {
+      const [sales, purchases, monthly, totalProd] = await Promise.all([
+        getTopSoldProducts(selectedMonth, selectedMonth, 20),
+        getTopPurchasedProducts(selectedMonth, selectedMonth, 20),
+        getMonthlySalesAndPurchases(selectedMonth, selectedMonth),
+        getTotalProducts(),
+      ]);
+      setTopSales(sales);
+      setTopPurchases(purchases);
+      setMonthlyTotals(monthly);
+      setTotalProducts(totalProd.total);
+     } catch (error) {
+      console.error("Error cargando datos del dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+    };
 
     fetchData();
   }, [selectedMonth]);
@@ -84,6 +90,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      {loading && <p className="text-center text-gray-500">Cargando datos...</p>}
+
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Selector de Mes */}
         <div className="flex justify-end mb-6">
@@ -151,7 +159,6 @@ export default function DashboardPage() {
               </h2>
             </CardContent>
           </Card>
-         
         </div>
 
         {/* Gráfico: Más Vendidos */}

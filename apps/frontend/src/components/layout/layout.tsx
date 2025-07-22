@@ -21,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <Header />
 
     
-        <main className="flex-1 overflow-auto ">{children}</main>
+        <main className="flex-1 overflow-auto dark:bg-gray-800">{children}</main>
 
         <Footer />
       </div>

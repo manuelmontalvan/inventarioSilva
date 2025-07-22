@@ -339,7 +339,7 @@ private parseDateDMY(dateStr: any): Date | null {
       totalQuantity,
     }));
   }
-async getTopSoldProducts(limit = 10, startMonth?: string, endMonth?: string) {
+async getTopSoldProducts(limit = 20, startMonth?: string, endMonth?: string) {
   const qb = this.productSaleRepository
     .createQueryBuilder('ps')
     .select([

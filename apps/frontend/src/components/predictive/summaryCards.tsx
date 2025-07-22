@@ -104,29 +104,43 @@ export default function SummaryCards({
           </p>
         )}
 
-        {model?.metrics &&
-          typeof model.metrics.MAE === "number" &&
-          typeof model.metrics.RMSE === "number" && (
-            <div className="text-xs text-gray-600">
-              <p>MAE: {model.metrics.MAE.toFixed(2)}</p>
-              <p>RMSE: {model.metrics.RMSE.toFixed(2)}</p>
-              <p
-                className={
-                  model.metrics.MAE < 100
-                    ? "text-green-600 font-semibold mt-1"
-                    : model.metrics.MAE < 300
-                    ? "text-yellow-600 font-semibold mt-1"
-                    : "text-red-600 font-semibold mt-1"
-                }
-              >
-                {model.metrics.MAE < 100
-                  ? "✅ Modelo confiable"
-                  : model.metrics.MAE < 300
-                  ? "⚠️ Modelo aceptable"
-                  : "🚨 Modelo poco confiable"}
-              </p>
-            </div>
-          )}
+      {model?.metrics &&
+  typeof model.metrics.MAE === "number" &&
+  typeof model.metrics.RMSE === "number" && (
+    <div className="text-xs text-gray-600">
+      <p>
+        <strong>MAE (Error Absoluto Medio):</strong>{" "}
+        {model.metrics.MAE.toFixed(2)} 
+        {" "}({((model.metrics.MAE / 1000) * 100).toFixed(1)}%)
+        <br />
+        Indica el error promedio en las predicciones. Mientras más bajo, mejor.
+      </p>
+      <p className="mt-2">
+        <strong>RMSE (Raíz del Error Cuadrático Medio):</strong>{" "}
+        {model.metrics.RMSE.toFixed(2)} 
+        {" "}({((model.metrics.RMSE / 1000) * 100).toFixed(1)}%)
+        <br />
+        Penaliza más los errores grandes. También debe ser lo más bajo posible.
+      </p>
+
+      <p
+        className={
+          model.metrics.MAE < 100
+            ? "text-green-600 font-semibold mt-2"
+            : model.metrics.MAE < 300
+            ? "text-yellow-600 font-semibold mt-2"
+            : "text-red-600 font-semibold mt-2"
+        }
+      >
+        {model.metrics.MAE < 100
+          ? "✅ Modelo confiable"
+          : model.metrics.MAE < 300
+          ? "⚠️ Modelo aceptable"
+          : "🚨 Modelo poco confiable"}
+      </p>
+    </div>
+)}
+
       </CardContent>
     </Card>
   );

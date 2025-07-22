@@ -478,7 +478,7 @@ async clearAll() {
       };
     });
   }
-  async getTopPurchasedProducts(limit = 10, startMonth?: string, endMonth?: string) {
+  async getTopPurchasedProducts(limit = 20, startMonth?: string, endMonth?: string) {
   const qb = this.purchaseRepo
     .createQueryBuilder('purchase')
     .leftJoin('purchase.product', 'product')

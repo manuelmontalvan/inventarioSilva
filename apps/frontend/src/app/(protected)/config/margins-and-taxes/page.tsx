@@ -111,8 +111,8 @@ export default function MarginAndTaxConfigPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6 space-y-8">
-        <h1 className="text-2xl font-bold">
+      <div className="p-6 space-y-8  ">
+        <h1 className="text-2xl font-bold dark:text-white">
           Configuración de Margen e Impuestos
         </h1>
 

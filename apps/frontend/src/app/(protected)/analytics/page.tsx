@@ -1,7 +1,10 @@
 "use client";
 
 import { MultiModelPredictionResponse } from "@/types/prediction";
-import { getAllModelPredictions, exportAllForecasts } from "@/lib/api/prediction/prediction";
+import {
+  getAllModelPredictions,
+  exportAllForecasts,
+} from "@/lib/api/prediction/prediction";
 import { useEffect, useState } from "react";
 import { ProductForecastComparison } from "@/types/prediction";
 import {
@@ -22,8 +25,10 @@ import { addToast } from "@heroui/toast";
 export default function PredictiveAnalyticsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<ProductSearchResult | null>(null);
-  const [multiModelPrediction, setMultiModelPrediction] = useState<MultiModelPredictionResponse | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductSearchResult | null>(null);
+  const [multiModelPrediction, setMultiModelPrediction] =
+    useState<MultiModelPredictionResponse | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
   const [errorPrediction, setErrorPrediction] = useState<string | null>(null);
@@ -31,7 +36,9 @@ export default function PredictiveAnalyticsPage() {
   const [days, setDays] = useState(7);
   const [daysInput, setDaysInput] = useState(days.toString());
   const [restockModalOpen, setRestockModalOpen] = useState(false);
-  const [restockProducts, setRestockProducts] = useState<ProductForecastComparison[]>([]);
+  const [restockProducts, setRestockProducts] = useState<
+    ProductForecastComparison[]
+  >([]);
   const [loadingCompare, setLoadingCompare] = useState(false);
 
   // Carga inicial de productos para búsqueda
@@ -43,15 +50,27 @@ export default function PredictiveAnalyticsPage() {
 
   // Búsqueda con debounce (300ms)
   useEffect(() => {
-    if (searchTerm.length < 2) {
-      setSearchResults([]);
-      return;
-    }
     const delay = setTimeout(() => {
-      searchPredictiveProducts(searchTerm)
+      const term = searchTerm.trim();
+
+      if (term === "") {
+        // Cuando se borra el input, vuelve a mostrar resultados generales
+        searchPredictiveProducts("a") // o "", si tu API lo permite
+          .then(setSearchResults)
+          .catch(() => setSearchResults([]));
+        return;
+      }
+
+      if (term.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      searchPredictiveProducts(term)
         .then(setSearchResults)
         .catch(() => setSearchResults([]));
     }, 300);
+
     return () => clearTimeout(delay);
   }, [searchTerm]);
 
@@ -108,8 +127,9 @@ export default function PredictiveAnalyticsPage() {
       console.log("Respuesta compareForecasts:", response);
 
       // Filtra productos con alerta de reposición
-      const needRestock = response.comparison.filter((p) => p.general_alert === true);
-
+      const needRestock = response.comparison.filter(
+        (p) => p.general_alert === true
+      );
 
       setRestockProducts(needRestock);
       setRestockModalOpen(true);
@@ -126,7 +146,7 @@ export default function PredictiveAnalyticsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="p-6 space-y-6 max-w-5xl mx-auto dark:text-white ">
         <h1 className="text-3xl font-bold">Análisis Predictivo</h1>
 
         <SearchBar
@@ -158,7 +178,7 @@ export default function PredictiveAnalyticsPage() {
           />
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 text-gray-950 dark:text-white">
           <label className="text-sm">Días de predicción:</label>
           <input
             type="number"
@@ -181,7 +201,7 @@ export default function PredictiveAnalyticsPage() {
                 setDaysInput(days.toString());
               }
             }}
-            className="p-2 rounded bg-gray-100"
+            className="p-2 rounded bg-gray-100 dark:text-gray-900"
           />
         </div>
 

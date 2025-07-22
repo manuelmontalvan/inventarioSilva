@@ -66,7 +66,7 @@ export default function PurchasesPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-black  dark:text-white max-w-7xl mx-auto px-6 py-10">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-800  dark:text-white max-w-7xl mx-auto px-6 py-10">
         <div className="mb-10 flex justify-between gap-4">
           <h1 className="text-3xl font-semibold text-gray-800 dark:text-white">
             Gestión de Órdenes de Compra
