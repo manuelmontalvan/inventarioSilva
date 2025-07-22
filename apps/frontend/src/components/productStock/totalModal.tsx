@@ -92,7 +92,7 @@ export default function ProductStockTotalsModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-full dark:bg-zinc-900 dark:text-zinc-100">
+      <DialogContent className="max-w-5xl  dark:bg-zinc-900 dark:text-zinc-100">
         <DialogTitle className="text-xl font-bold mb-2">
           Totales de Productos por Localidad
         </DialogTitle>
