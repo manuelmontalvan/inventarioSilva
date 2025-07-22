@@ -32,38 +32,36 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
-private parseDateDMY(dateStr: any): Date | null {
-  if (!dateStr) return null;
+  private parseDateDMY(dateStr: any): Date | null {
+    if (!dateStr) return null;
 
-  if (typeof dateStr === 'string') {
-    // Primero probar con formato ISO (YYYY-MM-DD)
-    const parsedISO = new Date(dateStr);
-    if (!isNaN(parsedISO.getTime())) return parsedISO;
+    if (typeof dateStr === 'string') {
+      // Primero probar con formato ISO (YYYY-MM-DD)
+      const parsedISO = new Date(dateStr);
+      if (!isNaN(parsedISO.getTime())) return parsedISO;
 
-    // Si no es ISO, tratar D/M/Y con slashes
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const [day, month, year] = parts.map(Number);
-    if (!day || !month || !year) return null;
-    return new Date(year, month - 1, day);
+      // Si no es ISO, tratar D/M/Y con slashes
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return null;
+      const [day, month, year] = parts.map(Number);
+      if (!day || !month || !year) return null;
+      return new Date(year, month - 1, day);
+    }
+
+    if (dateStr instanceof Date) {
+      if (isNaN(dateStr.getTime())) return null;
+      return dateStr;
+    }
+
+    if (typeof dateStr === 'number') {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
+      if (isNaN(jsDate.getTime())) return null;
+      return jsDate;
+    }
+
+    return null;
   }
-
-  if (dateStr instanceof Date) {
-    if (isNaN(dateStr.getTime())) return null;
-    return dateStr;
-  }
-
-  if (typeof dateStr === 'number') {
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    const jsDate = new Date(excelEpoch.getTime() + dateStr * 86400000);
-    if (isNaN(jsDate.getTime())) return null;
-    return jsDate;
-  }
-
-  return null;
-}
-
-
 
   async create(createSaleDto: CreateSaleDto, user: User): Promise<Sale> {
     const sale = new Sale();
@@ -149,83 +147,80 @@ private parseDateDMY(dateStr: any): Date | null {
   }
 
   async importSalesFromExcel(fileBuffer: Buffer, user: User) {
-  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-  const salesPromises: Promise<Sale>[] = [];
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const salesPromises: Promise<Sale>[] = [];
 
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-    if (rows.length === 0) continue;
+      if (rows.length === 0) continue;
 
-    const productSalesToCreate: CreateProductSaleDto[] = [];
+      const productSalesToCreate: CreateProductSaleDto[] = [];
 
-    // Obtener cliente de la primera fila (asumiendo que es el mismo para toda la hoja)
-    let customer: Customer | null = null;
-    const firstCustomerName = rows[0]?.['customerName']?.trim();
-    if (firstCustomerName) {
-      customer = await this.customerRepository.findOne({
-        where: { name: firstCustomerName },
-      });
-      if (!customer) {
-        customer = this.customerRepository.create({
-          name: firstCustomerName,
+      // Obtener cliente de la primera fila (asumiendo que es el mismo para toda la hoja)
+      let customer: Customer | null = null;
+      const firstCustomerName = rows[0]?.['customerName']?.trim();
+      if (firstCustomerName) {
+        customer = await this.customerRepository.findOne({
+          where: { name: firstCustomerName },
         });
-        customer = await this.customerRepository.save(customer);
-      }
-    }
-
-    for (const row of rows) {
-      const product = await this.productRepository.findOne({
-        where: {
-          name: row['productName'],
-          brand: { name: row['brandName'] },
-          unit_of_measure: { name: row['unitName'] },
-        },
-        relations: ['brand', 'unit_of_measure'],
-      });
-
-      if (!product) {
-        throw new NotFoundException(
-          `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
-        );
+        if (!customer) {
+          customer = this.customerRepository.create({
+            name: firstCustomerName,
+          });
+          customer = await this.customerRepository.save(customer);
+        }
       }
 
-      if (product.sale_price === undefined) {
-        throw new BadRequestException(
-          `El producto ${product.name} no tiene precio de venta asignado.`,
-        );
-      }
+      for (const row of rows) {
+        const product = await this.productRepository.findOne({
+          where: {
+            name: row['productName'],
+            brand: { name: row['brandName'] },
+            unit_of_measure: { name: row['unitName'] },
+          },
+          relations: ['brand', 'unit_of_measure'],
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Producto no encontrado: ${row['productName']} en hoja ${sheetName}`,
+          );
+        }
+
+        if (product.sale_price === undefined) {
+          throw new BadRequestException(
+            `El producto ${product.name} no tiene precio de venta asignado.`,
+          );
+        }
 
         productSalesToCreate.push({
-        productId: product.id,
-        quantity: Number(row['quantity']),
-        unit_price: Number(row['unit_price']) || product.sale_price,
-        invoice_number: row['invoice_number'] || '',
-        sale_date: this.parseDateDMY(row['saleDate'])?.toISOString(),
-        
-        notes: row['notes'] || '',
-      });
-     
+          productId: product.id,
+          quantity: Number(row['quantity']),
+          unit_price: Number(row['unit_price']) || product.sale_price,
+          invoice_number: row['invoice_number'] || '',
+          sale_date: this.parseDateDMY(row['saleDate'])?.toISOString(),
 
+          notes: row['notes'] || '',
+        });
+      }
+
+      const createSaleDto: CreateSaleDto = {
+        productSales: productSalesToCreate,
+        payment_method: 'cash',
+        status: 'paid',
+        notes: `Importado desde ${sheetName}`,
+        invoice_number: rows[0]?.['invoice_number'] || '',
+        customerId: customer?.id,
+        // NO incluir sale_date a este nivel
+      };
+
+      salesPromises.push(this.create(createSaleDto, user));
     }
 
-    const createSaleDto: CreateSaleDto = {
-      productSales: productSalesToCreate,
-      payment_method: 'cash',
-      status: 'paid',
-      notes: `Importado desde ${sheetName}`,
-      invoice_number: rows[0]?.['invoice_number'] || '',
-      customerId: customer?.id,
-      // NO incluir sale_date a este nivel
-    };
-
-    salesPromises.push(this.create(createSaleDto, user));
+    return Promise.all(salesPromises);
   }
-
-  return Promise.all(salesPromises);
-}
-
 
   async getNextOrderNumber(): Promise<string> {
     const date = new Date();
@@ -339,55 +334,56 @@ private parseDateDMY(dateStr: any): Date | null {
       totalQuantity,
     }));
   }
-async getTopSoldProducts(limit = 20, startMonth?: string, endMonth?: string) {
-  const qb = this.productSaleRepository
-    .createQueryBuilder('ps')
-    .select([
-      'ps.productId AS "productId"',
-      'ps.product_name AS "productName"',
-      'ps.brand_name AS "brandName"',
-      'ps.unit_of_measure_name AS "unitName"',
-      'SUM(ps.quantity) AS "totalQuantity"',
-    ])
-    .groupBy('ps.productId')
-    .addGroupBy('ps.product_name')
-    .addGroupBy('ps.brand_name')
-    .addGroupBy('ps.unit_of_measure_name');
+  async getTopSoldProducts(limit = 20, startMonth?: string, endMonth?: string) {
+    const qb = this.productSaleRepository
+      .createQueryBuilder('ps')
+      .select([
+        'ps.productId AS "productId"',
+        'ps.product_name AS "productName"',
+        'ps.brand_name AS "brandName"',
+        'ps.unit_of_measure_name AS "unitName"',
+        'SUM(ps.quantity) AS "totalQuantity"',
+      ])
+      .groupBy('ps.productId')
+      .addGroupBy('ps.product_name')
+      .addGroupBy('ps.brand_name')
+      .addGroupBy('ps.unit_of_measure_name');
 
-  // Filtro por rango de meses, si están definidos
-  if (startMonth) {
-    qb.andWhere(`TO_CHAR(ps.sale_date, 'YYYY-MM') >= :startMonth`, { startMonth });
+    if (startMonth && endMonth) {
+      const startDate = new Date(`${startMonth}-01`);
+      const endDate = new Date(`${endMonth}-01`);
+      endDate.setMonth(endDate.getMonth() + 1); // para incluir todo el mes final
+
+      qb.andWhere('ps.sale_date >= :startDate', { startDate }).andWhere(
+        'ps.sale_date < :endDate',
+        { endDate },
+      );
+    }
+
+    qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
+
+    const result = await qb.getRawMany();
+
+    return result.map((r) => ({
+      productId: r.productId,
+      productName: r.productName,
+      brandName: r.brandName,
+      unitName: r.unitName,
+      totalQuantity: Number(r.totalQuantity),
+    }));
   }
-  if (endMonth) {
-    qb.andWhere(`TO_CHAR(ps.sale_date, 'YYYY-MM') <= :endMonth`, { endMonth });
+
+  async getMonthlySales() {
+    return await this.saleRepository
+      .createQueryBuilder('sale')
+      .select([
+        "DATE_TRUNC('month', sale.sale_date) AS month",
+        'SUM(sale.total_amount) AS totalSales',
+      ])
+      .groupBy('month')
+      .orderBy('month', 'ASC')
+      .getRawMany();
   }
-
-  qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
-
-  const result = await qb.getRawMany();
-
-  return result.map((r) => ({
-    productId: r.productId,
-    productName: r.productName,
-    brandName: r.brandName,
-    unitName: r.unitName,
-    totalQuantity: Number(r.totalQuantity),
-  }));
-}
-
-async getMonthlySales() {
-  return await this.saleRepository
-    .createQueryBuilder('sale')
-    .select([
-      "DATE_TRUNC('month', sale.sale_date) AS month",
-      "SUM(sale.total_amount) AS totalSales",
-    ])
-    .groupBy("month")
-    .orderBy("month", "ASC")
-    .getRawMany();
-}
-
-
 
   async getSoldProducts() {
     const result = await this.productSaleRepository

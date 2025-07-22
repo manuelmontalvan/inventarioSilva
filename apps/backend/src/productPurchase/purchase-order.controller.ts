@@ -101,10 +101,16 @@ export class PurchaseOrderController {
   getMonthlyQuantityTrend(@Param('productId') productId: string) {
     return this.service.getMonthlyPurchaseQuantityTrend(productId);
   }
-  @Get('/top-products')
-  getTopProducts() {
-    return this.service.getTopPurchasedProducts();
+ @Get('/top-products')
+  getTopProducts(
+    @Query('limit') limit?: string,
+    @Query('startMonth') startMonth?: string,
+    @Query('endMonth') endMonth?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    return this.service.getTopPurchasedProducts(parsedLimit, startMonth, endMonth);
   }
+
 
   @Get('purchased-products')
   getPurchasedProducts() {

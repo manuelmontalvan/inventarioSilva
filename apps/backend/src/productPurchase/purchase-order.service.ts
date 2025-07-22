@@ -478,7 +478,12 @@ async clearAll() {
       };
     });
   }
-  async getTopPurchasedProducts(limit = 20, startMonth?: string, endMonth?: string) {
+async getTopPurchasedProducts(
+  limit: number = 20,
+  startMonth?: string,
+  endMonth?: string,
+) {
+  
   const qb = this.purchaseRepo
     .createQueryBuilder('purchase')
     .leftJoin('purchase.product', 'product')
@@ -497,10 +502,15 @@ async clearAll() {
     .addGroupBy('unit.name');
 
   if (startMonth) {
-    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') >= :startMonth`, { startMonth });
+    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') >= :startMonth`, {
+      startMonth,
+    });
   }
+
   if (endMonth) {
-    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') <= :endMonth`, { endMonth });
+    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') <= :endMonth`, {
+      endMonth,
+    });
   }
 
   qb.orderBy('"totalQuantity"', 'DESC').limit(limit);

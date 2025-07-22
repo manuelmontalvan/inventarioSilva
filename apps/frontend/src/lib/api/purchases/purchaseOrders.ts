@@ -33,7 +33,7 @@ export const deletePurchaseOrder = async (id: string): Promise<void> => {
   try {
     await axios.delete(`/purchase-orders/${id}`);
   } catch (error) {
-    console.error('Error deleting purchase order:', error);
+    console.error("Error deleting purchase order:", error);
     throw error;
   }
 };
@@ -88,9 +88,9 @@ export const getPurchaseHistory = async (params?: {
   return data;
 };
 export const getTopPurchasedProducts = async (
-   startMonth?: string,
+  startMonth?: string,
   endMonth?: string,
-  limit = 10
+  limit = 20
 ): Promise<
   {
     productId: string;
@@ -104,10 +104,9 @@ export const getTopPurchasedProducts = async (
   if (startMonth) params.startMonth = startMonth;
   if (endMonth) params.endMonth = endMonth;
 
-  const { data } = await axios.get('/purchase-orders/top-products', { params });
+  const { data } = await axios.get("/purchase-orders/top-products", { params });
   return data;
 };
-
 
 export const getPurchasePriceTrend = async (
   productId: string

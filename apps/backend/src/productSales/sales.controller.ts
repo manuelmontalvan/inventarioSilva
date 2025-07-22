@@ -103,9 +103,15 @@ export class SalesController {
     return this.salesService.getSalePriceTrend(productId);
   }
   @UseGuards(JwtAuthGuard)
-  @Get('/top-products')
-  getTopSoldProducts(@Query('limit') limit?: string) {
-    return this.salesService.getTopSoldProducts(Number(limit) || 10);
+ @Get('top-products')
+  async getTopPurchasedProducts(
+    @Query('limit') limit?: string,
+    @Query('startMonth') startMonth?: string,
+    @Query('endMonth') endMonth?: string,
+  ) {
+    const limitNumber = limit ? parseInt(limit, 10) : 20;
+
+    return this.salesService.getTopSoldProducts(limitNumber, startMonth, endMonth);
   }
 
   // NUEVO: Obtener productos vendidos únicos

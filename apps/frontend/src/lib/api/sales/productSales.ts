@@ -103,7 +103,7 @@ export const getSalePriceTrend = async (
 export const getTopSoldProducts = async (
   startMonth?: string,
   endMonth?: string,
-  limit = 10
+  limit = 20
 ): Promise<
   {
     productId: string;
