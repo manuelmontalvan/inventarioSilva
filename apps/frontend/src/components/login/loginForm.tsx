@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/authContext";
@@ -40,13 +39,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     setError(null);
 
     try {
-      if (!email || !password) {
-        throw new Error("Por favor, completa todos los campos.");
-      }
+      if (!email || !password) throw new Error("Por favor, completa todos los campos.");
 
       await login(email, password);
-      onLogin(email); // ✅ Notifica al padre
-      router.push("/dashboard");      
+      onLogin(email);
+      router.push("/dashboard");
     } catch (error: unknown) {
       let message = "Error al iniciar sesión. Inténtalo de nuevo.";
       if (
@@ -90,21 +87,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="w-full max-w-md mx-auto p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-lg border border-white/10"
+      transition={{ duration: 0.4 }}
+      className="w-full max-w-md mx-auto px-6 py-8 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl shadow-xl"
     >
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold text-center dark:text-white mb-8">
-          Iniciar Sesión
-        </h2>
+      <div className="text-center mb-6">
+        <h2 className="text-3xl font-bold text-zinc-800 dark:text-white">Iniciar Sesión</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Bienvenido de nuevo, ingresa tus credenciales
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <Label htmlFor="email" className="text-white">
+          <Label htmlFor="email" className="text-zinc-800 dark:text-white">
             Email
           </Label>
           <Input
@@ -112,14 +107,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Ingresa tu email"
-            className="bg-black/20 text-white border-purple-500/30 placeholder:text-gray-400"
+            placeholder="tucorreo@ejemplo.com"
+            className="mt-1 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white border-gray-300 dark:border-zinc-600"
             disabled={isLoading}
           />
         </div>
 
         <div>
-          <Label htmlFor="password" className="text-white">
+          <Label htmlFor="password" className="text-zinc-800 dark:text-white">
             Contraseña
           </Label>
           <div className="relative">
@@ -129,12 +124,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ingresa tu contraseña"
-              className="bg-black/20 text-white border-purple-500/30 placeholder:text-gray-400 pr-10"
+              className="mt-1 pr-10 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white border-gray-300 dark:border-zinc-600"
               disabled={isLoading}
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
             >
@@ -143,56 +138,51 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        {error && <p className="text-sm text-red-500">{error}</p>}
 
         <Button
           type="submit"
-          className={cn(
-            "w-full bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-300",
-            "flex items-center justify-center gap-2 py-3"
-          )}
+          className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white font-semibold py-3 rounded-lg transition-colors"
           disabled={isLoading}
         >
           {isLoading ? (
             <>
-              <Loader2 className="animate-spin w-5 h-5" />
+              <Loader2 className="animate-spin w-5 h-5 mr-2" />
               Iniciando sesión...
             </>
           ) : (
             <>
-              Iniciar Sesión
-              <ArrowRight className="w-5 h-5" />
+              Iniciar Sesión <ArrowRight className="w-5 h-5 ml-2" />
             </>
           )}
         </Button>
 
-        <div className="text-center mt-4 dark:text-white">
+        <div className="text-center">
           <Dialog>
             <DialogTrigger asChild>
-              <Button
-                variant="link"
-                className=" text-blue-600 text-sm underline"
-              >
+              <Button variant="link" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                 ¿Olvidaste tu contraseña?
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-white/90 backdrop-blur border border-gray-300">
+            <DialogContent className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl">
               <DialogHeader>
-                <DialogTitle>Recuperar contraseña</DialogTitle>
-                <DialogDescription>
-                  Ingresa tu correo y te enviaremos instrucciones para
-                  restablecer tu contraseña.
+                <DialogTitle className="text-zinc-800 dark:text-white">Recuperar contraseña</DialogTitle>
+                <DialogDescription className="text-gray-500 dark:text-gray-400">
+                  Ingresa tu correo y te enviaremos instrucciones para restablecer tu contraseña.
                 </DialogDescription>
               </DialogHeader>
-              <Input
-                type="email"
-                placeholder="tuemail@ejemplo.com"
-                value={recoveryEmail}
-                onChange={(e) => setRecoveryEmail(e.target.value)}
-              />
-              <DialogFooter>
-                <Button onClick={handlePasswordRecovery}>Enviar</Button>
-              </DialogFooter>
+              <div className="space-y-4 mt-4">
+                <Input
+                  type="email"
+                  placeholder="tuemail@ejemplo.com"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                  className="bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white border-gray-300 dark:border-zinc-600"
+                />
+                <DialogFooter>
+                  <Button onClick={handlePasswordRecovery}>Enviar</Button>
+                </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

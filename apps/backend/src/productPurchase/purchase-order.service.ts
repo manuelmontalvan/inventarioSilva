@@ -48,7 +48,7 @@ export class PurchaseOrderService {
 
     @InjectRepository(UnitOfMeasure)
     private readonly unitOfMeasureRepo: Repository<UnitOfMeasure>,
-     @InjectRepository(PurchaseOrder)
+    @InjectRepository(PurchaseOrder)
     private readonly purchaseOrderRepository: Repository<PurchaseOrder>, // <-- Aquí debe ir
     private readonly dataSource: DataSource,
   ) {}
@@ -63,23 +63,34 @@ export class PurchaseOrderService {
     const registeredBy = { id: user.id } as User;
 
     // ✅ Fecha actual en UTC
-    const now = new Date();
+    const now = dto.purchase_date ? new Date(dto.purchase_date) : new Date();
 
     // ✅ Rango del día actual en UTC
-    const yyyy = now.getUTCFullYear();
-    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(now.getUTCDate()).padStart(2, '0');
-
-    const todayStartUtc = new Date(
-      Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate()),
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
     );
-    const todayEndUtc = new Date(
-      Date.UTC(yyyy, now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
+    const todayEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
     );
 
     const countToday = await this.orderRepo.count({
       where: {
-        purchase_date: Between(todayStartUtc, todayEndUtc),
+        purchase_date: Between(todayStart, todayEnd),
       },
     });
 
@@ -229,29 +240,29 @@ export class PurchaseOrderService {
   }
 
   async remove(id: string) {
-  const found = await this.orderRepo.findOne({
-    where: { id },
-    relations: ['purchase_lines'], // asegúrate de incluir relaciones
-  });
+    const found = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['purchase_lines'], // asegúrate de incluir relaciones
+    });
 
-  if (!found) throw new NotFoundException('Orden de compra no encontrada');
+    if (!found) throw new NotFoundException('Orden de compra no encontrada');
 
-  await this.orderRepo.remove(found); // activa cascada
-  return { message: 'Orden eliminada correctamente' };
-}
-// src/purchases/purchase-orders.service.ts
-
-async clearAll() {
-  try {
-    // TRUNCATE con CASCADE
-    await this.purchaseOrderRepository.query(`TRUNCATE TABLE purchase_orders CASCADE`);
-  } catch (error) {
-    console.error("Error clearing purchase orders:", error);
-    throw error;
+    await this.orderRepo.remove(found); // activa cascada
+    return { message: 'Orden eliminada correctamente' };
   }
-}
+  // src/purchases/purchase-orders.service.ts
 
-
+  async clearAll() {
+    try {
+      // TRUNCATE con CASCADE
+      await this.purchaseOrderRepository.query(
+        `TRUNCATE TABLE purchase_orders CASCADE`,
+      );
+    } catch (error) {
+      console.error('Error clearing purchase orders:', error);
+      throw error;
+    }
+  }
 
   async importPurchaseOrderFromFile(
     filePath: string,
@@ -478,55 +489,52 @@ async clearAll() {
       };
     });
   }
-async getTopPurchasedProducts(
-  limit: number = 20,
-  startMonth?: string,
-  endMonth?: string,
-) {
-  
-  const qb = this.purchaseRepo
-    .createQueryBuilder('purchase')
-    .leftJoin('purchase.product', 'product')
-    .leftJoin('product.brand', 'brand')
-    .leftJoin('product.unit_of_measure', 'unit')
-    .select([
-      'product.id AS "productId"',
-      'product.name AS "productName"',
-      'brand.name AS "brandName"',
-      'unit.name AS "unitName"',
-      'SUM(purchase.quantity) AS "totalQuantity"',
-    ])
-    .groupBy('product.id')
-    .addGroupBy('product.name')
-    .addGroupBy('brand.name')
-    .addGroupBy('unit.name');
+  async getTopPurchasedProducts(
+    limit: number = 20,
+    startMonth?: string,
+    endMonth?: string,
+  ) {
+    const qb = this.purchaseRepo
+      .createQueryBuilder('purchase')
+      .leftJoin('purchase.product', 'product')
+      .leftJoin('product.brand', 'brand')
+      .leftJoin('product.unit_of_measure', 'unit')
+      .select([
+        'product.id AS "productId"',
+        'product.name AS "productName"',
+        'brand.name AS "brandName"',
+        'unit.name AS "unitName"',
+        'SUM(purchase.quantity) AS "totalQuantity"',
+      ])
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('brand.name')
+      .addGroupBy('unit.name');
 
-  if (startMonth) {
-    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') >= :startMonth`, {
-      startMonth,
-    });
+    if (startMonth) {
+      qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') >= :startMonth`, {
+        startMonth,
+      });
+    }
+
+    if (endMonth) {
+      qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') <= :endMonth`, {
+        endMonth,
+      });
+    }
+
+    qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
+
+    const result = await qb.getRawMany();
+
+    return result.map((r) => ({
+      productId: r.productId,
+      productName: r.productName,
+      brandName: r.brandName,
+      unitName: r.unitName,
+      totalQuantity: Number(r.totalQuantity),
+    }));
   }
-
-  if (endMonth) {
-    qb.andWhere(`TO_CHAR(purchase.purchase_date, 'YYYY-MM') <= :endMonth`, {
-      endMonth,
-    });
-  }
-
-  qb.orderBy('"totalQuantity"', 'DESC').limit(limit);
-
-  const result = await qb.getRawMany();
-
-  return result.map((r) => ({
-    productId: r.productId,
-    productName: r.productName,
-    brandName: r.brandName,
-    unitName: r.unitName,
-    totalQuantity: Number(r.totalQuantity),
-  }));
-}
-
-  
 
   async getPurchasedProducts() {
     const products = await this.productRepo

@@ -18,6 +18,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { addToast } from "@heroui/toast";
 
 export default function AdminPage() {
   const [users, setUsers] = useState<UserI[]>([]);
@@ -55,8 +56,12 @@ export default function AdminPage() {
       ) {
         message = err.message;
       }
-      // Puedes mostrar un toast o console.error
-      console.error(message);
+      addToast({
+        color: "danger",  
+        title: "Error al Cargar Usuarios",
+        description: message,
+      });      
+    
     }
   };
 

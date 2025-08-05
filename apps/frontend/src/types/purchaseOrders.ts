@@ -21,6 +21,7 @@ export interface CreatePurchaseOrderDto {
   invoice_number: string;
   notes?: string;
   items: CreateProductPurchaseDto[];
+  purchase_date?: string;
 }
 
 export interface UpdatePurchaseOrderDto {

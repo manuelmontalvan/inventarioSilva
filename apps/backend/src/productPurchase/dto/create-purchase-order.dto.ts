@@ -2,10 +2,10 @@
 import {
   IsString,
   IsOptional,
-  IsDateString,
   ValidateNested,
   IsArray,
   ArrayNotEmpty,
+  IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProductPurchaseDto } from './create-product-purchase.dto';
@@ -27,4 +27,8 @@ export class CreatePurchaseOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductPurchaseDto)
   items: CreateProductPurchaseDto[];
+
+  @IsOptional()
+  @IsDateString()
+  purchase_date?: string;
 }

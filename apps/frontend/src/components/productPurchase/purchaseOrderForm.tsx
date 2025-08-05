@@ -12,6 +12,7 @@ import {
 import { getProducts } from "@/lib/api/products/products";
 import { addToast } from "@heroui/toast";
 import { ProductsTab } from "@/components/tabla/productTab";
+import ModernDatePicker from "@/components/ui/modernDatePicker";
 
 // Extendemos el tipo para guardar información visual
 type PurchaseItemWithDisplay = CreateProductPurchaseDto & {
@@ -41,6 +42,9 @@ export default function PurchaseOrderForm({
   const [totalPages, setTotalPages] = useState(1);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [notes, setNotes] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(
+    new Date()
+  );
 
   const limit = 10;
 
@@ -163,6 +167,8 @@ export default function PurchaseOrderForm({
         supplierId,
         invoice_number: invoiceNumber,
         notes,
+        purchase_date: purchaseDate?.toISOString() ?? new Date().toISOString(),
+
         items: items.map((item) => ({
           productId: item.productId,
           supplierId,
@@ -208,6 +214,11 @@ export default function PurchaseOrderForm({
             placeholder="Seleccionar proveedor"
             className="w-full"
           />
+        </div>
+
+        <div className="flex-1 min-w-[250px] max-w-[400px]">
+          <label className="block font-medium mb-1">Fecha de compra</label>
+          <ModernDatePicker date={purchaseDate} onChange={setPurchaseDate} />
         </div>
 
         <div className="flex-1 min-w-[250px] max-w-[400px]">
