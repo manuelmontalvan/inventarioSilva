@@ -23,6 +23,7 @@ import { ShelfModule } from './products/locality/shelves/shelf.module';
 import { PagesModule } from './page/page.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { SharedModule } from './shared/sahred.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module'; 
 
 @Module({
   imports: [
@@ -67,7 +68,8 @@ import { SharedModule } from './shared/sahred.module';
     ShelfModule,
     PagesModule,
     PredictionModule,
-    SharedModule,
+    SharedModule,    
+    CloudinaryModule,
   ],
   providers: [RolesSeed, UserSeed],
 })

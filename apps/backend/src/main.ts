@@ -3,12 +3,15 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import * as crypto from 'crypto';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 if (!(global as any).crypto) {
   (global as any).crypto = crypto;
 }
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -31,6 +34,9 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

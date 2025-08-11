@@ -15,6 +15,8 @@ import { ProductStockService } from './product-stock/product-stock.service';
 import { PricingService } from 'src/pricing/pricing.service';
 import { MarginConfig } from '../pricing/entities/margin-config.entity';
 import { Tax } from 'src/pricing/entities/tax.entity';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -30,9 +32,10 @@ import { Tax } from 'src/pricing/entities/tax.entity';
       MarginConfig,
       Tax
     ]),
+     CloudinaryModule,
   ],
   controllers: [ProductsController],
 
-  providers: [ProductsService  ,ProductStockService, PricingService],
+  providers: [ProductsService  ,ProductStockService, PricingService ],
 })
 export class ProductsModule {}

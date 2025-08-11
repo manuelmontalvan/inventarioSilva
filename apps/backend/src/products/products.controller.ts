@@ -27,18 +27,63 @@ import { User } from '../users/user.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService
+    ,private readonly cloudinaryService: CloudinaryService
+  ) {}
 
-  @Post()
+ @Post()
   @Roles(RoleType.admin, RoleType.bodeguero)
-  async create(@Body() createProductDto: CreateProductDto, @Req() req: Request) {
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() createProductDto: CreateProductDto,
+    @Req() req: Request,
+  ) {
     const user = req.user as User;
-    return this.productsService.create(createProductDto, user);
+   let imageUrl: string | undefined = undefined;
+
+
+    if (file) {
+      const uploadResult = await this.cloudinaryService.uploadImage(file);
+      imageUrl = uploadResult.secure_url;
+    }
+
+  const dtoWithImage = imageUrl
+  ? { ...createProductDto, image: imageUrl }
+  : { ...createProductDto };
+
+
+    return this.productsService.create(dtoWithImage, user);
   }
+
+
+   @Post('upload-image')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProductImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se envió ningún archivo');
+    }
+
+    const uploadResult = await this.cloudinaryService.uploadImage(file);
+
+    if (!uploadResult || !uploadResult.secure_url) {
+      throw new BadRequestException('Error al subir la imagen');
+    }
+
+    return {
+      url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+      format: uploadResult.format,
+    };
+  }
+
+
 
   @Get()
   @Roles(RoleType.admin, RoleType.bodeguero, RoleType.vendedor)
