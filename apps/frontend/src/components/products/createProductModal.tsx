@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import {
   Modal,
   ModalContent,
@@ -133,6 +133,7 @@ export const CreateProductModal = ({
       }
       const cleaned = {
         ...data,
+        image: imageUrl,
         expiration_date: data.expiration_date || undefined,
       };
 
@@ -350,7 +351,9 @@ export const CreateProductModal = ({
                     {/* Vista previa de la imagen subida */}
                     {field.value && (
                       <div className="mt-2 max-w-xs md:max-w-sm">
-                        <img
+                        <Image
+                          width={400}
+                          height={300}
                           src={field.value}
                           alt="Vista previa"
                           className="rounded-md border border-gray-300 object-cover w-full h-48"

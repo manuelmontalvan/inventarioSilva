@@ -341,7 +341,7 @@ export default function EditProductModal({
               <FormField
                 control={form.control}
                 name="image"
-                render={({ field }) => (
+                render={({  }) => (
                   <FormItem className="md:col-span-2 flex flex-col gap-2">
                     <FormLabel
                       htmlFor="product-image-upload"
