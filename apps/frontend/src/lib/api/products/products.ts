@@ -72,3 +72,16 @@ export const uploadProducts = async (file: File) => {
 
   return res.data;
 };
+
+export const uploadProductImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await axios.post("/products/upload-image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return res.data; // { url, public_id, format }
+};

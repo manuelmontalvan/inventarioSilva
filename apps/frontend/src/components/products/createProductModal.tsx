@@ -29,7 +29,9 @@ import { createProduct } from "@/lib/api/products/products";
 import { z } from "zod";
 import { getCategories } from "@/lib/api/products/categories";
 import { getBrands } from "@/lib/api/products/brands";
-import { getUnitsOfMeasure} from "@/lib/api/products/unitOfMeasures";
+import { getUnitsOfMeasure } from "@/lib/api/products/unitOfMeasures";
+import { uploadProductImage } from "@/lib/api/products/products";
+
 type ProductFormValues = z.infer<typeof ProductSchema>;
 
 interface Category {
@@ -80,6 +82,14 @@ export const CreateProductModal = ({
   const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setSelectedFile(e.target.files[0]);
+      form.setValue("image", URL.createObjectURL(e.target.files[0])); // solo para vista previa
+    }
+  };
 
   useEffect(() => {
     if (!open) {
@@ -99,7 +109,7 @@ export const CreateProductModal = ({
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
-      } catch  {
+      } catch {
         addToast({
           title: "Error",
           description: "No se pudieron cargar categorías, marcas o unidades",
@@ -114,6 +124,13 @@ export const CreateProductModal = ({
   const onSubmit = async (data: ProductFormValues) => {
     setLoading(true);
     try {
+      let imageUrl = data.image; // por si ya tiene una url directa
+
+      if (selectedFile) {
+        // Subir la imagen solo aquí
+        const uploadResult = await uploadProductImage(selectedFile);
+        imageUrl = uploadResult.url;
+      }
       const cleaned = {
         ...data,
         expiration_date: data.expiration_date || undefined,
@@ -300,12 +317,46 @@ export const CreateProductModal = ({
                 control={form.control}
                 name="image"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Imagen (URL)</FormLabel>
+                  <FormItem className="md:col-span-2 flex flex-col gap-2">
+                    <FormLabel
+                      className="font-semibold text-gray-700 dark:text-gray-200"
+                      htmlFor="product-image-upload"
+                    >
+                      Subir imagen
+                    </FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <div>
+                        <label
+                          htmlFor="product-image-upload"
+                          className={`cursor-pointer block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100
+            dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+            ${loading ? "cursor-not-allowed opacity-50" : ""}`}
+                          aria-busy={loading}
+                        >
+                          {loading ? "Cargando..." : "Seleccionar archivo"}
+                        </label>
+                        <input
+                          id="product-image-upload"
+                          type="file"
+                          accept="image/*"
+                          disabled={loading}
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+
+                    {/* Vista previa de la imagen subida */}
+                    {field.value && (
+                      <div className="mt-2 max-w-xs md:max-w-sm">
+                        <img
+                          src={field.value}
+                          alt="Vista previa"
+                          className="rounded-md border border-gray-300 object-cover w-full h-48"
+                        />
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />

@@ -37,6 +37,7 @@ import { ProductSchema, ProductFormValues } from "@/lib/schemas/productSchema";
 import { getCategories } from "@/lib/api/products/categories";
 import { getBrands } from "@/lib/api/products/brands";
 import { getUnitsOfMeasure } from "@/lib/api/products/unitOfMeasures";
+import { uploadProductImage } from "@/lib/api/products/products";
 
 interface Props {
   product: ProductI | null;
@@ -63,13 +64,17 @@ export default function EditProductModal({
       brandId: "",
       unitOfMeasureId: "",
       purchase_price: 0,
+      image: "", // Asegúrate que image está en el esquema
     },
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
 
+  // Cargar datos y reset form + imagen cuando cambia el producto
   useEffect(() => {
     if (product) {
       form.reset({
@@ -82,22 +87,24 @@ export default function EditProductModal({
         brandId: String(product.brand?.id || ""),
         unitOfMeasureId: String(product.unit_of_measure?.id || ""),
         purchase_price: Number(product.purchase_price || 0),
+        image: product.image || "",
       });
+      setLocalImageUrl(product.image || null);
     } else {
       form.reset();
+      setLocalImageUrl(null);
     }
   }, [product, form]);
 
+  // Cargar categorías, marcas, unidades cuando se abre modal
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Ejecutar las 3 llamadas paralelas usando las funciones Axios
         const [catData, brandData, unitData] = await Promise.all([
           getCategories(),
           getBrands(),
           getUnitsOfMeasure(),
         ]);
-
         setCategories(catData);
         setBrands(brandData);
         setUnits(unitData);
@@ -114,6 +121,36 @@ export default function EditProductModal({
     if (open) fetchData();
   }, [open]);
 
+  // Manejar cambio de archivo y subir imagen
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const uploadResult = await uploadProductImage(file);
+      setLocalImageUrl(uploadResult.url);
+      form.setValue("image", uploadResult.url);
+      addToast({
+        title: "Imagen subida",
+        description: "La imagen se subió correctamente",
+        variant: "bordered",
+        color: "success",
+      });
+    } catch (error) {
+      console.error("Error al subir la imagen", error);
+      addToast({
+        title: "Error",
+        description: "No se pudo subir la imagen",
+        variant: "bordered",
+        color: "danger",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Enviar formulario con todos los datos incluidos image
   const onSubmit = async (data: ProductFormValues) => {
     if (!product) {
       addToast({
@@ -151,7 +188,7 @@ export default function EditProductModal({
             Editar producto
           </DialogTitle>
           <DialogDescription>
-            Actualice los neuvos datos del producto
+            Actualice los nuevos datos del producto
           </DialogDescription>
         </DialogHeader>
 
@@ -160,7 +197,7 @@ export default function EditProductModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 ["name", "Nombre del producto", "text"],
-                ["description", "Descripcion del producto", "text"],
+                ["description", "Descripción del producto", "text"],
                 ["internal_code", "Código interno", "text"],
                 ["min_stock", "Stock mínimo", "number"],
                 ["max_stock", "Stock máximo", "number"],
@@ -197,6 +234,7 @@ export default function EditProductModal({
                   )}
                 />
               ))}
+
               <FormField
                 control={form.control}
                 name="purchase_price"
@@ -214,9 +252,7 @@ export default function EditProductModal({
                         }
                         onChange={(e) =>
                           field.onChange(
-                            e.target.value === ""
-                              ? undefined
-                              : Number(e.target.value)
+                            e.target.value === "" ? undefined : Number(e.target.value)
                           )
                         }
                       />
@@ -300,13 +336,60 @@ export default function EditProductModal({
                   </FormItem>
                 )}
               />
+
+              {/* Campo para subir imagen */}
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2 flex flex-col gap-2">
+                    <FormLabel
+                      htmlFor="product-image-upload"
+                      className="font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                      Imagen del producto
+                    </FormLabel>
+                    <FormControl>                
+                      <input
+                        id="product-image-upload"
+                        type="file"
+                        accept="image/*"
+                        disabled={uploading}
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </FormControl>
+                          <label
+                        htmlFor="product-image-upload"
+                        className={`cursor-pointer block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100
+                          dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600
+                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                          ${uploading ? "cursor-not-allowed opacity-50" : ""}`}
+                        aria-busy={uploading}
+                      >
+                        {uploading ? "Subiendo..." : "Seleccionar archivo"}
+                      </label>
+
+                    {/* Vista previa */}
+                    {localImageUrl && (
+                      <div className="mt-2 max-w-xs md:max-w-sm">
+                        <img
+                          src={localImageUrl}
+                          alt="Vista previa de la imagen"
+                          className="rounded-md border border-gray-300 object-contain w-full h-48"
+                        />
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
             </div>
 
             <DialogFooter className="flex justify-end gap-3 pt-4">
               <Button variant="bordered" color="danger" onPress={onClose}>
                 Cancelar
               </Button>
-              <Button color="success" variant="solid" type="submit">
+              <Button color="success" variant="solid" type="submit" disabled={uploading}>
                 Guardar cambios
               </Button>
             </DialogFooter>
