@@ -25,11 +25,6 @@ interface MarginConfig {
   category?: Category | null;
 }
 
-interface Tax {
-  id: string;
-  name: string;
-  rate: number;
-}
 
 export default function MarginAndTaxConfigPage() {
   const [margins, setMargins] = useState<MarginConfig[]>([]);
@@ -46,7 +41,7 @@ export default function MarginAndTaxConfigPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const [marginData, taxData, categoryData] = await Promise.all([
+      const [marginData, categoryData] = await Promise.all([
         getMargins(),
         getTaxes(),
         getCategories(),
