@@ -174,53 +174,7 @@ export default function MarginAndTaxConfigPage() {
               ))}
             </ul>
           </CardContent>
-        </Card>
-
-        {/* IMPUESTOS */}
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <h2 className="text-xl font-semibold">Impuestos</h2>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nombre"
-                value={newTax.name}
-                onChange={(e) =>
-                  setNewTax((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-              <Input
-                type="number"
-                placeholder="%"
-                value={newTax.rate}
-                onFocus={() => setNewTax((prev) => ({ ...prev, rate: "" }))}
-                onChange={(e) =>
-                  setNewTax((prev) => ({ ...prev, rate: e.target.value }))
-                }
-              />
-              <Button onClick={handleAddTax}>Agregar</Button>
-            </div>
-
-            <ul className="space-y-2">
-              {taxes.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between border p-2 rounded"
-                >
-                  <span>
-                    {t.name}: {t.rate}%
-                  </span>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteTax(t.id)}
-                  >
-                    Eliminar
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        </Card>      
       </div>
     </ProtectedRoute>
   );

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ProductI } from "@/types/product";
 import { useCallback } from "react";
 
+
+
 import {
   getProducts,
   deleteProduct,
@@ -177,6 +179,12 @@ export default function ProductAdminPage() {
       </div>
     );
   }
+  
+
+
+
+
+
 
   return (
     <ProtectedRoute>

@@ -7,6 +7,9 @@ import { Button } from "@heroui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Trash2 } from "lucide-react";
 import { productColumnOptions } from "@/constants/productColumns";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface ProductTableProps {
   products: ProductI[];
@@ -116,10 +119,82 @@ export default function ProductTable({
     }
   }, [products, sortConfig]);
 
+const exportToExcel = () => {
+  const exportData = sortedProducts.map((p) => {
+    const row: Record<string, any> = {};
+    productColumnOptions.forEach(({ key, label }) => {
+      if (visibleColumns[key]) {
+        row[label] = getValue(p, key as keyof ProductI);
+      }
+    });
+    row["Stock"] = (p.stocks || [])
+      .map(
+        (s) =>
+          `${s.locality?.name || "Sin Localidad"} - ${
+            s.shelf?.name || "Sin Percha"
+          }: ${Number(s.quantity).toFixed(2)}`
+      )
+      .join(" | ");
+    return row;
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
+  XLSX.writeFile(workbook, "productos.xlsx");
+};
+
+const exportToPDF = () => {
+  const doc = new jsPDF();
+  const tableColumn: string[] = [];
+  const tableRows: any[] = [];
+
+  productColumnOptions.forEach(({ key, label }) => {
+    if (visibleColumns[key]) tableColumn.push(label);
+  });
+  tableColumn.push("Stock");
+
+  sortedProducts.forEach((p) => {
+    const row: any[] = [];
+    productColumnOptions.forEach(({ key }) => {
+      if (visibleColumns[key]) {
+        row.push(getValue(p, key as keyof ProductI));
+      }
+    });
+    row.push(
+      (p.stocks || [])
+        .map(
+          (s) =>
+            `${s.locality?.name || "Sin Localidad"} - ${
+              s.shelf?.name || "Sin Percha"
+            }: ${Number(s.quantity).toFixed(2)}`
+        )
+        .join(" | ")
+    );
+    tableRows.push(row);
+  });
+
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    styles: { fontSize: 8 },
+  });
+
+  doc.save("productos.pdf");
+};
+
   return (
     <div className="p-4 overflow-x-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Productos</h2>
+        <div className="flex gap-2">
+          <Button color="primary" variant="solid" onPress={exportToExcel}>
+            Exportar Excel
+          </Button>
+          <Button color="secondary" variant="solid" onPress={exportToPDF}>
+            Exportar PDF
+          </Button>
+        </div>
       </div>
 
       <div className="min-w-[1200px]">
