@@ -6,9 +6,7 @@ import {
   getMargins,
   createMargin,
   deleteMargin,
-  getTaxes,
-  createTax,
-  deleteTax,
+  getTaxes, 
 } from "@/lib/api/config/marginTax";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +33,7 @@ interface Tax {
 
 export default function MarginAndTaxConfigPage() {
   const [margins, setMargins] = useState<MarginConfig[]>([]);
-  const [taxes, setTaxes] = useState<Tax[]>([]);
+ 
   const [categories, setCategories] = useState<Category[]>([]);
   const [newMargin, setNewMargin] = useState<{
     categoryId: string;
@@ -44,10 +42,7 @@ export default function MarginAndTaxConfigPage() {
     categoryId: "",
     percentage: "",
   });
-  const [newTax, setNewTax] = useState<{ name: string; rate: string }>({
-    name: "",
-    rate: "",
-  });
+ 
 
   useEffect(() => {
     async function fetchData() {
@@ -56,8 +51,7 @@ export default function MarginAndTaxConfigPage() {
         getTaxes(),
         getCategories(),
       ]);
-      setMargins(marginData);
-      setTaxes(taxData);
+      setMargins(marginData);    
       setCategories(categoryData);
     }
     fetchData();
@@ -86,28 +80,9 @@ export default function MarginAndTaxConfigPage() {
     setMargins((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const handleAddTax = async () => {
-    try {
-      if (!newTax.name.trim() || !newTax.rate.trim()) {
-        addToast({ title: "Nombre y tasa son obligatorios", color: "warning" });
-        return;
-      }
-      const created = await createTax({
-        name: newTax.name,
-        rate: parseFloat(newTax.rate),
-      });
-      setTaxes((prev) => [...prev, created]);
-      setNewTax({ name: "", rate: "" });
-      addToast({ title: "Impuesto agregado", color: "success" });
-    } catch {
-      addToast({ title: "Error al agregar impuesto", color: "danger" });
-    }
-  };
+ 
 
-  const handleDeleteTax = async (id: string) => {
-    await deleteTax(id);
-    setTaxes((prev) => prev.filter((t) => t.id !== id));
-  };
+ 
 
   return (
     <ProtectedRoute>
@@ -174,7 +149,9 @@ export default function MarginAndTaxConfigPage() {
               ))}
             </ul>
           </CardContent>
-        </Card>      
+        </Card>
+
+      
       </div>
     </ProtectedRoute>
   );

@@ -1,7 +1,7 @@
 // UploadProductImage.tsx
 import { useRef, useState } from 'react';
 import axios from '@/lib/axiosInstance'; // tu instancia de Axios
-
+import Image from "next/image";
 export default function UploadProductImage({ productId }: { productId: string }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,7 @@ export default function UploadProductImage({ productId }: { productId: string })
         onChange={handleFileChange}
       />
       {imagePreview && (
-        <img src={imagePreview} alt="Vista previa" className="h-32 mt-2" />
+        <Image src={imagePreview} alt="Vista previa" className="h-32 mt-2" />
       )}
     </div>
   );

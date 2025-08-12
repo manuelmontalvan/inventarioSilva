@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -373,7 +373,7 @@ export default function EditProductModal({
                     {/* Vista previa */}
                     {localImageUrl && (
                       <div className="mt-2 max-w-xs md:max-w-sm">
-                        <img
+                        <Image                          
                           src={localImageUrl}
                           alt="Vista previa de la imagen"
                           className="rounded-md border border-gray-300 object-contain w-full h-48"

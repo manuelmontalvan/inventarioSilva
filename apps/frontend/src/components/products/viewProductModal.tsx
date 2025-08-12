@@ -10,7 +10,7 @@ import {
 import { Button } from "@heroui/button";
 import { ProductI } from "@/types/product";
 import React from "react";
-
+import Image from "next/image";
 export default function ViewProductModal({
   product,
   open,
@@ -38,7 +38,7 @@ export default function ViewProductModal({
               {/* Imagen - ocupa 1/3 en md+ */}
               <div className="w-full h-48 md:h-auto rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700">
                 {product.image ? (
-                  <img
+                  <Image
                     src={product.image}
                     alt={product.name}
                       className="object-contain w-full h-full"
